@@ -47,7 +47,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
     public boolean isSplitLevels() { return splitLevels; }
     public void setSplitLevels(boolean enabled) { splitLevels = enabled; setChanged(); }
-    public void processOnce() { if (level != null && !level.isClientSide) processOneItem(false); }
+    /** Rebuilds the virtual enchanted-book outputs; the input item is never consumed. */
+    public void processOnce() { if (level != null && !level.isClientSide) refreshGeneratedSlots(); }
     public void dropAllContents() {
         if (level == null || level.isClientSide) return;
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
@@ -67,16 +68,29 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             return stack.is(Items.ENCHANTED_BOOK) && !stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY).isEmpty();
         }
         @Override protected void onContentsChanged(int slot) {
-            if (!internalInventoryUpdate && slot > 0) {
+            if (internalInventoryUpdate) { setChanged(); return; }
+            if (slot == 0) {
+                refreshGeneratedSlots();
+            } else {
                 ItemStack offeredBook = getStackInSlot(slot);
-                if (!offeredBook.isEmpty() && offeredBook.is(Items.ENCHANTED_BOOK) && applyBookToInput(offeredBook)) {
+                if (!offeredBook.isEmpty() && offeredBook.is(Items.ENCHANTED_BOOK)
+                        && applyBookToInput(offeredBook)) {
                     internalInventoryUpdate = true;
                     setStackInSlot(slot, ItemStack.EMPTY);
                     internalInventoryUpdate = false;
                 }
+                refreshGeneratedSlots();
             }
-            if (slot == 0) autoExtractionPaused = false;
             setChanged();
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            ItemStack extracted = super.extractItem(slot, amount, simulate);
+            if (!simulate && !internalInventoryUpdate && slot > 0 && !extracted.isEmpty()) {
+                removeGeneratedBook(extracted);
+            }
+            return extracted;
         }
 
         @Override
@@ -123,7 +137,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (!machine.autoMode) return;
         if (++machine.workTicks < 10) return;
         machine.workTicks = 0;
-        machine.processOneItem(true);
+        machine.refreshGeneratedSlots();
     }
 
     private void processOneItem(boolean automatic) {
@@ -148,20 +162,15 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int bookLevel = entry.getIntValue();
             if (bookLevel <= 0 || !enchantment.value().isSupportedItem(item)) return false;
 
-            // Reject the whole book if any enchantment conflicts. The same
-            // enchantment is intentionally mergeable with itself.
-            if (existing != null) {
-                for (Object2IntMap.Entry<Holder<Enchantment>> oldEntry : existing.entrySet()) {
-                    if (!enchantment.equals(oldEntry.getKey())
-                            && !Enchantment.areCompatible(enchantment, oldEntry.getKey())) return false;
-                }
+            for (Object2IntMap.Entry<Holder<Enchantment>> oldEntry : existing.entrySet()) {
+                if (!enchantment.equals(oldEntry.getKey())
+                        && !Enchantment.areCompatible(enchantment, oldEntry.getKey())) return false;
             }
             for (Holder<Enchantment> added : additions) {
                 if (!Enchantment.areCompatible(enchantment, added)) return false;
             }
-
-            int oldLevel = existing == null ? 0 : existing.getLevel(enchantment);
-            if ((long) oldLevel + bookLevel > Integer.MAX_VALUE) return false;
+            int oldLevel = existing.getLevel(enchantment);
+            if ((long) oldLevel + bookLevel > enchantment.value().getMaxLevel()) return false;
             additions.add(enchantment);
         }
         return !additions.isEmpty();
@@ -171,22 +180,22 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         ItemStack item = inventory.getStackInSlot(0);
         if (!canApplyBook(item, book)) return false;
 
-        ItemEnchantments stored = book.get(DataComponents.STORED_ENCHANTMENTS);
+        ItemEnchantments stored = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
         ItemEnchantments existing = getStackEnchantments(item);
-        ItemEnchantments.Mutable merged = new ItemEnchantments.Mutable(
-                existing == null ? ItemEnchantments.EMPTY : existing);
+        ItemEnchantments.Mutable merged = new ItemEnchantments.Mutable(existing);
 
-        // Match EnchantmentCustomTable's default merge rule: a new enchantment
-        // keeps the book's level; a duplicate adds the two levels together.
+        // Match the reference table: new enchantments keep their level; duplicate
+        // enchantments merge by adding levels, subject to the normal max-level rule.
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
-            int oldLevel = existing == null ? 0 : existing.getLevel(entry.getKey());
+            int oldLevel = existing.getLevel(entry.getKey());
             merged.set(entry.getKey(), oldLevel + entry.getIntValue());
         }
 
+        internalInventoryUpdate = true;
         if (item.is(Items.ENCHANTED_BOOK)) item.set(DataComponents.STORED_ENCHANTMENTS, merged.toImmutable());
         else item.set(DataComponents.ENCHANTMENTS, merged.toImmutable());
         inventory.setStackInSlot(0, item);
-        autoExtractionPaused = true;
+        internalInventoryUpdate = false;
         setChanged();
         return true;
     }
@@ -196,54 +205,66 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 ? stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY)
                 : stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
     }
-    private void extractEnchantments(ItemStack input) {
-        if (input.isEmpty()) return;
+    private void refreshGeneratedSlots() {
+        if (level == null || level.isClientSide || internalInventoryUpdate) return;
+        ItemStack input = inventory.getStackInSlot(0);
         ItemEnchantments enchantments = getStackEnchantments(input);
-        if (enchantments.isEmpty()) return;
+        List<ItemStack> generated = new ArrayList<>();
 
-        boolean splitSingleBook = splitLevels && input.is(Items.ENCHANTED_BOOK) && enchantments.size() == 1;
-        List<Integer> splitBookLevels = splitSingleBook
-                ? splitSingleEnchantmentLevels(enchantments.entrySet().iterator().next().getIntValue())
-                : List.of();
-        int bookCount = 0;
-        for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-            bookCount += splitSingleBook ? splitBookLevels.size() : 1;
-        }
-        int cleanedItemCount = input.is(Items.ENCHANTED_BOOK) ? 0 : 1;
-        if (bookCount + cleanedItemCount > OUTPUT_SLOTS || bookCount == 0) return;
-
-        ItemStack[] results = new ItemStack[bookCount + cleanedItemCount];
-        int index = 0;
-        if (cleanedItemCount == 1) {
-            ItemStack cleaned = input.copyWithCount(1);
-            cleaned.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-            results[index++] = cleaned;
-        }
-
-        for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-            List<Integer> levels = splitSingleBook
-                    ? splitBookLevels
-                    : List.of(entry.getIntValue());
-            for (int storedLevel : levels) {
-                ItemStack outputBook = new ItemStack(Items.ENCHANTED_BOOK);
-                ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
-                stored.set(entry.getKey(), storedLevel);
-                outputBook.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
-                results[index++] = outputBook;
+        if (!input.isEmpty() && !enchantments.isEmpty()) {
+            boolean splitSingleBook = splitLevels && input.is(Items.ENCHANTED_BOOK) && enchantments.size() == 1;
+            if (splitSingleBook) {
+                Object2IntMap.Entry<Holder<Enchantment>> entry = enchantments.entrySet().iterator().next();
+                for (int level : splitSingleEnchantmentLevels(entry.getIntValue())) {
+                    generated.add(createBook(entry.getKey(), level));
+                }
+            } else {
+                for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
+                    generated.add(createBook(entry.getKey(), entry.getIntValue()));
+                }
             }
         }
 
-        int[] slots = findEmptyOutputSlots(results.length);
-        if (slots == null) return;
         internalInventoryUpdate = true;
-        for (int i = 0; i < results.length; i++) inventory.setStackInSlot(slots[i], results[i]);
+        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
+            ItemStack next = slot - OUTPUT_START < generated.size()
+                    ? generated.get(slot - OUTPUT_START) : ItemStack.EMPTY;
+            inventory.setStackInSlot(slot, next);
+        }
         internalInventoryUpdate = false;
-
-        input.shrink(1);
-        inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
     }
 
+    private ItemStack createBook(Holder<Enchantment> enchantment, int level) {
+        ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+        ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+        stored.set(enchantment, level);
+        book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
+        return book;
+    }
+
+    private void removeGeneratedBook(ItemStack book) {
+        if (level == null || level.isClientSide || book.isEmpty()) return;
+        ItemStack input = inventory.getStackInSlot(0);
+        if (input.isEmpty()) return;
+        ItemEnchantments current = getStackEnchantments(input);
+        ItemEnchantments removed = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+        if (removed.isEmpty()) return;
+
+        ItemEnchantments.Mutable remaining = new ItemEnchantments.Mutable(current);
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : removed.entrySet()) {
+            int currentLevel = current.getLevel(entry.getKey());
+            if (currentLevel < entry.getIntValue()) return;
+            remaining.set(entry.getKey(), currentLevel - entry.getIntValue());
+        }
+
+        internalInventoryUpdate = true;
+        if (input.is(Items.ENCHANTED_BOOK)) input.set(DataComponents.STORED_ENCHANTMENTS, remaining.toImmutable());
+        else input.set(DataComponents.ENCHANTMENTS, remaining.toImmutable());
+        inventory.setStackInSlot(0, input);
+        internalInventoryUpdate = false;
+        refreshGeneratedSlots();
+    }
 
     private static List<Integer> splitSingleEnchantmentLevels(int sourceLevel) {
         if (sourceLevel <= 1) return List.of();
@@ -282,6 +303,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
+        if (level != null && !level.isClientSide) refreshGeneratedSlots();
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
         splitLevels = tag.getBoolean("SplitLevels");
