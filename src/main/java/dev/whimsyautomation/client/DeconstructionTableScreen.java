@@ -10,58 +10,58 @@ import net.minecraft.world.entity.player.Inventory;
 public final class DeconstructionTableScreen extends AbstractContainerScreen<DeconstructionTableMenu> {
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageWidth = 228;
-        imageHeight = 230;
-        inventoryLabelY = 112;
+        imageWidth = 240;
+        imageHeight = 250;
+        inventoryLabelY = 144;
         titleLabelY = 8;
     }
 
-    @Override
-    protected void init() {
+    private void send(int id) {
+        if (minecraft != null && minecraft.gameMode != null) minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
+    }
+
+    @Override protected void init() {
         super.init();
-        addRenderableWidget(Button.builder(Component.literal("<"), button -> {
-            if (minecraft != null && minecraft.gameMode != null)
-                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 0);
-        }).bounds(leftPos + 12, topPos + 86, 20, 18).build());
-        addRenderableWidget(Button.builder(Component.literal(">"), button -> {
-            if (minecraft != null && minecraft.gameMode != null)
-                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 1);
-        }).bounds(leftPos + 35, topPos + 86, 20, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("AUTO"), button -> {
-            if (minecraft != null && minecraft.gameMode != null)
-                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 2);
-        }).bounds(leftPos + 12, topPos + 106, 43, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("PROCESS"), button -> {
-            if (minecraft != null && minecraft.gameMode != null)
-                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 3);
-        }).bounds(leftPos + 58, topPos + 106, 62, 16).build());
+        addRenderableWidget(Button.builder(Component.literal("<"), b -> send(0)).bounds(leftPos + 12, topPos + 104, 20, 18).build());
+        addRenderableWidget(Button.builder(Component.literal(">"), b -> send(1)).bounds(leftPos + 35, topPos + 104, 20, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("AUTO"), b -> send(2)).bounds(leftPos + 12, topPos + 124, 48, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("PROCESS"), b -> send(3)).bounds(leftPos + 64, topPos + 124, 66, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("PREV"), b -> send(4)).bounds(leftPos + 140, topPos + 104, 38, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("NEXT"), b -> send(5)).bounds(leftPos + 182, topPos + 104, 42, 18).build());
     }
 
-    @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        int x = leftPos;
-        int y = topPos;
-        graphics.fill(x, y, x + imageWidth, y + imageHeight, 0xF0101116);
-        graphics.fill(x + 6, y + 25, x + imageWidth - 6, y + 105, 0xFF24221F);
-        graphics.fill(x + 6, y + 114, x + imageWidth - 6, y + imageHeight - 6, 0xFF171B20);
-        graphics.fill(x + 10, y + 31, x + 40, y + 82, 0xFF3A3027);
-        graphics.fill(x + 62, y + 30, x + imageWidth - 10, y + 98, 0xFF1A1E23);
-        graphics.fill(x + 6, y + 24, x + imageWidth - 6, y + 25, 0xFFB77C45);
-        graphics.fill(x + 6, y + 105, x + imageWidth - 6, y + 106, 0xFF65503C);
+    private void slot(GuiGraphics g, int x, int y) {
+        g.fill(x - 1, y - 1, x + 17, y + 17, 0xFF08090B);
+        g.fill(x, y, x + 16, y + 16, 0xFF77716A);
+        g.fill(x + 1, y + 1, x + 15, y + 15, 0xFF292B2E);
+        g.fill(x + 2, y + 2, x + 14, y + 14, 0xFF202225);
     }
 
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"), 8, 8, 0xF0D0A2, false);
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.input"), 12, 30, 0xD9B98D, false);
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 66, 30, 0xA9D5B8, false);
+    @Override protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+        int x = leftPos, y = topPos;
+        g.fill(x, y, x + imageWidth, y + imageHeight, 0xF0101116);
+        g.fill(x + 5, y + 24, x + 235, y + 100, 0xFF24221F);
+        g.fill(x + 5, y + 102, x + 235, y + 143, 0xFF171B20);
+        g.fill(x + 5, y + 146, x + 235, y + 244, 0xFF171B20);
+        g.fill(x + 5, y + 24, x + 235, y + 25, 0xFFB77C45);
+        g.fill(x + 5, y + 143, x + 235, y + 144, 0xFF65503C);
+        slot(g, x + 22, y + 52);
+        for (int i = 0; i < 27; i++) slot(g, x + 66 + (i % 9) * 18, y + 42 + (i / 9) * 18);
+        for (int i = 0; i < 27; i++) slot(g, x + 26 + (i % 9) * 18, y + 158 + (i / 9) * 18);
+        for (int i = 0; i < 9; i++) slot(g, x + 26 + i * 18, y + 216);
+    }
+
+    @Override protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+        g.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"), 8, 8, 0xF0D0A2, false);
+        g.drawString(font, Component.translatable("screen.whimsy_automation.input"), 12, 30, 0xD9B98D, false);
+        g.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 66, 30, 0xA9D5B8, false);
         String status = font.plainSubstrByWidth(menu.getRecipeStatus(), 158);
-        graphics.drawString(font, status, 62, 89, 0xE0C49B, false);
-        graphics.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xB6B8BC, false);
+        g.drawString(font, status, 62, 88, 0xE0C49B, false);
+        g.drawString(font, "Page " + (menu.getPage() + 1) + "/" + menu.getPageCount(), 140, 88, 0xD4C7AF, false);
+        g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xB6B8BC, false);
     }
 
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
