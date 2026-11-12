@@ -26,16 +26,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class DeconstructionTableMenu extends AbstractContainerMenu {
-    private static final int PAGE_SIZE = 9;
+    private static final int PAGE_SIZE = 54;
     private static final int OUTPUT_START = 1;
     private static final int OUTPUT_SLOTS = 108;
     private static final int MACHINE_SLOT_COUNT = 109;
-    private static final int OUTPUT_PAGES = 12;
+    private static final int OUTPUT_PAGES = 2;
     private final DeconstructionTableBlockEntity machine;
     private final ContainerLevelAccess access;
     private final Level level;
     private int syncedRecipeIndex = -1;
     private int syncedPage;
+    private int syncedPreviewPage;
     private boolean syncedAutoMode;
     private boolean syncedLocked;
     private int syncedLockedRecipeIndex = -1;
@@ -67,6 +68,10 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             @Override public void set(int value) { syncedPage = Math.max(0, Math.min(OUTPUT_PAGES - 1, value)); }
         });
         addDataSlot(new DataSlot() {
+            @Override public int get() { return syncedPreviewPage; }
+            @Override public void set(int value) { syncedPreviewPage = Math.max(0, Math.min(255, value)); }
+        });
+        addDataSlot(new DataSlot() {
             @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
             @Override public void set(int value) { syncedAutoMode = value != 0; }
         });
@@ -83,8 +88,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private void addPagedOutputSlot(ItemStackHandler handler, int outputIndex) {
         int actualSlot = OUTPUT_START + outputIndex;
         int visibleIndex = outputIndex % PAGE_SIZE;
-        int x = 66 + (visibleIndex % 3) * 18;
-        int y = 42 + (visibleIndex / 3) * 18;
+        int x = 66 + (visibleIndex % 9) * 18;
+        int y = 42 + (visibleIndex / 9) * 18;
         addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler, actualSlot, x, y) {
             @Override public boolean isActive() { return outputIndex / PAGE_SIZE == syncedPage; }
         });
@@ -179,34 +184,44 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         syncedRecipeIndex = Math.floorMod(index + delta, found.size());
     }
 
-    public List<ItemStack> getPreviewStacks() {
-        ItemStack[] cells = new ItemStack[9];
-        Arrays.fill(cells, ItemStack.EMPTY);
+    private List<ItemStack> getAllPreviewStacks() {
         RecipeHolder<?> holder = getPreviewRecipe();
-        if (holder == null) return Arrays.asList(cells);
+        if (holder == null) return List.of();
+
+        ItemStack target = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
+        if (level.isClientSide && !target.isEmpty()) {
+            for (WhimsyJeiPlugin.Entry entry : WhimsyJeiPlugin.findByOutput(target)) {
+                if (entry.recipeId().equals(holder.id().toString())) {
+                    return entry.inputs().stream().map(ItemStack::copy).toList();
+                }
+            }
+        }
 
         List<ItemStack> recovered = new ArrayList<>();
         for (Ingredient ingredient : holder.value().getIngredients()) {
             if (ingredient.isEmpty()) continue;
             ItemStack[] choices = ingredient.getItems();
-            if (choices.length > 0) recovered.add(choices[0].copy());
-        }
-        // JEI's displayed ingredients are the fallback for modded recipe types
-        // whose Recipe#getIngredients does not expose their real machine inputs.
-        if (recovered.isEmpty() && level.isClientSide) {
-            ItemStack target = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
-            for (WhimsyJeiPlugin.Entry entry : WhimsyJeiPlugin.findByOutput(target)) {
-                if (entry.recipeId().equals(holder.id().toString())) {
-                    recovered.addAll(entry.inputs().stream().map(ItemStack::copy).toList());
-                    break;
-                }
+            for (ItemStack choice : choices) {
+                if (!choice.isEmpty()) recovered.add(choice.copy());
             }
         }
-        int start = syncedPage * PAGE_SIZE;
-        for (int i = 0; i < PAGE_SIZE && start + i < recovered.size(); i++) {
-            cells[i] = recovered.get(start + i);
+        return List.copyOf(recovered);
+    }
+
+    public List<ItemStack> getPreviewStacks() {
+        List<ItemStack> all = getAllPreviewStacks();
+        int start = syncedPreviewPage * PAGE_SIZE;
+        List<ItemStack> page = new ArrayList<>(PAGE_SIZE);
+        for (int i = 0; i < PAGE_SIZE; i++) {
+            int index = start + i;
+            page.add(index < all.size() ? all.get(index).copy() : ItemStack.EMPTY);
         }
-        return Arrays.asList(cells);
+        return List.copyOf(page);
+    }
+
+    public int getPreviewPage() { return syncedPreviewPage; }
+    public int getPreviewPageCount() {
+        return Math.max(1, (getAllPreviewStacks().size() + PAGE_SIZE - 1) / PAGE_SIZE);
     }
 
     public ItemStack getPreviewResult() {
@@ -250,6 +265,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (buttonId == 3) { machine.processOnce(); return true; }
         if (buttonId == 4) { syncedPage = Math.max(0, syncedPage - 1); return true; }
         if (buttonId == 5) { syncedPage = Math.min(OUTPUT_PAGES - 1, syncedPage + 1); return true; }
+        if (buttonId == 7) { syncedPreviewPage = Math.max(0, syncedPreviewPage - 1); return true; }
+        if (buttonId == 8) { syncedPreviewPage = Math.min(255, syncedPreviewPage + 1); return true; }
         if (buttonId == 6) {
             if (!machine.getLockedRecipe().isEmpty()) {
                 machine.setLockedRecipe(null);
@@ -267,6 +284,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (index < 0) index = buttonId == 0 ? found.size() - 1 : 0;
         else index = Math.floorMod(index + (buttonId == 0 ? -1 : 1), found.size());
         machine.setSelectedRecipe(found.get(index).id());
+        syncedPreviewPage = 0;
         return true;
     }
 
