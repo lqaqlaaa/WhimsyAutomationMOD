@@ -18,6 +18,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
@@ -161,7 +162,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
             int oldLevel = existing == null ? 0 : existing.getLevel(enchantment);
             int bookLevel = entry.getIntValue();
-            int nextLevel = oldLevel == bookLevel ? oldLevel + 1 : Math.max(oldLevel, bookLevel);
+            CustomData customData = book.get(DataComponents.CUSTOM_DATA);
+            boolean splitFragment = customData != null && customData.copyTag().getBoolean("WhimsySplitLevelFragment");
+            int nextLevel = splitFragment && oldLevel > 0
+                    ? oldLevel + 1
+                    : oldLevel == bookLevel ? oldLevel + 1 : Math.max(oldLevel, bookLevel);
             nextLevel = Math.min(nextLevel, enchantment.value().getMaxLevel());
             if (nextLevel > oldLevel) {
                 merged.set(enchantment, nextLevel);
@@ -203,6 +208,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
                 stored.set(entry.getKey(), storedLevel);
                 outputBook.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
+                if (splitLevels) {
+                    CompoundTag fragmentTag = new CompoundTag();
+                    fragmentTag.putBoolean("WhimsySplitLevelFragment", true);
+                    outputBook.set(DataComponents.CUSTOM_DATA, CustomData.of(fragmentTag));
+                }
                 results[index++] = outputBook;
             }
         }
