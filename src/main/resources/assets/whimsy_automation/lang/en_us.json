@@ -39,5 +39,6 @@
   "screen.whimsy_automation.apply_invalid": "Cannot apply: unsupported item or incompatible enchantments",
   "screen.whimsy_automation.apply_ready": "Ready to apply: %1$s (press Process)",
   "screen.whimsy_automation.recipe_locked_missing": "Locked recipe is missing (a required mod may be absent)",
-  "screen.whimsy_automation.recipe_materials": "Ingredient preview"
+  "screen.whimsy_automation.recipe_materials": "Ingredient preview",
+  "screen.whimsy_automation.apply_book": "APPLY BOOK"
 }
