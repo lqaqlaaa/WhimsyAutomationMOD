@@ -9,6 +9,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentExtractorScreen extends AbstractContainerScreen<EnchantmentExtractorMenu> {
     private Button processButton;
+    private Button outputModeButton;
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 240;
@@ -28,6 +29,17 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         addRenderableWidget(processButton);
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.previous"), b -> send(3)).bounds(leftPos + 52, topPos + 124, 42, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.next"), b -> send(4)).bounds(leftPos + 146, topPos + 124, 42, 18).build());
+        outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
+                .bounds(leftPos + 145, topPos + 103, 88, 34).build();
+        addRenderableWidget(outputModeButton);
+    }
+
+    private Component outputModeLabel() {
+        return Component.translatable(switch (menu.getOutputMode()) {
+            case 0 -> "screen.whimsy_automation.mode_combined_short";
+            case 1 -> "screen.whimsy_automation.mode_enchantments_short";
+            default -> "screen.whimsy_automation.mode_levels_short";
+        });
     }
 
     private void drawSwitch(GuiGraphics g, int x, int y, boolean enabled) {
@@ -53,7 +65,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         for (int i = 0; i < 27; i++) slot(g, x + 26 + (i % 9) * 18, y + 158 + (i / 9) * 18);
         for (int i = 0; i < 9; i++) slot(g, x + 26 + i * 18, y + 216);
         drawSwitch(g, x + 46, y + 106, menu.isAutoMode());
-        drawSwitch(g, x + 194, y + 106, menu.getOutputMode() != 1);
     }
 
     @Override
@@ -64,8 +75,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         g.drawString(font, Component.translatable("screen.whimsy_automation.book_input"), 4, 68, 0xD5C5F2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.page", menu.getPage() + 1, menu.getPageCount()), 100, 128, 0xD5C5F2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 10, 108, 0xC9D3E1, false);
-        g.drawString(font, Component.translatable("screen.whimsy_automation.output_mode"), 151, 108, 0xC9D3E1, false);
-        String mode = Component.translatable(switch (menu.getOutputMode()) { case 0 -> "screen.whimsy_automation.output_combined"; case 2 -> "screen.whimsy_automation.output_split"; default -> "screen.whimsy_automation.output_separate"; }).getString();
+        if (outputModeButton != null) outputModeButton.setMessage(outputModeLabel());
         g.drawString(font, font.plainSubstrByWidth(mode, 58), 151, 120, 0xFFE2D4F6, false);
         g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xAAB7C8, false);
         if (processButton != null) processButton.setMessage(Component.translatable("screen.whimsy_automation.process"));
@@ -78,10 +88,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             int localY = (int) mouseY - topPos;
             if (localX >= 46 && localX < 76 && localY >= 106 && localY < 119) {
                 send(0);
-                return true;
-            }
-            if (localX >= 194 && localX < 224 && localY >= 106 && localY < 119) {
-                send(2);
                 return true;
             }
         }
