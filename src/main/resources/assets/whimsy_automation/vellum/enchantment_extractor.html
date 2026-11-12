@@ -1,0 +1,102 @@
+<!doctype html>
+<html class="mc-dim">
+<head>
+<meta charset="utf-8">
+<title>附魔提取器</title>
+<style>
+* { box-sizing: border-box; }
+html { shape-rendering: crispEdges; color: #242424; font-family: minecraft:default; }
+body { margin: 0; min-height: 100%; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.window { width: min(620px, 96vw); max-height: 96vh; overflow-y: auto; padding: 10px; background: #c6c6c6; border: 3px solid #101010; box-shadow: 0 0 0 2px #777; }
+.machine-head { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #888; padding:2px 2px 8px; margin-bottom:9px; gap:8px; }
+.machine-title { display:flex; align-items:center; gap:9px; font-size:16px; font-weight:bold; }
+.machine-icon { width:30px; height:30px; display:grid; place-items:center; background:#667d52; border:2px solid #303b29; box-shadow:inset 2px 2px #a9b78f,inset -2px -2px #3b4b30; color:white; }
+.machine-sub { font-size:10px; color:#555; font-weight:normal; margin-top:3px; }
+.status { font-size:10px; color:#35472c; background:#aebd9d; border:1px solid #667b56; padding:4px 6px; white-space:nowrap; }
+.machine-body { display:grid; grid-template-columns:minmax(0,1fr) 148px; gap:10px; }
+.work-area { min-width:0; background:#b7b7b7; border:2px solid #777; box-shadow:inset 2px 2px #888,inset -2px -2px #eee; padding:9px; }
+.section-label { font-size:10px; color:#555; font-weight:bold; letter-spacing:.04em; margin:0 0 7px; }
+.flow { display:flex; align-items:center; justify-content:flex-start; gap:9px; flex-wrap:wrap; }
+.slot-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:32px; }
+.slot-frame { width:38px; height:38px; display:grid; place-items:center; background:#8b8b8b; border:2px solid; border-color:#373737 #fff #fff #373737; box-shadow:inset 1px 1px #555; }
+slot { display:block; width:18px; height:18px; }
+.slot-caption { font-size:9px; color:#555; text-align:center; }
+.arrow { font-size:18px; color:#555; }
+.divider { height:2px; background:#888; border-bottom:1px solid #eee; margin:10px 0 8px; }
+.output-grid { display:grid; grid-template-columns:repeat(9,18px); gap:3px; justify-content:center; min-height:60px; }
+.output-grid slot { width:18px; height:18px; }
+.page { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; font-size:10px; }
+button { min-width:26px; height:22px; border:2px solid; border-color:#fff #555 #555 #fff; background:#c6c6c6; color:#222; font:inherit; cursor:pointer; padding:1px 5px; }
+button:active { border-color:#555 #fff #fff #555; }
+button:disabled { opacity:.45; }
+.control-area { display:flex; flex-direction:column; gap:8px; }
+.control { background:#bcbcbc; border:2px solid; border-color:#fff #555 #555 #fff; padding:7px; font-size:10px; box-shadow:inset 1px 1px #eee; }
+.control strong { display:block; margin-bottom:6px; font-size:11px; }
+.switchrow { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:7px; }
+.switch { width:32px; height:16px; background:#777; border:1px solid #444; padding:2px; display:flex; align-items:center; }
+.switch i { width:10px; height:10px; background:#ddd; display:block; box-shadow:1px 1px #333; }
+.switch.on { background:#5e7d4c; justify-content:flex-end; }
+.switch.on i { background:#e9f1dc; }
+.inventory { width:min(620px,96vw); background:#c6c6c6; border:2px solid #101010; padding:8px 10px; }
+.inventory-title { font-size:11px; font-weight:bold; margin:0 0 6px; color:#333; }
+.inv-grid { display:grid; grid-template-columns:repeat(9,18px); gap:3px; justify-content:center; }
+.inv-grid slot { width:18px; height:18px; }
+.hotbar { margin-top:8px; }
+@media(max-width:560px) {
+ .machine-body { grid-template-columns:1fr; }
+ .control-area { display:grid; grid-template-columns:1fr 1fr; }
+ .window,.inventory { width:96vw; padding:7px; }
+ .machine-title { font-size:14px; }
+ .work-area { padding:7px; }
+}
+</style>
+</head>
+<body>
+<main class="window" data-vellum-bounds>
+  <header class="machine-head">
+    <div class="machine-title"><div class="machine-icon">⚒</div><div>附魔提取器<div class="machine-sub">分离装备附魔，并将附魔书应用到装备</div></div></div>
+    <div class="status">● {{ vellum.data.applying ? '附魔应用中' : '机器待命' }}</div>
+  </header>
+  <div class="machine-body">
+    <section class="work-area">
+      <div class="section-label">输入与操作</div>
+      <div class="flow">
+        <div class="slot-wrap"><div class="slot-frame"><slot index="0"></slot></div><div class="slot-caption">装备输入</div></div>
+        <div class="arrow">＋</div>
+        <div class="slot-wrap"><div class="slot-frame"><slot index="1"></slot></div><div class="slot-caption">附魔书输入</div></div>
+        <div class="arrow">➜</div>
+        <div class="slot-wrap"><div class="slot-frame"><item id="minecraft:enchanted_book" tooltip></item></div><div class="slot-caption">生成结果</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section-label">提取结果 · {{ vellum.data.page + 1 }} / {{ vellum.data.pageCount }}</div>
+      <div class="output-grid">
+        <slot v-for="i in range(0,27)" :index="2 + i + vellum.data.page * 27"></slot>
+      </div>
+      <div class="page">
+        <button @click="vellum.send('page', -1)" :disabled="vellum.data.page <= 0">‹</button>
+        <span>{{ vellum.data.page + 1 }} / {{ vellum.data.pageCount }}</span>
+        <button @click="vellum.send('page', 1)" :disabled="vellum.data.page + 1 >= vellum.data.pageCount">›</button>
+        <button @click="vellum.send('process', 1)">执行</button>
+      </div>
+    </section>
+    <aside class="control-area">
+      <div class="control">
+        <strong>运行设置</strong>
+        <div class="switchrow"><span>自动提取</span><span :class="vellum.data.auto ? 'switch on' : 'switch'" @click="vellum.send('auto', true)"><i></i></span></div>
+        <div class="switchrow"><span>拆分附魔等级</span><span :class="vellum.data.split ? 'switch on' : 'switch'" @click="vellum.send('split', true)"><i></i></span></div>
+      </div>
+      <div class="control"><strong>提示</strong>{{ vellum.data.applyPreview }}</div>
+      <div class="control"><strong>机器状态</strong><span style="color:#47613b">● 可用</span><br>输出槽保留原版物品交互。</div>
+    </aside>
+  </div>
+</main>
+<section class="inventory" data-vellum-bounds aria-label="玩家背包">
+  <div class="inventory-title">物品栏</div>
+  <div class="inv-grid"><slot v-for="i in range(218,245)" :index="i"></slot></div>
+  <div class="hotbar">
+    <div class="inventory-title">快捷栏</div>
+    <div class="inv-grid"><slot v-for="i in range(245,254)" :index="i"></slot></div>
+  </div>
+</section>
+</body>
+</html>
