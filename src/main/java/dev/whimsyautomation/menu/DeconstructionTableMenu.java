@@ -23,6 +23,8 @@ import java.util.List;
 
 public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
+    private static final int OUTPUT_START = 1;
+    private static final int OUTPUT_SLOTS = 108;
     private static final int MACHINE_SLOT_COUNT = 109;
     private static final int OUTPUT_PAGES = 4;
     private final DeconstructionTableBlockEntity machine;
