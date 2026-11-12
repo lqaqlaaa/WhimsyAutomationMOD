@@ -3,6 +3,7 @@ package dev.whimsyautomation.menu;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.util.RecipeIngredientResolver;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -83,7 +84,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         List<RecipeHolder<?>> found = new ArrayList<>();
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             ItemStack result = holder.value().getResultItem(level.registryAccess());
-            if (!result.isEmpty() && ItemStack.isSameItemSameComponents(result, input) && !holder.value().getIngredients().isEmpty()) found.add(holder);
+            if (!result.isEmpty() && ItemStack.isSameItemSameComponents(result, input) && !RecipeIngredientResolver.getIngredients(holder.value()).isEmpty()) found.add(holder);
         }
         found.sort((a, b) -> a.id().compareTo(b.id()));
         return found;

@@ -3,6 +3,7 @@ package dev.whimsyautomation.block.entity;
 import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
+import dev.whimsyautomation.util.RecipeIngredientResolver;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -112,7 +113,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             if (!lockedRecipe.isEmpty() && !holder.id().toString().equals(lockedRecipe)) continue;
             ItemStack result = holder.value().getResultItem(level.registryAccess());
             if (result.isEmpty() || !ItemStack.isSameItemSameComponents(result, input)) continue;
-            if (holder.value().getIngredients().isEmpty()) continue;
+            if (RecipeIngredientResolver.getIngredients(holder.value()).isEmpty()) continue;
             candidates.add(holder);
         }
         if (candidates.isEmpty()) return;
@@ -124,7 +125,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (input.getCount() < inputCost) return;
 
         List<ItemStack> recovered = new ArrayList<>();
-        for (Ingredient ingredient : selected.value().getIngredients()) {
+        for (Ingredient ingredient : RecipeIngredientResolver.getIngredients(selected.value())) {
             if (ingredient.isEmpty()) continue;
             ItemStack[] options = ingredient.getItems();
             if (options.length == 0) return;

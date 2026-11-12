@@ -29,7 +29,9 @@ public final class SidedMachineItemHandler implements IItemHandler {
     private int map(int slot) {
         if (slot < 0 || slot >= getSlots()) return -1;
         if (input && slot == 0) return 0;
-        return outputStart + slot - (input ? 1 : 0);
+        int outputIndex = slot - (input ? 1 : 0);
+        if (!output || outputIndex < 0 || outputIndex >= inventory.getSlots() - outputStart) return -1;
+        return outputStart + outputIndex;
     }
 
     @Override
@@ -48,7 +50,9 @@ public final class SidedMachineItemHandler implements IItemHandler {
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         int mapped = map(slot);
-        if (mapped < outputStart || !output) return ItemStack.EMPTY;
+        if (mapped < outputStart || !output || amount <= 0) return ItemStack.EMPTY;
+        // Output slots are mapped as a contiguous, zero-based hopper view. Do not
+        // route extraction through the input slot even when both sides are exposed.
         return inventory.extractItem(mapped, amount, simulate);
     }
 

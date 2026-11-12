@@ -12,7 +12,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         super(menu, inventory, title);
         imageWidth = 240;
         imageHeight = 250;
-        inventoryLabelY = 144;
+        inventoryLabelY = 148;
         titleLabelY = 8;
     }
 
@@ -24,10 +24,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         super.init();
         addRenderableWidget(Button.builder(Component.literal("<"), b -> send(0)).bounds(leftPos + 12, topPos + 104, 20, 18).build());
         addRenderableWidget(Button.builder(Component.literal(">"), b -> send(1)).bounds(leftPos + 35, topPos + 104, 20, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("AUTO"), b -> send(2)).bounds(leftPos + 12, topPos + 124, 48, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("PROCESS"), b -> send(3)).bounds(leftPos + 64, topPos + 124, 66, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("PREV"), b -> send(4)).bounds(leftPos + 140, topPos + 104, 38, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("NEXT"), b -> send(5)).bounds(leftPos + 182, topPos + 104, 42, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.auto"), b -> send(2)).bounds(leftPos + 12, topPos + 124, 48, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(3)).bounds(leftPos + 64, topPos + 124, 66, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.previous"), b -> send(4)).bounds(leftPos + 64, topPos + 124, 48, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.next"), b -> send(5)).bounds(leftPos + 128, topPos + 124, 48, 18).build());
     }
 
     private void slot(GuiGraphics g, int x, int y) {
@@ -41,7 +41,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         int x = leftPos, y = topPos;
         g.fill(x, y, x + imageWidth, y + imageHeight, 0xF0101116);
         g.fill(x + 5, y + 24, x + 235, y + 100, 0xFF24221F);
-        g.fill(x + 5, y + 102, x + 235, y + 143, 0xFF171B20);
+        g.fill(x + 5, y + 96, x + 235, y + 143, 0xFF171B20);
         g.fill(x + 5, y + 146, x + 235, y + 244, 0xFF171B20);
         g.fill(x + 5, y + 24, x + 235, y + 25, 0xFFB77C45);
         g.fill(x + 5, y + 143, x + 235, y + 144, 0xFF65503C);
@@ -55,9 +55,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         g.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"), 8, 8, 0xF0D0A2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.input"), 12, 30, 0xD9B98D, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 66, 30, 0xA9D5B8, false);
-        String status = font.plainSubstrByWidth(menu.getRecipeStatus(), 158);
-        g.drawString(font, status, 62, 88, 0xE0C49B, false);
-        g.drawString(font, "Page " + (menu.getPage() + 1) + "/" + menu.getPageCount(), 64, 109, 0xD4C7AF, false);
+        String status = font.plainSubstrByWidth(menu.getRecipeStatus(), 164);
+        g.drawString(font, status, 62, 94, 0xE0C49B, false);
+        g.drawString(font, "Page " + (menu.getPage() + 1) + "/" + menu.getPageCount(), 170, 30, 0xD4C7AF, false);
         g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xB6B8BC, false);
     }
 

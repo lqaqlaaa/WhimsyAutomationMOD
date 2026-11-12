@@ -7,5 +7,10 @@
   "screen.whimsy_automation.extractor": "ENCHANTMENT EXTRACTOR",
   "screen.whimsy_automation.deconstruction": "DECONSTRUCTION TABLE",
   "screen.whimsy_automation.input": "INPUT",
-  "screen.whimsy_automation.outputs": "OUTPUT"
+  "screen.whimsy_automation.outputs": "OUTPUT",
+  "screen.whimsy_automation.auto": "AUTO",
+  "screen.whimsy_automation.process": "PROCESS",
+  "screen.whimsy_automation.previous": "PREV",
+  "screen.whimsy_automation.next": "NEXT",
+  "screen.whimsy_automation.split_levels": "SPLIT I"
 }

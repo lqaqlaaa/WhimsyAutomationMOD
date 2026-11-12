@@ -12,7 +12,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         super(menu, inventory, title);
         imageWidth = 240;
         imageHeight = 250;
-        inventoryLabelY = 144;
+        inventoryLabelY = 148;
         titleLabelY = 8;
     }
 
@@ -22,11 +22,11 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override protected void init() {
         super.init();
-        addRenderableWidget(Button.builder(Component.literal("AUTO"), b -> send(0)).bounds(leftPos + 12, topPos + 104, 48, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("PROCESS"), b -> send(1)).bounds(leftPos + 64, topPos + 104, 62, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("SPLIT I"), b -> send(2)).bounds(leftPos + 130, topPos + 104, 62, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("PREV"), b -> send(3)).bounds(leftPos + 52, topPos + 124, 42, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("NEXT"), b -> send(4)).bounds(leftPos + 146, topPos + 124, 42, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.auto"), b -> send(0)).bounds(leftPos + 12, topPos + 104, 48, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1)).bounds(leftPos + 64, topPos + 104, 62, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.split_levels"), b -> send(2)).bounds(leftPos + 130, topPos + 104, 62, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.previous"), b -> send(3)).bounds(leftPos + 52, topPos + 124, 42, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.next"), b -> send(4)).bounds(leftPos + 146, topPos + 124, 42, 18).build());
     }
 
     private void slot(GuiGraphics g, int x, int y) {
@@ -54,7 +54,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         g.drawString(font, Component.translatable("screen.whimsy_automation.extractor"), 8, 8, 0xE8D8FF, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.input"), 12, 30, 0x8EDDE0, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 48, 30, 0xD5C5F2, false);
-        g.drawString(font, "Page " + (menu.getPage() + 1) + "/" + menu.getPageCount(), 100, 128, 0xD5C5F2, false);
+        g.drawString(font, "Page " + (menu.getPage() + 1) + "/" + menu.getPageCount(), 170, 30, 0xD5C5F2, false);
         g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xAAB7C8, false);
     }
 
