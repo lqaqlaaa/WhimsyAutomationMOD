@@ -102,7 +102,11 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
         if (buttonId == 2) {
-            machine.setLockedRecipe(null);
+            machine.setAutoMode(!machine.isAutoMode());
+            return true;
+        }
+        if (buttonId == 3) {
+            machine.processOnce();
             return true;
         }
         List<RecipeHolder<?>> found = candidates();
