@@ -164,6 +164,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         List<RecipeHolder<?>> found = new ArrayList<>();
         for (RecipeHolder<?> holder : allRecipes()) {
             Recipe<?> recipe = holder.value();
+            if (recipe.getIngredients().isEmpty()) continue;
             ItemStack result = recipe.getResultItem(level.registryAccess());
             if (!matchesRecipeOutput(result, input)) continue;
             found.add(holder);
