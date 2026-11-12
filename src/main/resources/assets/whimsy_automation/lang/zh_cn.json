@@ -22,6 +22,8 @@
   "screen.whimsy_automation.next": "下一页",
   "screen.whimsy_automation.page": "第 %1$s/%2$s 页",
   "screen.whimsy_automation.recipe_none": "没有匹配的配方",
+  "screen.whimsy_automation.recipe_count": "可拆解配方：%1$s 种",
+  "screen.whimsy_automation.recipe_locked_count": "配方已锁定 · 可用配方：%1$s 种",
   "screen.whimsy_automation.recipe_unavailable": "锁定的配方不可用",
   "screen.whimsy_automation.recipe_select": "选择配方（%1$s）",
   "screen.whimsy_automation.recipe_changed": "配方列表已更改",
