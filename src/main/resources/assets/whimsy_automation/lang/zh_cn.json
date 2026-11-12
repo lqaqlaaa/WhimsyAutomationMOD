@@ -1,4 +1,5 @@
 {
   "block.whimsy_automation.enchantment_extractor": "附魔提取器",
-  "block.whimsy_automation.deconstruction_table": "物品拆解台"
+  "block.whimsy_automation.deconstruction_table": "物品拆解台",
+  "itemGroup.whimsy_automation": "奇思妙想自动化"
 }
