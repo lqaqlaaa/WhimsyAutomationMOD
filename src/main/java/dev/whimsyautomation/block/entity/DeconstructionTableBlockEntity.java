@@ -7,7 +7,6 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -112,13 +111,10 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        // Durability is state, not recipe identity: a slightly damaged bow/tool
-        // is still the result item of its crafting recipe.
-        ItemStack normalizedResult = recipeResult.copy();
-        ItemStack normalizedInput = input.copy();
-        normalizedResult.remove(DataComponents.DAMAGE);
-        normalizedInput.remove(DataComponents.DAMAGE);
-        return ItemStack.isSameItemSameComponents(normalizedResult, normalizedInput);
+        // Reverse crafting identifies the recipe result by item type, not by
+        // runtime state such as durability, enchantments, custom name or repair cost.
+        // Component variants can still produce multiple candidates for the UI to cycle.
+        return ItemStack.isSameItem(recipeResult, input);
     }
 
     private void processOneItem() {
@@ -136,8 +132,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
         if (candidates.isEmpty()) return;
         candidates.sort((a, b) -> a.id().compareTo(b.id()));
-        if (lockedRecipe.isEmpty() && candidates.size() > 1) return;
-
         RecipeHolder<?> selected = candidates.getFirst();
         ItemStack recipeResult = selected.value().getResultItem(level.registryAccess());
         int inputCost = Math.max(1, recipeResult.getCount());
