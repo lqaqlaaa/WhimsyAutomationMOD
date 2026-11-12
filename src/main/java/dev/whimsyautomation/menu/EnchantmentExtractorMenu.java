@@ -34,7 +34,11 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         if (machine != null) {
             addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getInventory(), 0, 18, 52));
-            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getBookInput(), 0, 18, 76));
+            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getBookInput(), 0, 18, 76) {
+                @Override public boolean mayPlace(ItemStack stack) {
+                    return machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack);
+                }
+            });
             for (int i = 0; i < 216; i++) addPagedOutputSlot(machine.getInventory(), i);
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 52));
