@@ -2,6 +2,7 @@ package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -13,6 +14,23 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         imageHeight = 230;
         inventoryLabelY = 112;
         titleLabelY = 8;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        addRenderableWidget(Button.builder(Component.literal("<"), button -> {
+            if (minecraft != null && minecraft.gameMode != null)
+                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 0);
+        }).bounds(leftPos + 12, topPos + 86, 20, 18).build());
+        addRenderableWidget(Button.builder(Component.literal(">"), button -> {
+            if (minecraft != null && minecraft.gameMode != null)
+                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 1);
+        }).bounds(leftPos + 35, topPos + 86, 20, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("AUTO"), button -> {
+            if (minecraft != null && minecraft.gameMode != null)
+                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 2);
+        }).bounds(leftPos + 12, topPos + 106, 43, 16).build());
     }
 
     @Override
@@ -33,6 +51,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"), 8, 8, 0xF0D0A2, false);
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.input"), 12, 30, 0xD9B98D, false);
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 66, 30, 0xA9D5B8, false);
+        String status = font.plainSubstrByWidth(menu.getRecipeStatus(), 158);
+        graphics.drawString(font, status, 62, 89, 0xE0C49B, false);
         graphics.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xB6B8BC, false);
     }
 
