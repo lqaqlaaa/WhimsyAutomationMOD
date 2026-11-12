@@ -3,6 +3,7 @@ package dev.whimsyautomation.client;
 import dev.whimsyautomation.menu.EnchantmentExtractorMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -13,6 +14,20 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         imageHeight = 280;
         inventoryLabelY = 162;
         titleLabelY = 8;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        addRenderableWidget(Button.builder(Component.literal("AUTO"), b -> {
+            if (minecraft != null && minecraft.gameMode != null) minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 0);
+        }).bounds(leftPos + 12, topPos + 86, 48, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("PROCESS"), b -> {
+            if (minecraft != null && minecraft.gameMode != null) minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 1);
+        }).bounds(leftPos + 64, topPos + 86, 58, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("SPLIT I"), b -> {
+            if (minecraft != null && minecraft.gameMode != null) minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 2);
+        }).bounds(leftPos + 126, topPos + 86, 72, 18).build());
     }
 
     @Override
