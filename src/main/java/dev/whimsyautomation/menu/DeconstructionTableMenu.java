@@ -137,20 +137,11 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        if (recipeResult.isEmpty() || input.isEmpty() || !ItemStack.isSameItem(recipeResult, input)) return false;
-        ItemStack expected = recipeResult.copy();
-        ItemStack supplied = input.copy();
-        // Durability is consumed by normal use and must not invalidate an otherwise
-        // identical recipe output. Other data components remain significant.
-        expected.remove(net.minecraft.core.component.DataComponents.DAMAGE);
-        supplied.remove(net.minecraft.core.component.DataComponents.DAMAGE);
-        expected.remove(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
-        supplied.remove(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
-        expected.remove(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
-        supplied.remove(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
-        expected.remove(net.minecraft.core.component.DataComponents.REPAIR_COST);
-        supplied.remove(net.minecraft.core.component.DataComponents.REPAIR_COST);
-        return ItemStack.isSameItemSameComponents(expected, supplied);
+        // Recipe viewers such as JEI associate recipes with the output item, not
+        // with one exact component payload. Crafted/damaged/renamed variants of
+        // the same item must therefore still expose the same reverse recipes.
+        return !recipeResult.isEmpty() && !input.isEmpty()
+                && ItemStack.isSameItem(recipeResult, input);
     }
 
     private List<RecipeHolder<?>> candidates() {
