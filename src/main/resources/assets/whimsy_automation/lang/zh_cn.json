@@ -27,5 +27,11 @@
   "screen.whimsy_automation.auto_short": "自动化",
   "screen.whimsy_automation.split_short": "拆分等级",
   "screen.whimsy_automation.recipe_auto": "已自动匹配：%1$s",
-  "screen.whimsy_automation.recipe_default": "默认配方：%1$s（共 %2$s 个，可切换）"
+  "screen.whimsy_automation.recipe_default": "默认配方：%1$s（共 %2$s 个，可切换）",
+  "screen.whimsy_automation.recipe_locked_mismatch": "锁定配方与当前输入不匹配，已暂停拆解",
+  "screen.whimsy_automation.recipe_select_hint": "检测到 %1$s 个配方，使用左右键预览",
+  "screen.whimsy_automation.recipe_selected": "预览配方：%1$s",
+  "screen.whimsy_automation.preview_empty": "暂无材料预览",
+  "screen.whimsy_automation.lock": "锁定配方",
+  "screen.whimsy_automation.unlock": "解除锁定"
 }
