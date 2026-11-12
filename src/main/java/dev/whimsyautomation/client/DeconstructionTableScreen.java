@@ -41,9 +41,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 .bounds(leftPos + 78, topPos + 188, 20, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
                 .bounds(leftPos + 100, topPos + 188, 20, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(7))
+        addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
                 .bounds(leftPos + 328, topPos + 188, 20, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("›"), b -> send(8))
+        addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
                 .bounds(leftPos + 350, topPos + 188, 20, 18).build());
     }
 
