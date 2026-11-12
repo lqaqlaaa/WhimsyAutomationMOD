@@ -49,7 +49,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private int workTicks;
     private boolean autoMode = false;
 
-    private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + 27) {
+    private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
         @Override public int getSlotLimit(int slot) { return 64; }
 
         @Override
@@ -75,7 +75,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         private DynamicItemStackHandler(int size) { super(size); }
 
         private void resize(int size) {
-            int targetSize = Math.max(OUTPUT_START, size);
+            int targetSize = Math.max(OUTPUT_START + PAGE_SIZE * 10, size);
             if (targetSize == stacks.size()) return;
             NonNullList<ItemStack> resized = NonNullList.withSize(targetSize, ItemStack.EMPTY);
             for (int i = 0; i < Math.min(stacks.size(), targetSize); i++) {
@@ -158,11 +158,24 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        // Recipe viewers such as JEI associate recipes with the output item, not
-        // with one exact component payload. Crafted/damaged/renamed variants of
-        // the same item must therefore still expose the same reverse recipes.
-        return !recipeResult.isEmpty() && !input.isEmpty()
-                && ItemStack.isSameItem(recipeResult, input);
+        // Preserve variant-defining components (for example TACZ gun IDs or
+        // modded item data), while ignoring state/cosmetic data that should not
+        // prevent dismantling a damaged, enchanted or renamed copy.
+        if (recipeResult.isEmpty() || input.isEmpty()
+                || !ItemStack.isSameItem(recipeResult, input)) return false;
+        ItemStack expected = recipeResult.copy();
+        ItemStack actual = input.copy();
+        for (net.minecraft.core.component.DataComponentType<?> component : java.util.List.of(
+                net.minecraft.core.component.DataComponents.DAMAGE,
+                net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                net.minecraft.core.component.DataComponents.ITEM_NAME,
+                net.minecraft.core.component.DataComponents.REPAIR_COST,
+                net.minecraft.core.component.DataComponents.ENCHANTMENTS,
+                net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS)) {
+            expected.remove(component);
+            actual.remove(component);
+        }
+        return ItemStack.isSameItemSameComponents(expected, actual);
     }
 
     private boolean matchesRecipeIdOutput(String recipeId, ItemStack input) {
@@ -299,7 +312,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
-        int requiredOutputSize = OUTPUT_START + 27;
+        int requiredOutputSize = OUTPUT_START + PAGE_SIZE * 10;
         for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
             if (!inventory.getStackInSlot(slot).isEmpty()) {
                 requiredOutputSize = Math.max(requiredOutputSize, slot + 1);
