@@ -38,6 +38,14 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         @Override public int getSlotLimit(int slot) { return 64; }
         @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty(); }
         @Override protected void onContentsChanged(int slot) { setChanged(); }
+
+        @Override
+        public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
+            // Preserve old output contents while migrating older, smaller inventories.
+            CompoundTag migrated = tag.copy();
+            migrated.putInt("Size", OUTPUT_START + OUTPUT_SLOTS);
+            super.deserializeNBT(registries, migrated);
+        }
     };
 
     private final IItemHandler topHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
