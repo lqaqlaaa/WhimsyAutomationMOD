@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public final class EnchantmentExtractorBlock extends BaseEntityBlock {
-    public static final MapCodec<EnchantmentExtractorBlock> CODEC = simpleCodec(EnchantmentExtractorBlock::new);
+    public static final MapCodec<EnchantmentExtractorBlock> CODEC = MapCodec.unit(EnchantmentExtractorBlock::new);
 
     public EnchantmentExtractorBlock() {
         super(BlockBehaviour.Properties.of().strength(3.5F).requiresCorrectToolForDrops());
