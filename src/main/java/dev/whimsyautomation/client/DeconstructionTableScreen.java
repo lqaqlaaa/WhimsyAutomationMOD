@@ -57,7 +57,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         g.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 66, 30, 0xA9D5B8, false);
         String status = font.plainSubstrByWidth(menu.getRecipeStatus(), 158);
         g.drawString(font, status, 62, 88, 0xE0C49B, false);
-        g.drawString(font, "Page " + (menu.getPage() + 1) + "/" + menu.getPageCount(), 140, 88, 0xD4C7AF, false);
+        g.drawString(font, "Page " + (menu.getPage() + 1) + "/" + menu.getPageCount(), 64, 109, 0xD4C7AF, false);
         g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xB6B8BC, false);
     }
 
