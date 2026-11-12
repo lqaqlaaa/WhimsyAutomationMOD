@@ -39,5 +39,6 @@
   "screen.whimsy_automation.apply_invalid": "无法应用：附魔不适用于该物品或彼此冲突",
   "screen.whimsy_automation.apply_ready": "准备应用：%1$s（点击处理）",
   "screen.whimsy_automation.recipe_locked_missing": "锁定配方不存在（可能缺少对应模组）",
-  "screen.whimsy_automation.recipe_materials": "材料预览"
+  "screen.whimsy_automation.recipe_materials": "材料预览",
+  "screen.whimsy_automation.apply_book": "应用附魔"
 }
