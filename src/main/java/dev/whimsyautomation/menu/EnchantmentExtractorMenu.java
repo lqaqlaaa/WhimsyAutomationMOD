@@ -13,33 +13,79 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.ItemStackHandler;
+import net.minecraft.world.item.Items;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.SlotItemHandler;
 
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_START = 1;
-    private static final int OUTPUT_SLOTS = EnchantmentExtractorBlockEntity.OUTPUT_SLOTS;
-    private static final int MACHINE_SLOT_COUNT = OUTPUT_START + OUTPUT_SLOTS;
+    private static final int OUTPUT_MENU_START = 1;
+    private static final int MACHINE_SLOT_COUNT = OUTPUT_MENU_START + PAGE_SIZE;
     private final EnchantmentExtractorBlockEntity machine;
     private final ContainerLevelAccess access;
+    private final IItemHandler pageHandler;
     private int syncedPage;
     private boolean syncedAutoMode;
     private int syncedOutputMode = 1;
 
-    public EnchantmentExtractorMenu(int id, Inventory playerInventory, FriendlyByteBuf data) { this(id, playerInventory, data.readBlockPos()); }
+    public EnchantmentExtractorMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
+        this(id, playerInventory, data.readBlockPos());
+    }
+
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, BlockPos pos) {
         super(ModMenus.ENCHANTMENT_EXTRACTOR.get(), id);
         this.machine = playerInventory.player.level().getBlockEntity(pos) instanceof EnchantmentExtractorBlockEntity be ? be : null;
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
-        if (machine != null) {
-            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getInventory(), 0, 18, 52));
-            for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(machine.getInventory(), i);
-        } else {
-            addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 52));
-            ItemStackHandler dummyHandler = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS);
-            for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(dummyHandler, i);
-        }
+        this.pageHandler = new IItemHandler() {
+            private int actualSlot(int pageSlot) {
+                return OUTPUT_START + syncedPage * PAGE_SIZE + pageSlot;
+            }
+
+            @Override public int getSlots() { return PAGE_SIZE; }
+
+            @Override public ItemStack getStackInSlot(int slot) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                int actual = actualSlot(slot);
+                return actual < machine.getInventory().getSlots()
+                        ? machine.getInventory().getStackInSlot(actual) : ItemStack.EMPTY;
+            }
+
+            @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return stack;
+                int actual = actualSlot(slot);
+                return actual < machine.getInventory().getSlots()
+                        ? machine.getInventory().insertItem(actual, stack, simulate) : stack;
+            }
+
+            @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                int actual = actualSlot(slot);
+                return actual < machine.getInventory().getSlots()
+                        ? machine.getInventory().extractItem(actual, amount, simulate) : ItemStack.EMPTY;
+            }
+
+            @Override public int getSlotLimit(int slot) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return 64;
+                int actual = actualSlot(slot);
+                return actual < machine.getInventory().getSlots()
+                        ? machine.getInventory().getSlotLimit(actual) : 64;
+            }
+
+            @Override public boolean isItemValid(int slot, ItemStack stack) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return false;
+                int actual = actualSlot(slot);
+                return actual < machine.getInventory().getSlots()
+                        && machine.getInventory().isItemValid(actual, stack);
+            }
+        };
+
+        addSlot(new net.neoforged.neoforge.items.SlotItemHandler(
+                machine != null ? machine.getInventory() : new net.neoforged.neoforge.items.ItemStackHandler(1),
+                0, 18, 52));
+        for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
         addPlayerInventory(playerInventory, 26, 158);
+
         addDataSlot(new DataSlot() {
             @Override public int get() { return syncedPage; }
             @Override public void set(int value) { syncedPage = Math.max(0, Math.min(getPageCount() - 1, value)); }
@@ -54,16 +100,10 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         });
     }
 
-    private void addPagedOutputSlot(ItemStackHandler handler, int outputIndex) {
-        int actualSlot = 1 + outputIndex;
-        int visibleIndex = outputIndex % PAGE_SIZE;
-        int x = 48 + (visibleIndex % 9) * 18;
-        int y = 42 + (visibleIndex / 9) * 18;
-        addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler, actualSlot, x, y) {
-            @Override public boolean isActive() {
-                return outputIndex / PAGE_SIZE == syncedPage;
-            }
-        });
+    private void addPagedOutputSlot(int outputIndex) {
+        int x = 48 + (outputIndex % 9) * 18;
+        int y = 42 + (outputIndex / 9) * 18;
+        addSlot(new SlotItemHandler(pageHandler, outputIndex, x, y));
     }
 
     private void addPlayerInventory(Inventory inventory, int x, int y) {
@@ -72,7 +112,11 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) addSlot(new Slot(inventory, col, x + col * 18, y + 58));
     }
 
-    public int getPage() { return syncedPage; }
+    private int getActualOutputSlot(int menuSlotIndex) {
+        return OUTPUT_START + syncedPage * PAGE_SIZE + (menuSlotIndex - OUTPUT_MENU_START);
+    }
+
+    public int getPage() { return Math.min(syncedPage, getPageCount() - 1); }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isSplitLevels() { return syncedOutputMode == 2; }
     public int getOutputMode() { return syncedOutputMode; }
@@ -98,21 +142,22 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack source = slot.getItem();
         ItemStack copy = source.copy();
-        if (index >= OUTPUT_START && index < MACHINE_SLOT_COUNT) {
-            // Do not shift-click the live generated stack: that bypasses
-            // ItemStackHandler.extractItem and would leave the source enchantment intact.
+
+        if (index >= OUTPUT_MENU_START && index < MACHINE_SLOT_COUNT) {
+            int actualOutputSlot = getActualOutputSlot(index);
             ItemStack moving = source.copy();
             if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
             int movedCount = copy.getCount() - moving.getCount();
             if (movedCount <= 0) return ItemStack.EMPTY;
-            machine.consumeGeneratedBook(index, copy.copyWithCount(movedCount));
+            machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount));
             return copy.copyWithCount(movedCount);
         }
+
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
         } else {
-            boolean moved = source.is(net.minecraft.world.item.Items.ENCHANTED_BOOK)
-                    ? moveItemStackTo(source, 1, MACHINE_SLOT_COUNT, false)
+            boolean moved = source.is(Items.ENCHANTED_BOOK)
+                    ? moveItemStackTo(source, OUTPUT_MENU_START, MACHINE_SLOT_COUNT, false)
                     : moveItemStackTo(source, 0, 1, false);
             if (!moved) return ItemStack.EMPTY;
         }
@@ -120,6 +165,9 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         return copy;
     }
 
-    @Override public boolean stillValid(Player player) { return machine != null && stillValid(access, player, ModBlocks.ENCHANTMENT_EXTRACTOR.get()); }
+    @Override public boolean stillValid(Player player) {
+        return machine != null && stillValid(access, player, ModBlocks.ENCHANTMENT_EXTRACTOR.get());
+    }
+
     public EnchantmentExtractorBlockEntity machine() { return machine; }
 }
