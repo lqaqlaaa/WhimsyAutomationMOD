@@ -37,6 +37,7 @@ import java.util.List;
 public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
     private static final int OUTPUT_STACK_LIMIT = Integer.MAX_VALUE;
+    private static final int BOOK_STACK_COMPONENT_LIMIT = 99;
     private int workTicks;
     private boolean autoMode = false;
     private boolean splitLevels = false;
@@ -135,6 +136,10 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     private static class DynamicItemStackHandler extends ItemStackHandler {
         private DynamicItemStackHandler(int size) { super(size); }
+
+        @Override protected int getStackLimit(int slot, ItemStack stack) {
+            return slot == 0 ? 1 : OUTPUT_STACK_LIMIT;
+        }
 
         private void resize(int size) {
             int targetSize = Math.max(OUTPUT_START, size);
@@ -295,7 +300,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     private ItemStack createBook(Holder<Enchantment> enchantment, int level) {
         ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
-        book.set(DataComponents.MAX_STACK_SIZE, OUTPUT_STACK_LIMIT);
+        book.set(DataComponents.MAX_STACK_SIZE, BOOK_STACK_COMPONENT_LIMIT);
         ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
         stored.set(enchantment, level);
         book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
