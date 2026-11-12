@@ -1,12 +1,117 @@
 package dev.whimsyautomation.block.entity;
 
 import dev.whimsyautomation.registry.ModBlockEntities;
+import dev.whimsyautomation.util.SidedMachineItemHandler;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
+import org.jetbrains.annotations.Nullable;
 
+/** Input slot 0; output slots 1-54. Each enchantment level becomes a level-I book. */
 public final class EnchantmentExtractorBlockEntity extends BlockEntity {
+    public static final int OUTPUT_START = 1;
+    public static final int OUTPUT_SLOTS = 54;
+    private int workTicks;
+
+    private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
+        @Override public int getSlotLimit(int slot) { return 1; }
+        @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty(); }
+        @Override protected void onContentsChanged(int slot) { setChanged(); }
+    };
+
+    private final IItemHandler topHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
+    private final IItemHandler bottomHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, false, true);
+    private final IItemHandler sideHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
+    private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, true);
+
     public EnchantmentExtractorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), pos, state);
+    }
+
+    public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
+        if (side == null) return unsidedHandler;
+        if (side == Direction.DOWN) return bottomHandler;
+        if (side == Direction.UP) return topHandler;
+        return sideHandler;
+    }
+
+    public static void serverTick(Level level, BlockPos pos, BlockState state, EnchantmentExtractorBlockEntity machine) {
+        if (level.isClientSide) return;
+        if (++machine.workTicks < 10) return;
+        machine.workTicks = 0;
+        machine.processOneItem();
+    }
+
+    private void processOneItem() {
+        ItemStack input = inventory.getStackInSlot(0);
+        if (input.isEmpty()) return;
+        ItemEnchantments enchantments = input.get(DataComponents.ENCHANTMENTS);
+        if (enchantments == null || enchantments.isEmpty()) return;
+
+        int bookCount = 0;
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
+            bookCount += Math.max(0, entry.getIntValue());
+        }
+        if (bookCount + 1 > OUTPUT_SLOTS) return;
+
+        ItemStack[] results = new ItemStack[bookCount + 1];
+        ItemStack cleaned = input.copyWithCount(1);
+        cleaned.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        results[0] = cleaned;
+
+        int index = 1;
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
+            for (int level = 0; level < entry.getIntValue(); level++) {
+                ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+                ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+                stored.set(entry.getKey(), 1);
+                book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
+                results[index++] = book;
+            }
+        }
+
+        int[] slots = findEmptyOutputSlots(results.length);
+        if (slots == null) return;
+        for (int i = 0; i < results.length; i++) inventory.setStackInSlot(slots[i], results[i]);
+
+        input.shrink(1);
+        inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
+        setChanged();
+    }
+
+    private int[] findEmptyOutputSlots(int count) {
+        int[] slots = new int[count];
+        int found = 0;
+        for (int slot = OUTPUT_START; slot < inventory.getSlots() && found < count; slot++) {
+            if (inventory.getStackInSlot(slot).isEmpty()) slots[found++] = slot;
+        }
+        return found == count ? slots : null;
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.put("Inventory", inventory.serializeNBT(registries));
+        tag.putInt("WorkTicks", workTicks);
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        workTicks = tag.getInt("WorkTicks");
     }
 }
