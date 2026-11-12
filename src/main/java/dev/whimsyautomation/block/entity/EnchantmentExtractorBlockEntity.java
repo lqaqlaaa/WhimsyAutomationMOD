@@ -46,7 +46,14 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     public boolean isAutoMode() { return autoMode; }
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
     public boolean isSplitLevels() { return splitLevels; }
-    public void setSplitLevels(boolean enabled) { splitLevels = enabled; setChanged(); }
+    public void setSplitLevels(boolean enabled) {
+        if (splitLevels == enabled) return;
+        splitLevels = enabled;
+        // The split option is a display/extraction rule, not an automation task.
+        // Rebuild outputs immediately even when automatic mode is disabled.
+        refreshGeneratedSlots();
+        setChanged();
+    }
     /** Rebuilds the virtual enchanted-book outputs; the input item is never consumed. */
     public void processOnce() { if (level != null && !level.isClientSide) refreshGeneratedSlots(); }
     public void dropAllContents() {
@@ -202,16 +209,18 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         List<ItemStack> generated = new ArrayList<>();
 
         if (!input.isEmpty() && !enchantments.isEmpty()) {
-            boolean splitSingleBook = splitLevels && input.is(Items.ENCHANTED_BOOK) && enchantments.size() == 1;
-            if (splitSingleBook) {
-                Object2IntMap.Entry<Holder<Enchantment>> entry = enchantments.entrySet().iterator().next();
-                for (int level : splitSingleEnchantmentLevels(entry.getIntValue())) {
-                    generated.add(createBook(entry.getKey(), level));
+            for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
+                int enchantmentLevel = entry.getIntValue();
+                if (splitLevels) {
+                    // One output slot per level: e.g. Sharpness V becomes five
+                    // separate Sharpness I books, for weapons and enchanted books alike.
+                    for (int i = 0; i < enchantmentLevel && generated.size() < OUTPUT_SLOTS; i++) {
+                        generated.add(createBook(entry.getKey(), 1));
+                    }
+                } else {
+                    generated.add(createBook(entry.getKey(), enchantmentLevel));
                 }
-            } else {
-                for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-                    generated.add(createBook(entry.getKey(), entry.getIntValue()));
-                }
+                if (generated.size() >= OUTPUT_SLOTS) break;
             }
         }
 
@@ -306,9 +315,10 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
-        if (level != null && !level.isClientSide) refreshGeneratedSlots();
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
         splitLevels = tag.getBoolean("SplitLevels");
+        // Rebuild only after mode flags have been restored from disk.
+        if (level != null && !level.isClientSide) refreshGeneratedSlots();
     }
 }
