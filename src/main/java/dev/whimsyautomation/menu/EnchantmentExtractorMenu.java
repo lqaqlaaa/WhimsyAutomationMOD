@@ -15,6 +15,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
@@ -38,12 +39,19 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         super(ModMenus.ENCHANTMENT_EXTRACTOR.get(), id);
         this.machine = playerInventory.player.level().getBlockEntity(pos) instanceof EnchantmentExtractorBlockEntity be ? be : null;
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
-        this.pageHandler = new IItemHandler() {
+        this.pageHandler = new IItemHandlerModifiable() {
             private int actualSlot(int pageSlot) {
                 return OUTPUT_START + getPage() * PAGE_SIZE + pageSlot;
             }
 
             @Override public int getSlots() { return PAGE_SIZE; }
+
+            @Override public void setStackInSlot(int slot, ItemStack stack) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return;
+                int actual = actualSlot(slot);
+                machine.ensureOutputInventorySize(actual + 1);
+                machine.getInventory().setStackInSlot(actual, stack);
+            }
 
             @Override public ItemStack getStackInSlot(int slot) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
