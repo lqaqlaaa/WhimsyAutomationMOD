@@ -7,6 +7,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -110,6 +111,16 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         machine.processOneItem();
     }
 
+    private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
+        // Durability is state, not recipe identity: a slightly damaged bow/tool
+        // is still the result item of its crafting recipe.
+        ItemStack normalizedResult = recipeResult.copy();
+        ItemStack normalizedInput = input.copy();
+        normalizedResult.remove(DataComponents.DAMAGE);
+        normalizedInput.remove(DataComponents.DAMAGE);
+        return ItemStack.isSameItemSameComponents(normalizedResult, normalizedInput);
+    }
+
     private void processOneItem() {
         if (level == null) return;
         ItemStack input = inventory.getStackInSlot(0);
@@ -119,7 +130,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             if (!lockedRecipe.isEmpty() && !holder.id().toString().equals(lockedRecipe)) continue;
             ItemStack result = holder.value().getResultItem(level.registryAccess());
-            if (result.isEmpty() || !ItemStack.isSameItemSameComponents(result, input)) continue;
+            if (result.isEmpty() || !matchesRecipeOutput(result, input)) continue;
             if (holder.value().getIngredients().isEmpty()) continue;
             candidates.add(holder);
         }
