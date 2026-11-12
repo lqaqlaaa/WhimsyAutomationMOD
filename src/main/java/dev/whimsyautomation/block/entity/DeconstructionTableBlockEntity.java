@@ -29,19 +29,34 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Reverse-processes all registered recipes that expose a result and ingredients. */
+/**
+ * Reverse-processes supported registered recipes. Recipe preview, recipe lock and
+ * automation are deliberately separate states.
+ */
 public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
     public static final int OUTPUT_SLOTS = 108;
 
+    private String selectedRecipe = "";
+    private String lockedRecipe = "";
+    private int workTicks;
+    private boolean autoMode = false;
+
     private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
         @Override public int getSlotLimit(int slot) { return 64; }
-        @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty(); }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            if (slot != 0 || stack.isEmpty()) return false;
+            // A locked recipe also constrains insertion, not just processing.
+            // This prevents hoppers from filling the input with unrelated items.
+            return lockedRecipe.isEmpty() || matchesRecipeIdOutput(lockedRecipe, stack);
+        }
+
         @Override protected void onContentsChanged(int slot) { setChanged(); }
 
         @Override
         public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
-            // Preserve old output contents while migrating older, smaller inventories.
             CompoundTag migrated = tag.copy();
             migrated.putInt("Size", OUTPUT_START + OUTPUT_SLOTS);
             super.deserializeNBT(registries, migrated);
@@ -53,13 +68,30 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private final IItemHandler sideHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
     private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, true);
 
-    private String lockedRecipe = "";
-    private int workTicks;
-    private boolean autoMode = false;
+    public DeconstructionTableBlockEntity(BlockPos pos, BlockState state) {
+        super(ModBlockEntities.DECONSTRUCTION_TABLE.get(), pos, state);
+    }
 
+    public ItemStackHandler getInventory() { return inventory; }
     public boolean isAutoMode() { return autoMode; }
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
-    public void processOnce() { if (level != null && !level.isClientSide) processOneItem(); }
+    public String getSelectedRecipe() { return selectedRecipe; }
+    public String getLockedRecipe() { return lockedRecipe; }
+
+    public void setSelectedRecipe(@Nullable ResourceLocation recipeId) {
+        selectedRecipe = recipeId == null ? "" : recipeId.toString();
+        setChanged();
+    }
+
+    public void setLockedRecipe(@Nullable ResourceLocation recipeId) {
+        lockedRecipe = recipeId == null ? "" : recipeId.toString();
+        setChanged();
+    }
+
+    public void processOnce() {
+        if (level != null && !level.isClientSide) processOneItem(false);
+    }
+
     public void dropAllContents() {
         if (level == null || level.isClientSide) return;
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
@@ -71,14 +103,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
     }
 
-    public DeconstructionTableBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.DECONSTRUCTION_TABLE.get(), pos, state);
-    }
-
-    public ItemStackHandler getInventory() { return inventory; }
-
-    @Override
-    public Component getDisplayName() {
+    @Override public Component getDisplayName() {
         return Component.translatable("container.whimsy_automation.deconstruction_table");
     }
 
@@ -95,44 +120,58 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         return sideHandler;
     }
 
-    public String getLockedRecipe() { return lockedRecipe; }
-
-    public void setLockedRecipe(@Nullable ResourceLocation recipeId) {
-        lockedRecipe = recipeId == null ? "" : recipeId.toString();
-        setChanged();
-    }
-
     public static void serverTick(Level level, BlockPos pos, BlockState state, DeconstructionTableBlockEntity machine) {
-        if (level.isClientSide) return;
-        if (!machine.autoMode) return;
+        if (level.isClientSide || !machine.autoMode) return;
         if (++machine.workTicks < 10) return;
         machine.workTicks = 0;
-        machine.processOneItem();
+        machine.processOneItem(true);
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        // Reverse crafting identifies the recipe result by item type, not by
-        // runtime state such as durability, enchantments, custom name or repair cost.
-        // Component variants can still produce multiple candidates for the UI to cycle.
-        return ItemStack.isSameItem(recipeResult, input);
+        return !recipeResult.isEmpty() && !input.isEmpty() && ItemStack.isSameItem(recipeResult, input);
     }
 
-    private void processOneItem() {
+    private boolean matchesRecipeIdOutput(String recipeId, ItemStack input) {
+        if (level == null || recipeId == null || recipeId.isEmpty() || input.isEmpty()) return false;
+        for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
+            if (!holder.id().toString().equals(recipeId)) continue;
+            return matchesRecipeOutput(holder.value().getResultItem(level.registryAccess()), input);
+        }
+        return false;
+    }
+
+    private RecipeHolder<?> findRecipe(String recipeId) {
+        if (level == null || recipeId == null || recipeId.isEmpty()) return null;
+        for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
+            if (holder.id().toString().equals(recipeId)) return holder;
+        }
+        return null;
+    }
+
+    private void processOneItem(boolean automatic) {
         if (level == null) return;
         ItemStack input = inventory.getStackInSlot(0);
         if (input.isEmpty()) return;
 
-        List<RecipeHolder<?>> candidates = new ArrayList<>();
-        for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
-            if (!lockedRecipe.isEmpty() && !holder.id().toString().equals(lockedRecipe)) continue;
-            ItemStack result = holder.value().getResultItem(level.registryAccess());
-            if (result.isEmpty() || !matchesRecipeOutput(result, input)) continue;
-            if (holder.value().getIngredients().isEmpty()) continue;
-            candidates.add(holder);
+        // Lock always wins. Otherwise use the explicitly previewed recipe.
+        // If a chosen recipe does not match this input, stop; never fall back to
+        // another recipe and accidentally consume a different item.
+        String chosenId = !lockedRecipe.isEmpty() ? lockedRecipe : selectedRecipe;
+        RecipeHolder<?> selected = chosenId.isEmpty() ? null : findRecipe(chosenId);
+        if (!chosenId.isEmpty()) {
+            if (selected == null || !matchesRecipeOutput(selected.value().getResultItem(level.registryAccess()), input)) return;
+        } else {
+            List<RecipeHolder<?>> candidates = new ArrayList<>();
+            for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
+                ItemStack result = holder.value().getResultItem(level.registryAccess());
+                if (matchesRecipeOutput(result, input) && !holder.value().getIngredients().isEmpty()) candidates.add(holder);
+            }
+            candidates.sort((a, b) -> a.id().compareTo(b.id()));
+            if (candidates.isEmpty()) return;
+            selected = candidates.getFirst();
         }
-        if (candidates.isEmpty()) return;
-        candidates.sort((a, b) -> a.id().compareTo(b.id()));
-        RecipeHolder<?> selected = candidates.getFirst();
+
+        if (selected.value().getIngredients().isEmpty()) return;
         ItemStack recipeResult = selected.value().getResultItem(level.registryAccess());
         int inputCost = Math.max(1, recipeResult.getCount());
         if (input.getCount() < inputCost) return;
@@ -146,8 +185,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
         if (recovered.isEmpty()) return;
 
-        // Plan all output changes on copies first. Existing compatible stacks are
-        // filled before empty slots, so repeated ingredients do not clutter pages.
         List<ItemStack> outputPlan = new ArrayList<>(OUTPUT_SLOTS);
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
             outputPlan.add(inventory.getStackInSlot(slot).copy());
@@ -156,13 +193,10 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             if (!insertIntoOutputPlan(outputPlan, result.copy())) return;
         }
 
-        // Commit outputs and input consumption only after the complete plan fits.
         for (int i = 0; i < outputPlan.size(); i++) {
             ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
             ItemStack after = outputPlan.get(i);
-            if (!ItemStack.matches(before, after)) {
-                inventory.setStackInSlot(OUTPUT_START + i, after);
-            }
+            if (!ItemStack.matches(before, after)) inventory.setStackInSlot(OUTPUT_START + i, after);
         }
         input.shrink(inputCost);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
@@ -170,7 +204,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
-        // Merge with matching item+components first.
         for (ItemStack existing : plan) {
             if (incoming.isEmpty()) return true;
             if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, incoming)) continue;
@@ -181,7 +214,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
                 incoming.shrink(moved);
             }
         }
-        // Then distribute any remainder across empty slots.
         for (int i = 0; i < plan.size() && !incoming.isEmpty(); i++) {
             if (!plan.get(i).isEmpty()) continue;
             int moved = Math.min(incoming.getCount(), Math.min(incoming.getMaxStackSize(), inventory.getSlotLimit(OUTPUT_START)));
@@ -195,6 +227,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
+        tag.putString("SelectedRecipe", selectedRecipe);
         tag.putString("LockedRecipe", lockedRecipe);
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
@@ -204,6 +237,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        selectedRecipe = tag.getString("SelectedRecipe");
         lockedRecipe = tag.getString("LockedRecipe");
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
