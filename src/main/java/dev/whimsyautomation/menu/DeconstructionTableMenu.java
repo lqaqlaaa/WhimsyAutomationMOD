@@ -155,6 +155,20 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return found.get(index);
     }
 
+    /** Updates the client preview immediately; the server selection remains authoritative. */
+    public void cyclePreview(int delta) {
+        List<RecipeHolder<?>> found = candidates();
+        if (found.isEmpty()) {
+            syncedRecipeIndex = -1;
+            return;
+        }
+        int index = syncedRecipeIndex;
+        if (index < 0 || index >= found.size()) {
+            index = delta < 0 ? 0 : -1;
+        }
+        syncedRecipeIndex = Math.floorMod(index + delta, found.size());
+    }
+
     public List<ItemStack> getPreviewStacks() {
         ItemStack[] cells = new ItemStack[9];
         Arrays.fill(cells, ItemStack.EMPTY);
