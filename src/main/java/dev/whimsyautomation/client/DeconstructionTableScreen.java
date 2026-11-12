@@ -76,15 +76,20 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         slot(g, x + 22, y + 52);
         for (int i = 0; i < 54; i++) {
             slot(g, x + 66 + (i % 9) * 18, y + 42 + (i / 9) * 18);
-            slot(g, x + 246 + (i % 9) * 18, y + 42 + (i / 9) * 18);
         }
         for (int i = 0; i < 27; i++) slot(g, x + 26 + (i % 9) * 18, y + 220 + (i / 9) * 18);
         for (int i = 0; i < 9; i++) slot(g, x + 26 + i * 18, y + 278);
 
         List<ItemStack> preview = menu.getPreviewStacks();
+        int columns = Math.max(3, menu.getPreviewColumns());
+        int rows = Math.max(1, (preview.size() + columns - 1) / columns);
+        int previewX = x + 246 + (9 - columns) * 9;
+        int previewY = y + 42 + (6 - rows) * 9;
         for (int i = 0; i < preview.size(); i++) {
-            ItemStack stack = preview.get(i);
-            if (!stack.isEmpty()) g.renderItem(stack, x + 246 + (i % 9) * 18, y + 42 + (i / 9) * 18);
+            int itemX = previewX + (i % columns) * 18;
+            int itemY = previewY + (i / columns) * 18;
+            slot(g, itemX, itemY);
+            g.renderItem(preview.get(i), itemX, itemY);
         }
         drawSwitch(g, x + 12, y + 190, menu.isAutoMode());
     }
