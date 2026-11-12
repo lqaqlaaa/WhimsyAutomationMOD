@@ -39,7 +39,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         this.pageHandler = new IItemHandler() {
             private int actualSlot(int pageSlot) {
-                return OUTPUT_START + syncedPage * PAGE_SIZE + pageSlot;
+                return OUTPUT_START + getPage() * PAGE_SIZE + pageSlot;
             }
 
             @Override public int getSlots() { return PAGE_SIZE; }
@@ -113,7 +113,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     }
 
     private int getActualOutputSlot(int menuSlotIndex) {
-        return OUTPUT_START + syncedPage * PAGE_SIZE + (menuSlotIndex - OUTPUT_MENU_START);
+        return OUTPUT_START + getPage() * PAGE_SIZE + (menuSlotIndex - OUTPUT_MENU_START);
     }
 
     public int getPage() { return Math.min(syncedPage, getPageCount() - 1); }
