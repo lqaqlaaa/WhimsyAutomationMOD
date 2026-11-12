@@ -164,7 +164,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         List<RecipeHolder<?>> found = new ArrayList<>();
         for (RecipeHolder<?> holder : allRecipes()) {
             Recipe<?> recipe = holder.value();
-            if (recipe.getIngredients().isEmpty()) continue;
+            if (dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe).isEmpty()) continue;
             ItemStack result = recipe.getResultItem(level.registryAccess());
             if (!matchesRecipeOutput(result, input)) continue;
             found.add(holder);
@@ -246,7 +246,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         // JEI display alternatives can be client-only or cycle through choices that
         // the actual recipe does not consume, so they must not override this list.
         List<ItemStack> recovered = new ArrayList<>();
-        for (Ingredient ingredient : holder.value().getIngredients()) {
+        for (Ingredient ingredient : dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(holder.value())) {
             if (ingredient.isEmpty()) continue;
             ItemStack[] choices = ingredient.getItems();
             if (choices.length > 0 && !choices[0].isEmpty()) recovered.add(choices[0].copy());
