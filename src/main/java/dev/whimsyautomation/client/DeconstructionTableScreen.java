@@ -7,6 +7,8 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
+import java.util.List;
+
 public final class DeconstructionTableScreen extends AbstractContainerScreen<DeconstructionTableMenu> {
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -27,6 +29,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(3)).bounds(leftPos + 90, topPos + 124, 66, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.previous"), b -> send(4)).bounds(leftPos + 140, topPos + 104, 38, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.next"), b -> send(5)).bounds(leftPos + 182, topPos + 104, 42, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.lock"), b -> send(6))
+                .bounds(leftPos + 158, topPos + 124, 66, 18).build());
     }
 
     private void drawSwitch(GuiGraphics g, int x, int y, boolean enabled) {
@@ -64,11 +68,17 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         g.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"), 8, 8, 0xF0D0A2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.input"), 12, 30, 0xD9B98D, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 66, 30, 0xA9D5B8, false);
-        String status = font.plainSubstrByWidth(menu.getRecipeStatus(), 158);
-        g.drawString(font, status, 62, 88, 0xE0C49B, false);
-        g.drawString(font, Component.translatable("screen.whimsy_automation.page", menu.getPage() + 1, menu.getPageCount()), 64, 109, 0xD4C7AF, false);
-        g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 12, 128, 0xC9D3E1, false);
-        g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xB6B8BC, false);
+        String status = font.plainSubstrByWidth(menu.getRecipeStatus(), 166);
+        g.drawString(font, status, 62, 88, menu.isLocked() ? 0xFFFFC66E : 0xFFE0C49B, false);
+        List<String> preview = menu.getPreviewLines();
+        String previewText = preview.isEmpty() ? Component.translatable("screen.whimsy_automation.preview_empty").getString()
+                : String.join(" · ", preview);
+        previewText = font.plainSubstrByWidth(previewText, 166);
+        g.drawString(font, previewText, 62, 98, 0xFFB9C6D3, false);
+        g.drawString(font, Component.translatable("screen.whimsy_automation.page", menu.getPage() + 1, menu.getPageCount()), 64, 109, 0xFFD4C7AF, false);
+        g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 12, 128, 0xFFC9D3E1, false);
+        g.drawString(font, Component.translatable(menu.isLocked() ? "screen.whimsy_automation.unlock" : "screen.whimsy_automation.lock"), 160, 128, 0xFFFFC66E, false);
+        g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xFFB6B8BC, false);
     }
 
     @Override
