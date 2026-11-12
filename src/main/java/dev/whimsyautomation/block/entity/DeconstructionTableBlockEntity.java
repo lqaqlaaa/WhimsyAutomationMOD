@@ -124,7 +124,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private void processOneItem() {
         if (level == null) return;
         ItemStack input = inventory.getStackInSlot(0);
-        if (input.isEmpty() || lockedRecipe.isEmpty()) return;
+        if (input.isEmpty()) return;
 
         List<RecipeHolder<?>> candidates = new ArrayList<>();
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
@@ -136,6 +136,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
         if (candidates.isEmpty()) return;
         candidates.sort((a, b) -> a.id().compareTo(b.id()));
+        if (lockedRecipe.isEmpty() && candidates.size() > 1) return;
 
         RecipeHolder<?> selected = candidates.getFirst();
         ItemStack recipeResult = selected.value().getResultItem(level.registryAccess());
