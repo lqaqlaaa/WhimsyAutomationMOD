@@ -22,7 +22,17 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
         machine=inv.player.level().getBlockEntity(pos) instanceof EnchantmentConversionTableBlockEntity be?be:null;
         access=ContainerLevelAccess.create(inv.player.level(),pos);
         ItemStackHandler handler=machine==null?new ItemStackHandler(4):machine.getInventory();
-        for(int i=0;i<4;i++) addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler,i,35+i*36,52));
+        for(int i=0;i<4;i++) {
+            final int slotIndex=i;
+            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler,i,35+i*36,52) {
+                @Override public boolean mayPickup(Player player) { return slotIndex != EnchantmentConversionTableBlockEntity.RESULT_SLOT || !getItem().isEmpty(); }
+                @Override public ItemStack onTake(Player player, ItemStack stack) {
+                    ItemStack taken=super.onTake(player,stack);
+                    if(slotIndex==EnchantmentConversionTableBlockEntity.RESULT_SLOT && machine!=null) machine.refreshCopyResult();
+                    return taken;
+                }
+            });
+        }
         for(int row=0;row<3;row++) for(int col=0;col<9;col++) addSlot(new Slot(inv,col+row*9+9,8+col*18,112+row*18));
         for(int col=0;col<9;col++) addSlot(new Slot(inv,col,8+col*18,170));
     }
