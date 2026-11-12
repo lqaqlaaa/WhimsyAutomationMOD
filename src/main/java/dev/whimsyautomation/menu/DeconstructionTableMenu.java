@@ -3,7 +3,6 @@ package dev.whimsyautomation.menu;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
-import dev.whimsyautomation.integration.jei.WhimsyJeiPlugin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -242,25 +241,16 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             return cachedPreviewStacks;
         }
 
-        List<ItemStack> result = null;
-        if (level.isClientSide && !target.isEmpty()) {
-            for (WhimsyJeiPlugin.Entry entry : WhimsyJeiPlugin.findByOutput(target)) {
-                if (entry.recipeId().equals(recipeId)) {
-                    result = mergeIdenticalStacks(entry.inputs());
-                    break;
-                }
-            }
+        // Preview and execution use the same server-registered Recipe ingredients.
+        // JEI display alternatives can be client-only or cycle through choices that
+        // the actual recipe does not consume, so they must not override this list.
+        List<ItemStack> recovered = new ArrayList<>();
+        for (Ingredient ingredient : holder.value().getIngredients()) {
+            if (ingredient.isEmpty()) continue;
+            ItemStack[] choices = ingredient.getItems();
+            if (choices.length > 0 && !choices[0].isEmpty()) recovered.add(choices[0].copy());
         }
-        if (result == null) {
-            List<ItemStack> recovered = new ArrayList<>();
-            for (Ingredient ingredient : holder.value().getIngredients()) {
-                if (ingredient.isEmpty()) continue;
-                ItemStack[] choices = ingredient.getItems();
-                // One ingredient alternative represents one consumed recipe slot.
-                if (choices.length > 0 && !choices[0].isEmpty()) recovered.add(choices[0].copy());
-            }
-            result = mergeIdenticalStacks(recovered);
-        }
+        List<ItemStack> result = mergeIdenticalStacks(recovered);
         cachedPreviewRecipeId = recipeId;
         cachedPreviewInput = target.copy();
         cachedPreviewStacks = result;
