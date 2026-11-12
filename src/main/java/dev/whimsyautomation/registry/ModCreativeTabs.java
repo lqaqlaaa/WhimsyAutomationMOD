@@ -16,6 +16,7 @@ public final class ModCreativeTabs {
                     .icon(() -> ModItems.ENCHANTMENT_EXTRACTOR.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.ENCHANTMENT_EXTRACTOR.get());
+                        output.accept(ModItems.ENCHANTMENT_CONVERSION_TABLE.get());
                         output.accept(ModItems.DECONSTRUCTION_TABLE.get());
                     })
                     .build());
