@@ -221,7 +221,18 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
                 selectedRecipe = selected.id().toString();
             }
         }
-        if (selected == null) return;
+        if (selected == null) {
+            // In automatic mode, an item with no dismantling recipe must not
+            // remain in the input slot and block an automation line. Pass the
+            // original stack through the normal output inventory unchanged.
+            // A locked recipe is intentionally excluded: its input filter
+            // already rejects unrelated items, and a missing locked recipe
+            // must never silently turn into a pass-through mode.
+            if (automatic && lockedRecipe.isEmpty()) {
+                passThroughInput(input);
+            }
+            return;
+        }
         Recipe<?> recipe = selected.value();
         ItemStack recipeResult = recipe.getResultItem(level.registryAccess());
         if (!matchesRecipeOutput(recipeResult, input)) return;
@@ -276,6 +287,32 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
     }
+    private void passThroughInput(ItemStack input) {
+        if (input.isEmpty()) return;
+
+        List<ItemStack> outputPlan = new ArrayList<>(Math.max(27, inventory.getSlots() - OUTPUT_START));
+        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
+            outputPlan.add(inventory.getStackInSlot(slot).copy());
+        }
+
+        // insertIntoOutputPlan merges identical stacks and expands the output
+        // inventory when necessary, so an unprocessable item is never trapped
+        // merely because the visible output page is full.
+        insertIntoOutputPlan(outputPlan, input.copy());
+
+        inventory.resize(OUTPUT_START + outputPlan.size());
+        for (int i = 0; i < outputPlan.size(); i++) {
+            ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
+            ItemStack after = outputPlan.get(i);
+            if (!ItemStack.matches(before, after)) {
+                inventory.setStackInSlot(OUTPUT_START + i, after);
+            }
+        }
+
+        inventory.setStackInSlot(0, ItemStack.EMPTY);
+        setChanged();
+    }
+
     private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
         for (ItemStack existing : plan) {
             if (incoming.isEmpty()) return true;
