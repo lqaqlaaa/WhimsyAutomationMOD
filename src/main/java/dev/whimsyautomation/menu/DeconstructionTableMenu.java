@@ -68,10 +68,6 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             @Override public void set(int value) { syncedPage = Math.max(0, Math.min(OUTPUT_PAGES - 1, value)); }
         });
         addDataSlot(new DataSlot() {
-            @Override public int get() { return syncedPreviewPage; }
-            @Override public void set(int value) { syncedPreviewPage = Math.max(0, Math.min(255, value)); }
-        });
-        addDataSlot(new DataSlot() {
             @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
             @Override public void set(int value) { syncedAutoMode = value != 0; }
         });
@@ -186,6 +182,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             index = delta < 0 ? 0 : -1;
         }
         syncedRecipeIndex = Math.floorMod(index + delta, found.size());
+        syncedPreviewPage = 0;
     }
 
     private List<ItemStack> getAllPreviewStacks() {
@@ -214,7 +211,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     public List<ItemStack> getPreviewStacks() {
         List<ItemStack> all = getAllPreviewStacks();
-        int start = syncedPreviewPage * PAGE_SIZE;
+        int start = getPreviewPage() * PAGE_SIZE;
         List<ItemStack> page = new ArrayList<>(PAGE_SIZE);
         for (int i = 0; i < PAGE_SIZE; i++) {
             int index = start + i;
@@ -223,7 +220,13 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return List.copyOf(page);
     }
 
-    public int getPreviewPage() { return syncedPreviewPage; }
+    public int getPreviewPage() {
+        return Math.min(syncedPreviewPage, getPreviewPageCount() - 1);
+    }
+    public void cyclePreviewPage(int delta) {
+        int pages = getPreviewPageCount();
+        syncedPreviewPage = Math.max(0, Math.min(pages - 1, getPreviewPage() + delta));
+    }
     public int getPreviewPageCount() {
         return Math.max(1, (getAllPreviewStacks().size() + PAGE_SIZE - 1) / PAGE_SIZE);
     }
@@ -269,8 +272,6 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (buttonId == 3) { machine.processOnce(); return true; }
         if (buttonId == 4) { syncedPage = Math.max(0, syncedPage - 1); return true; }
         if (buttonId == 5) { syncedPage = Math.min(OUTPUT_PAGES - 1, syncedPage + 1); return true; }
-        if (buttonId == 7) { syncedPreviewPage = Math.max(0, syncedPreviewPage - 1); return true; }
-        if (buttonId == 8) { syncedPreviewPage = Math.min(255, syncedPreviewPage + 1); return true; }
         if (buttonId == 6) {
             if (!machine.getLockedRecipe().isEmpty()) {
                 machine.setLockedRecipe(null);
