@@ -17,15 +17,17 @@ java {
 repositories {
     mavenCentral()
     maven { url = 'https://maven.blamejared.com' }
+    maven {
+        url = 'https://maven.maxleiter.com'
+        content { includeGroup('dev.vellum') }
+    }
 }
 
 neoForge {
     version = neo_version
 
     runs {
-        client {
-            client()
-        }
+        client { client() }
         server {
             server()
             programArgument '--nogui'
@@ -42,6 +44,7 @@ neoForge {
 dependencies {
     compileOnly "mezz.jei:jei-1.21.1-neoforge-api:${jei_version}"
     runtimeOnly "mezz.jei:jei-1.21.1-neoforge:${jei_version}"
+    implementation "dev.vellum:vellum-neoforge-1.21.1:${vellum_version}"
 }
 
 tasks.withType(ProcessResources).configureEach {
@@ -51,6 +54,7 @@ tasks.withType(ProcessResources).configureEach {
             neo_version            : neo_version,
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
+            vellum_version         : vellum_version,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,
