@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -135,6 +136,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (level == null || recipeId == null || recipeId.isEmpty() || input.isEmpty()) return false;
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             if (!holder.id().toString().equals(recipeId)) continue;
+            if (!(holder.value() instanceof CraftingRecipe)) return false;
             return matchesRecipeOutput(holder.value().getResultItem(level.registryAccess()), input);
         }
         return false;
@@ -153,34 +155,27 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         ItemStack input = inventory.getStackInSlot(0);
         if (input.isEmpty()) return;
 
-        // Lock always wins. Otherwise use the explicitly previewed recipe.
-        // If a chosen recipe does not match this input, stop; never fall back to
-        // another recipe and accidentally consume a different item.
+        // A recipe must be explicitly selected. A locked recipe always takes
+        // priority, and a mismatch is a hard stop: never fall back to another recipe.
         String chosenId = !lockedRecipe.isEmpty() ? lockedRecipe : selectedRecipe;
-        RecipeHolder<?> selected = chosenId.isEmpty() ? null : findRecipe(chosenId);
-        if (!chosenId.isEmpty()) {
-            if (selected == null || !matchesRecipeOutput(selected.value().getResultItem(level.registryAccess()), input)) return;
-        } else {
-            List<RecipeHolder<?>> candidates = new ArrayList<>();
-            for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
-                ItemStack result = holder.value().getResultItem(level.registryAccess());
-                if (matchesRecipeOutput(result, input) && !holder.value().getIngredients().isEmpty()) candidates.add(holder);
-            }
-            candidates.sort((a, b) -> a.id().compareTo(b.id()));
-            if (candidates.isEmpty()) return;
-            selected = candidates.getFirst();
-        }
+        if (chosenId.isEmpty()) return;
 
-        if (selected.value().getIngredients().isEmpty()) return;
+        RecipeHolder<?> selected = findRecipe(chosenId);
+        if (selected == null || !(selected.value() instanceof CraftingRecipe craftingRecipe)) return;
+
         ItemStack recipeResult = selected.value().getResultItem(level.registryAccess());
+        if (!matchesRecipeOutput(recipeResult, input)) return;
+
         int inputCost = Math.max(1, recipeResult.getCount());
         if (input.getCount() < inputCost) return;
 
         List<ItemStack> recovered = new ArrayList<>();
-        for (Ingredient ingredient : selected.value().getIngredients()) {
+        for (Ingredient ingredient : craftingRecipe.getIngredients()) {
             if (ingredient.isEmpty()) continue;
             ItemStack[] options = ingredient.getItems();
             if (options.length == 0) return;
+            // Ingredient tags can contain several valid items. The preview uses
+            // the same deterministic first option that the machine will return.
             recovered.add(options[0].copy());
         }
         if (recovered.isEmpty()) return;
@@ -193,6 +188,8 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             if (!insertIntoOutputPlan(outputPlan, result.copy())) return;
         }
 
+        // Commit only after every ingredient fits. This prevents partial
+        // output delivery followed by input consumption.
         for (int i = 0; i < outputPlan.size(); i++) {
             ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
             ItemStack after = outputPlan.get(i);
@@ -202,7 +199,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
     }
-
     private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
         for (ItemStack existing : plan) {
             if (incoming.isEmpty()) return true;
