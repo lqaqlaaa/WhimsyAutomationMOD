@@ -271,12 +271,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             if (existingMatch == null) merged.add(candidate.copy());
             else existingMatch.grow(candidate.getCount());
         }
-        // Preview-only stacks may exceed normal inventory limits so one repeated
-        // ingredient is shown in one slot with its complete quantity.
-        for (ItemStack stack : merged) {
-            stack.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE,
-                    Math.max(stack.getMaxStackSize(), stack.getCount()));
-        }
+        // Preview-only stacks keep their aggregate count even above normal stack limits.
         return List.copyOf(merged);
     }
 
