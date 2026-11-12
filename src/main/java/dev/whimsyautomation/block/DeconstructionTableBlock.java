@@ -45,6 +45,14 @@ public final class DeconstructionTableBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof DeconstructionTableBlockEntity machine) {
+            machine.dropAllContents();
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
+    @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
         return level.isClientSide ? null : createTickerHelper(type, ModBlockEntities.DECONSTRUCTION_TABLE.get(), DeconstructionTableBlockEntity::serverTick);
     }
