@@ -54,8 +54,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return stack;
                 int actual = actualSlot(slot);
-                return actual < machine.getInventory().getSlots()
-                        ? machine.getInventory().insertItem(actual, stack, simulate) : stack;
+                machine.ensureOutputInventorySize(actual + 1);
+                return machine.getInventory().insertItem(actual, stack, simulate);
             }
 
             @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
@@ -75,8 +75,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public boolean isItemValid(int slot, ItemStack stack) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return false;
                 int actual = actualSlot(slot);
-                return actual < machine.getInventory().getSlots()
-                        && machine.getInventory().isItemValid(actual, stack);
+                machine.ensureOutputInventorySize(actual + 1);
+                return machine.getInventory().isItemValid(actual, stack);
             }
         };
 
