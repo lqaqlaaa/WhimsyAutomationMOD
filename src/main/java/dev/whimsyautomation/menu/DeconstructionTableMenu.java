@@ -109,6 +109,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         supplied.remove(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
         expected.remove(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
         supplied.remove(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
+        expected.remove(net.minecraft.core.component.DataComponents.REPAIR_COST);
+        supplied.remove(net.minecraft.core.component.DataComponents.REPAIR_COST);
         return ItemStack.isSameItemSameComponents(expected, supplied);
     }
 
