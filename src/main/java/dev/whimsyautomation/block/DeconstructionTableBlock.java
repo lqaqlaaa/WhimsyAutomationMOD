@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public final class DeconstructionTableBlock extends BaseEntityBlock {
-    public static final MapCodec<DeconstructionTableBlock> CODEC = simpleCodec(DeconstructionTableBlock::new);
+    public static final MapCodec<DeconstructionTableBlock> CODEC = MapCodec.unit(DeconstructionTableBlock::new);
 
     public DeconstructionTableBlock() {
         super(BlockBehaviour.Properties.of().strength(3.5F).requiresCorrectToolForDrops());
