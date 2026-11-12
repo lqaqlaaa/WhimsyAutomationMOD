@@ -4,6 +4,7 @@ import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -80,13 +81,21 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) addSlot(new Slot(inventory, col, x + col * 18, y + 58));
     }
 
+    private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
+        ItemStack normalizedResult = recipeResult.copy();
+        ItemStack normalizedInput = input.copy();
+        normalizedResult.remove(DataComponents.DAMAGE);
+        normalizedInput.remove(DataComponents.DAMAGE);
+        return ItemStack.isSameItemSameComponents(normalizedResult, normalizedInput);
+    }
+
     private List<RecipeHolder<?>> candidates() {
         ItemStack input = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
         if (input.isEmpty()) return List.of();
         List<RecipeHolder<?>> found = new ArrayList<>();
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             ItemStack result = holder.value().getResultItem(level.registryAccess());
-            if (!result.isEmpty() && ItemStack.isSameItemSameComponents(result, input) && !holder.value().getIngredients().isEmpty()) found.add(holder);
+            if (!result.isEmpty() && matchesRecipeOutput(result, input) && !holder.value().getIngredients().isEmpty()) found.add(holder);
         }
         found.sort((a, b) -> a.id().compareTo(b.id()));
         return found;
