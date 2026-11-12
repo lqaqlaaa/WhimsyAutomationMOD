@@ -29,7 +29,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-/** Input slot 0; output slots 1-54. Each enchantment level becomes a level-I book. */
+/** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
 public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
     public static final int OUTPUT_SLOTS = 216;
@@ -57,6 +57,15 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         @Override public int getSlotLimit(int slot) { return 1; }
         @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty(); }
         @Override protected void onContentsChanged(int slot) { setChanged(); }
+
+        @Override
+        public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
+            // Older saves stored only 54 output slots. Keep their item data, but
+            // force the current capacity before ItemStackHandler resizes itself.
+            CompoundTag migrated = tag.copy();
+            migrated.putInt("Size", OUTPUT_START + OUTPUT_SLOTS);
+            super.deserializeNBT(registries, migrated);
+        }
     };
 
     private final IItemHandler topHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
