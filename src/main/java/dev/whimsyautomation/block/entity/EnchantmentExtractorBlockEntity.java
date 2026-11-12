@@ -41,17 +41,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private boolean splitLevels = false;
     private boolean autoExtractionPaused;
 
-    // Separate manual input for enchanted books; the original inventory layout stays intact.
-    private final ItemStackHandler bookInput = new ItemStackHandler(1) {
-        @Override public int getSlotLimit(int slot) { return 1; }
-        @Override public boolean isItemValid(int slot, ItemStack stack) {
-            ItemEnchantments stored = stack.get(DataComponents.STORED_ENCHANTMENTS);
-            return slot == 0 && stack.is(Items.ENCHANTED_BOOK) && stored != null && !stored.isEmpty();
-        }
-        @Override protected void onContentsChanged(int slot) { setChanged(); }
-    };
-
-    public ItemStackHandler getBookInput() { return bookInput; }
+    private boolean internalInventoryUpdate;
 
     public boolean isAutoMode() { return autoMode; }
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
@@ -67,17 +57,27 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 inventory.setStackInSlot(slot, ItemStack.EMPTY);
             }
         }
-        ItemStack pendingBook = bookInput.getStackInSlot(0);
-        if (!pendingBook.isEmpty()) {
-            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, pendingBook);
-            bookInput.setStackInSlot(0, ItemStack.EMPTY);
-        }
     }
 
     private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
         @Override public int getSlotLimit(int slot) { return 1; }
-        @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty() && !stack.is(Items.ENCHANTED_BOOK); }
-        @Override protected void onContentsChanged(int slot) { if (slot == 0) autoExtractionPaused = false; setChanged(); }
+        @Override public boolean isItemValid(int slot, ItemStack stack) {
+            if (stack.isEmpty()) return false;
+            if (slot == 0) return !getStackEnchantments(stack).isEmpty();
+            return stack.is(Items.ENCHANTED_BOOK) && !stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY).isEmpty();
+        }
+        @Override protected void onContentsChanged(int slot) {
+            if (!internalInventoryUpdate && slot > 0) {
+                ItemStack offeredBook = getStackInSlot(slot);
+                if (!offeredBook.isEmpty() && offeredBook.is(Items.ENCHANTED_BOOK) && applyBookToInput(offeredBook)) {
+                    internalInventoryUpdate = true;
+                    setStackInSlot(slot, ItemStack.EMPTY);
+                    internalInventoryUpdate = false;
+                }
+            }
+            if (slot == 0) autoExtractionPaused = false;
+            setChanged();
+        }
 
         @Override
         public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
@@ -130,14 +130,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (level == null) return;
 
         ItemStack item = inventory.getStackInSlot(0);
-        ItemStack book = bookInput.getStackInSlot(0);
-
-        // A book in the second input slot means "apply", never "extract".
-        if (!item.isEmpty() && !book.isEmpty()) {
-            applyBook(item, book);
-            return;
-        }
-
         // Prevent automatic mode from immediately stripping an item again after
         // the player has just applied a book to it. Changing the item input clears this.
         if (automatic && autoExtractionPaused) return;
@@ -175,8 +167,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         return !additions.isEmpty();
     }
 
-    private void applyBook(ItemStack item, ItemStack book) {
-        if (!canApplyBook(item, book)) return;
+    private boolean applyBookToInput(ItemStack book) {
+        ItemStack item = inventory.getStackInSlot(0);
+        if (!canApplyBook(item, book)) return false;
 
         ItemEnchantments stored = book.get(DataComponents.STORED_ENCHANTMENTS);
         ItemEnchantments existing = item.get(DataComponents.ENCHANTMENTS);
@@ -192,15 +185,20 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         item.set(DataComponents.ENCHANTMENTS, merged.toImmutable());
         inventory.setStackInSlot(0, item);
-        book.shrink(1);
-        bookInput.setStackInSlot(0, book.isEmpty() ? ItemStack.EMPTY : book);
         autoExtractionPaused = true;
         setChanged();
+        return true;
+    }
+
+    private static ItemEnchantments getStackEnchantments(ItemStack stack) {
+        return stack.is(Items.ENCHANTED_BOOK)
+                ? stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY)
+                : stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
     }
     private void extractEnchantments(ItemStack input) {
         if (input.isEmpty()) return;
-        ItemEnchantments enchantments = input.get(DataComponents.ENCHANTMENTS);
-        if (enchantments == null || enchantments.isEmpty()) return;
+        ItemEnchantments enchantments = getStackEnchantments(input);
+        if (enchantments.isEmpty()) return;
 
         int bookCount = 0;
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
@@ -210,7 +208,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         ItemStack[] results = new ItemStack[bookCount + 1];
         ItemStack cleaned = input.copyWithCount(1);
-        cleaned.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        if (input.is(Items.ENCHANTED_BOOK)) cleaned.set(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+        else cleaned.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
         results[0] = cleaned;
 
         int index = 1;
@@ -228,7 +227,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         int[] slots = findEmptyOutputSlots(results.length);
         if (slots == null) return;
+        internalInventoryUpdate = true;
         for (int i = 0; i < results.length; i++) inventory.setStackInSlot(slots[i], results[i]);
+        internalInventoryUpdate = false;
 
         input.shrink(1);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
@@ -248,7 +249,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
-        tag.put("BookInput", bookInput.serializeNBT(registries));
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
         tag.putBoolean("SplitLevels", splitLevels);
@@ -259,7 +259,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
-        if (tag.contains("BookInput")) bookInput.deserializeNBT(registries, tag.getCompound("BookInput"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
