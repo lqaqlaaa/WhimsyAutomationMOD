@@ -54,7 +54,10 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             return lockedRecipe.isEmpty() || matchesRecipeIdOutput(lockedRecipe, stack);
         }
 
-        @Override protected void onContentsChanged(int slot) { setChanged(); }
+        @Override protected void onContentsChanged(int slot) {
+            if (slot == 0 && lockedRecipe.isEmpty()) selectedRecipe = "";
+            setChanged();
+        }
 
         @Override
         public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
