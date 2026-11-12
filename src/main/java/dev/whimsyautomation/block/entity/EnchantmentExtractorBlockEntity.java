@@ -30,6 +30,9 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
 public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
@@ -151,24 +154,26 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 existing == null ? ItemEnchantments.EMPTY : existing);
         boolean changed = false;
 
+        List<Holder<Enchantment>> additions = new ArrayList<>();
+        CustomData customData = book.get(DataComponents.CUSTOM_DATA);
+        boolean splitFragment = customData != null && customData.copyTag().getBoolean("WhimsySplitLevelFragment");
+
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
             Holder<Enchantment> enchantment = entry.getKey();
-            if (!enchantment.value().isSupportedItem(item)) continue;
-            boolean compatible = true;
+            // Never consume a multi-enchantment book partially.
+            if (!enchantment.value().isSupportedItem(item)) return;
             if (existing != null) {
                 for (Object2IntMap.Entry<Holder<Enchantment>> oldEntry : existing.entrySet()) {
-                    if (!Enchantment.areCompatible(enchantment, oldEntry.getKey())) {
-                        compatible = false;
-                        break;
-                    }
+                    if (!Enchantment.areCompatible(enchantment, oldEntry.getKey())) return;
                 }
             }
-            if (!compatible) continue;
+            for (Holder<Enchantment> added : additions) {
+                if (!Enchantment.areCompatible(enchantment, added)) return;
+            }
+            additions.add(enchantment);
 
             int oldLevel = existing == null ? 0 : existing.getLevel(enchantment);
             int bookLevel = entry.getIntValue();
-            CustomData customData = book.get(DataComponents.CUSTOM_DATA);
-            boolean splitFragment = customData != null && customData.copyTag().getBoolean("WhimsySplitLevelFragment");
             int nextLevel = splitFragment && oldLevel > 0
                     ? oldLevel + 1
                     : oldLevel == bookLevel ? oldLevel + 1 : Math.max(oldLevel, bookLevel);
