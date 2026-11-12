@@ -18,5 +18,10 @@
   "screen.whimsy_automation.recipe_unavailable": "锁定的配方不可用",
   "screen.whimsy_automation.recipe_select": "选择配方（%1$s）",
   "screen.whimsy_automation.recipe_changed": "配方列表已更改",
-  "screen.whimsy_automation.recipe_locked": "已锁定：%1$s"
+  "screen.whimsy_automation.recipe_locked": "已锁定：%1$s",
+  "screen.whimsy_automation.auto_state": "自动化：%s",
+  "screen.whimsy_automation.split_state": "拆分等级：%s",
+  "screen.whimsy_automation.on": "开启",
+  "screen.whimsy_automation.off": "关闭",
+  "screen.whimsy_automation.book_input": "附魔书"
 }
