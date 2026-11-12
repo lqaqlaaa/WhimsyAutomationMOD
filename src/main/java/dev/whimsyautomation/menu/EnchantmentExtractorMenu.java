@@ -20,6 +20,7 @@ import net.neoforged.neoforge.items.SlotItemHandler;
 
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
+    private static final int MIN_OUTPUT_PAGES = 10;
     private static final int OUTPUT_START = 1;
     private static final int OUTPUT_MENU_START = 1;
     private static final int MACHINE_SLOT_COUNT = OUTPUT_MENU_START + PAGE_SIZE;
@@ -27,7 +28,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final IItemHandler pageHandler;
     private int syncedPage;
-    private int syncedOutputSlotCount = OUTPUT_START + 1;
+    private int syncedOutputSlotCount = OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES;
     private boolean syncedAutoMode;
     private int syncedOutputMode = 1;
 
@@ -102,7 +103,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         addDataSlot(new DataSlot() {
             @Override public int get() { return machine == null ? OUTPUT_START + 1 : Math.min(32767, machine.getInventory().getSlots()); }
             @Override public void set(int value) {
-                syncedOutputSlotCount = Math.max(OUTPUT_START + 1, value);
+                syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES, value);
                 if (machine != null) machine.ensureOutputInventorySize(syncedOutputSlotCount);
             }
         });
