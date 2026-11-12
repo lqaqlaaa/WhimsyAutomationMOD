@@ -67,7 +67,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             @Override public ItemStack remove(int amount) { return handler.extractItem(actualSlot(), amount, false); }
             @Override public boolean mayPlace(ItemStack stack) { return false; }
             @Override public int getMaxStackSize() { return handler.getSlotLimit(actualSlot()); }
-            @Override public void setChanged() { handler.getStackInSlot(actualSlot()); }
+            @Override public void setChanged() { handler.setStackInSlot(actualSlot(), handler.getStackInSlot(actualSlot())); }
         });
     }
 
