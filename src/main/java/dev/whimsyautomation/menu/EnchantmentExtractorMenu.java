@@ -19,7 +19,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_START = 1;
     private static final int OUTPUT_SLOTS = 216;
-    private static final int MACHINE_SLOT_COUNT = 218;
+    private static final int MACHINE_SLOT_COUNT = 217;
     private static final int OUTPUT_PAGES = 8;
     private final EnchantmentExtractorBlockEntity machine;
     private final ContainerLevelAccess access;
@@ -34,15 +34,9 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         if (machine != null) {
             addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getInventory(), 0, 18, 52));
-            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getBookInput(), 0, 18, 76) {
-                @Override public boolean mayPlace(ItemStack stack) {
-                    return machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack);
-                }
-            });
             for (int i = 0; i < 216; i++) addPagedOutputSlot(machine.getInventory(), i);
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 52));
-            addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 76));
             ItemStackHandler dummyHandler = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS);
             for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(dummyHandler, i);
         }
@@ -79,20 +73,6 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) addSlot(new Slot(inventory, col, x + col * 18, y + 58));
     }
 
-    public String getApplyPreview() {
-        if (machine == null) return "";
-        ItemStack item = slots.get(0).getItem();
-        ItemStack book = slots.get(1).getItem();
-        if (item.isEmpty()) return Component.translatable("screen.whimsy_automation.apply_need_item").getString();
-        if (book.isEmpty()) return Component.translatable("screen.whimsy_automation.apply_need_book").getString();
-        if (!machine.canApplyBook(item, book)) return Component.translatable("screen.whimsy_automation.apply_invalid").getString();
-        return Component.translatable("screen.whimsy_automation.apply_ready", book.getHoverName()).getString();
-    }
-
-    public boolean isApplying() {
-        return !slots.get(0).getItem().isEmpty() && !slots.get(1).getItem().isEmpty();
-    }
-
     public int getPage() { return syncedPage; }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isSplitLevels() { return syncedSplitLevels; }
@@ -119,7 +99,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
         } else {
             boolean moved = source.is(net.minecraft.world.item.Items.ENCHANTED_BOOK)
-                    ? moveItemStackTo(source, 1, 2, false)
+                    ? moveItemStackTo(source, 1, MACHINE_SLOT_COUNT, false)
                     : moveItemStackTo(source, 0, 1, false);
             if (!moved) return ItemStack.EMPTY;
         }
