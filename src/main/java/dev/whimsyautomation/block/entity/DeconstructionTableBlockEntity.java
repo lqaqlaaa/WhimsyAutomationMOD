@@ -204,7 +204,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             List<RecipeHolder<?>> matches = new ArrayList<>();
             for (RecipeHolder<?> candidate : level.getRecipeManager().getRecipes()) {
                 if (matchesRecipeOutput(candidate.value().getResultItem(level.registryAccess()), input)
-                        && !candidate.value().getIngredients().isEmpty()) matches.add(candidate);
+                        && !dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(candidate.value()).isEmpty()) matches.add(candidate);
             }
             matches.sort((a, b) -> a.id().compareTo(b.id()));
             if (!matches.isEmpty()) {
@@ -218,7 +218,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (!matchesRecipeOutput(recipeResult, input)) return;
 
         List<ItemStack> recoveredPerBatch = new ArrayList<>();
-        for (Ingredient ingredient : recipe.getIngredients()) {
+        for (Ingredient ingredient : dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe)) {
             if (ingredient.isEmpty()) continue;
             ItemStack[] options = ingredient.getItems();
             if (options.length == 0) return;
