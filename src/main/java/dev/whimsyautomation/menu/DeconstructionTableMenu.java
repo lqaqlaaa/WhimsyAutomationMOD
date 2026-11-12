@@ -20,6 +20,8 @@ import java.util.Arrays;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.SlotItemHandler;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
@@ -28,12 +30,12 @@ import java.util.List;
 public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_START = 1;
-    private static final int OUTPUT_SLOTS = 108;
-    private static final int MACHINE_SLOT_COUNT = 109;
-    private static final int OUTPUT_PAGES = 4;
+    private static final int MACHINE_SLOT_COUNT = 1 + PAGE_SIZE;
     private final DeconstructionTableBlockEntity machine;
     private final ContainerLevelAccess access;
     private final Level level;
+    private final IItemHandler pageHandler;
+    private int syncedOutputSlotCount = 28;
     private int syncedRecipeIndex = -1;
     private int syncedPage;
     private int syncedPreviewPage;
@@ -50,14 +52,36 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         this.level = playerInventory.player.level();
         this.machine = level.getBlockEntity(pos) instanceof DeconstructionTableBlockEntity be ? be : null;
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
+        this.pageHandler = new IItemHandler() {
+            private int actualSlot(int pageSlot) { return OUTPUT_START + syncedPage * PAGE_SIZE + pageSlot; }
+            @Override public int getSlots() { return PAGE_SIZE; }
+            @Override public ItemStack getStackInSlot(int slot) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                int actual = actualSlot(slot);
+                machine.ensureOutputInventorySize(actual + 1);
+                return machine.getInventory().getStackInSlot(actual);
+            }
+            @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return stack;
+                int actual = actualSlot(slot);
+                machine.ensureOutputInventorySize(actual + 1);
+                return machine.getInventory().insertItem(actual, stack, simulate);
+            }
+            @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                int actual = actualSlot(slot);
+                machine.ensureOutputInventorySize(actual + 1);
+                return machine.getInventory().extractItem(actual, amount, simulate);
+            }
+            @Override public int getSlotLimit(int slot) { return 64; }
+            @Override public boolean isItemValid(int slot, ItemStack stack) { return false; }
+        };
         if (machine != null) {
-            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getInventory(), 0, 22, 60));
-            for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(machine.getInventory(), i);
+            addSlot(new SlotItemHandler(machine.getInventory(), 0, 22, 60));
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 22, 60));
-            ItemStackHandler dummyHandler = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS);
-            for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(dummyHandler, i);
         }
+        for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
         addPlayerInventory(playerInventory, 26, 182);
         addDataSlot(new DataSlot() {
             @Override public int get() { return getServerRecipeIndex(); }
@@ -65,7 +89,14 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         });
         addDataSlot(new DataSlot() {
             @Override public int get() { return syncedPage; }
-            @Override public void set(int value) { syncedPage = Math.max(0, Math.min(OUTPUT_PAGES - 1, value)); }
+            @Override public void set(int value) { syncedPage = Math.max(0, Math.min(getPageCount() - 1, value)); }
+        });
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return machine == null ? 28 : Math.min(32767, machine.getInventory().getSlots()); }
+            @Override public void set(int value) {
+                syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE, value);
+                if (machine != null) machine.ensureOutputInventorySize(syncedOutputSlotCount);
+            }
         });
         addDataSlot(new DataSlot() {
             @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
@@ -81,14 +112,10 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         });
     }
 
-    private void addPagedOutputSlot(ItemStackHandler handler, int outputIndex) {
-        int actualSlot = OUTPUT_START + outputIndex;
-        int visibleIndex = outputIndex % PAGE_SIZE;
-        int x = 50 + (visibleIndex % 9) * 18;
-        int y = 42 + (visibleIndex / 9) * 18;
-        addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler, actualSlot, x, y) {
-            @Override public boolean isActive() { return outputIndex / PAGE_SIZE == syncedPage; }
-        });
+    private void addPagedOutputSlot(int outputIndex) {
+        int x = 50 + (outputIndex % 9) * 18;
+        int y = 42 + (outputIndex / 9) * 18;
+        addSlot(new SlotItemHandler(pageHandler, outputIndex, x, y));
     }
 
     private void addPlayerInventory(Inventory inventory, int x, int y) {
@@ -292,17 +319,21 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return Component.translatable("screen.whimsy_automation.recipe_count", found.size()).getString();
     }
 
-    public int getPage() { return syncedPage; }
+    public int getPage() { return Math.min(syncedPage, getPageCount() - 1); }
+    public int getPageCount() {
+        int slotsCount = machine == null ? syncedOutputSlotCount : machine.getInventory().getSlots();
+        return Math.max(1, (Math.max(PAGE_SIZE, slotsCount - OUTPUT_START) + PAGE_SIZE - 1) / PAGE_SIZE);
+    }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isLocked() { return syncedLocked; }
-    public int getPageCount() { return OUTPUT_PAGES; }
+    
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
         if (buttonId == 2) { machine.setAutoMode(!machine.isAutoMode()); return true; }
         if (buttonId == 3) { machine.processOnce(); return true; }
         if (buttonId == 4) { syncedPage = Math.max(0, syncedPage - 1); return true; }
-        if (buttonId == 5) { syncedPage = Math.min(OUTPUT_PAGES - 1, syncedPage + 1); return true; }
+        if (buttonId == 5) { syncedPage = Math.min(getPageCount() - 1, syncedPage + 1); return true; }
         if (buttonId == 6) {
             if (!machine.getLockedRecipe().isEmpty()) {
                 machine.setLockedRecipe(null);
@@ -330,6 +361,15 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack source = slot.getItem();
         ItemStack copy = source.copy();
+        if (index >= OUTPUT_START && index < MACHINE_SLOT_COUNT) {
+            int actualOutput = OUTPUT_START + syncedPage * PAGE_SIZE + (index - OUTPUT_START);
+            ItemStack moving = source.copy();
+            if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
+            int movedCount = copy.getCount() - moving.getCount();
+            if (movedCount <= 0) return ItemStack.EMPTY;
+            machine.getInventory().extractItem(actualOutput, movedCount, false);
+            return copy.copyWithCount(movedCount);
+        }
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
         } else if (!moveItemStackTo(source, 0, 1, false)) return ItemStack.EMPTY;
