@@ -129,7 +129,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        return !recipeResult.isEmpty() && !input.isEmpty() && ItemStack.isSameItem(recipeResult, input);
+        return !recipeResult.isEmpty() && !input.isEmpty() && ItemStack.isSameItemSameComponents(recipeResult, input);
     }
 
     private boolean matchesRecipeIdOutput(String recipeId, ItemStack input) {
