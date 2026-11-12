@@ -46,7 +46,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             ItemEnchantments stored = stack.get(DataComponents.STORED_ENCHANTMENTS);
             return slot == 0 && stack.is(Items.ENCHANTED_BOOK) && stored != null && !stored.isEmpty();
         }
-        @Override protected void onContentsChanged(int slot) { if (slot == 0) autoExtractionPaused = false; setChanged(); }
+        @Override protected void onContentsChanged(int slot) { setChanged(); }
     };
 
     public ItemStackHandler getBookInput() { return bookInput; }
@@ -65,12 +65,17 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 inventory.setStackInSlot(slot, ItemStack.EMPTY);
             }
         }
+        ItemStack pendingBook = bookInput.getStackInSlot(0);
+        if (!pendingBook.isEmpty()) {
+            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, pendingBook);
+            bookInput.setStackInSlot(0, ItemStack.EMPTY);
+        }
     }
 
     private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
         @Override public int getSlotLimit(int slot) { return 1; }
         @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty() && !stack.is(Items.ENCHANTED_BOOK); }
-        @Override protected void onContentsChanged(int slot) { setChanged(); }
+        @Override protected void onContentsChanged(int slot) { if (slot == 0) autoExtractionPaused = false; setChanged(); }
 
         @Override
         public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
