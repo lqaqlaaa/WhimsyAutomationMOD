@@ -60,6 +60,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         g.drawString(font, Component.translatable("screen.whimsy_automation.input"), 12, 30, 0x8EDDE0, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 48, 30, 0xD5C5F2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.book_input"), 4, 68, 0xD5C5F2, false);
+        String applyPreview = font.plainSubstrByWidth(menu.getApplyPreview(), 220);
+        g.drawString(font, applyPreview, 10, 90, 0xFFB9DCC5, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.page", menu.getPage() + 1, menu.getPageCount()), 100, 128, 0xD5C5F2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 10, 108, 0xC9D3E1, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.split_short"), 151, 108, 0xC9D3E1, false);
