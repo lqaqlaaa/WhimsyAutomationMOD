@@ -21,6 +21,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.SlotItemHandler;
 import net.minecraft.resources.ResourceLocation;
 
@@ -52,9 +53,15 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         this.level = playerInventory.player.level();
         this.machine = level.getBlockEntity(pos) instanceof DeconstructionTableBlockEntity be ? be : null;
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
-        this.pageHandler = new IItemHandler() {
+        this.pageHandler = new IItemHandlerModifiable() {
             private int actualSlot(int pageSlot) { return OUTPUT_START + syncedPage * PAGE_SIZE + pageSlot; }
             @Override public int getSlots() { return PAGE_SIZE; }
+            @Override public void setStackInSlot(int slot, ItemStack stack) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return;
+                int actual = actualSlot(slot);
+                machine.ensureOutputInventorySize(actual + 1);
+                machine.getInventory().setStackInSlot(actual, stack);
+            }
             @Override public ItemStack getStackInSlot(int slot) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
                 int actual = actualSlot(slot);
