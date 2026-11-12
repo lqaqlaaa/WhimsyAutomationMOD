@@ -158,20 +158,11 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        if (recipeResult.isEmpty() || input.isEmpty() || !ItemStack.isSameItem(recipeResult, input)) return false;
-        ItemStack expected = recipeResult.copy();
-        ItemStack supplied = input.copy();
-        // Durability is consumed by normal use and must not invalidate an otherwise
-        // identical recipe output. Other data components remain significant.
-        expected.remove(DataComponents.DAMAGE);
-        supplied.remove(DataComponents.DAMAGE);
-        expected.remove(DataComponents.ENCHANTMENTS);
-        supplied.remove(DataComponents.ENCHANTMENTS);
-        expected.remove(DataComponents.STORED_ENCHANTMENTS);
-        supplied.remove(DataComponents.STORED_ENCHANTMENTS);
-        expected.remove(DataComponents.REPAIR_COST);
-        supplied.remove(DataComponents.REPAIR_COST);
-        return ItemStack.isSameItemSameComponents(expected, supplied);
+        // Recipe viewers such as JEI associate recipes with the output item, not
+        // with one exact component payload. Crafted/damaged/renamed variants of
+        // the same item must therefore still expose the same reverse recipes.
+        return !recipeResult.isEmpty() && !input.isEmpty()
+                && ItemStack.isSameItem(recipeResult, input);
     }
 
     private boolean matchesRecipeIdOutput(String recipeId, ItemStack input) {
