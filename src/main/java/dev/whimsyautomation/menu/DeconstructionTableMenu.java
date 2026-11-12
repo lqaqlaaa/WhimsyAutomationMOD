@@ -13,9 +13,8 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.ShapedRecipe;
 import java.util.Arrays;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -105,19 +104,19 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (input.isEmpty()) return List.of();
         List<RecipeHolder<?>> found = new ArrayList<>();
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
-            if (!(holder.value() instanceof CraftingRecipe craftingRecipe)) continue;
-            ItemStack result = holder.value().getResultItem(level.registryAccess());
-            if (!matchesRecipeOutput(result, input) || craftingRecipe.getIngredients().isEmpty()) continue;
+            Recipe<?> recipe = holder.value();
+            ItemStack result = recipe.getResultItem(level.registryAccess());
+            if (!matchesRecipeOutput(result, input) || recipe.getIngredients().isEmpty()) continue;
             found.add(holder);
         }
         found.sort((a, b) -> a.id().compareTo(b.id()));
         return found;
     }
 
-    private List<RecipeHolder<?>> allCraftingRecipes() {
+    private List<RecipeHolder<?>> allRecipes() {
         List<RecipeHolder<?>> all = new ArrayList<>();
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
-            if (holder.value() instanceof CraftingRecipe) all.add(holder);
+            all.add(holder);
         }
         all.sort((a, b) -> a.id().compareTo(b.id()));
         return all;
@@ -125,7 +124,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     private int getServerLockedRecipeIndex() {
         if (machine == null || machine.getLockedRecipe().isEmpty()) return -1;
-        List<RecipeHolder<?>> all = allCraftingRecipes();
+        List<RecipeHolder<?>> all = allRecipes();
         for (int i = 0; i < all.size(); i++) {
             if (all.get(i).id().toString().equals(machine.getLockedRecipe())) return i;
         }
@@ -173,25 +172,17 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         ItemStack[] cells = new ItemStack[9];
         Arrays.fill(cells, ItemStack.EMPTY);
         RecipeHolder<?> holder = getPreviewRecipe();
-        if (holder == null || !(holder.value() instanceof CraftingRecipe recipe)) return Arrays.asList(cells);
+        if (holder == null) return Arrays.asList(cells);
 
-        List<Ingredient> ingredients = recipe.getIngredients();
-        if (holder.value() instanceof ShapedRecipe shaped) {
-            int width = shaped.getWidth();
-            int height = shaped.getHeight();
-            for (int row = 0; row < height; row++) {
-                for (int col = 0; col < width; col++) {
-                    int index = row * width + col;
-                    if (index >= ingredients.size()) continue;
-                    ItemStack[] choices = ingredients.get(index).getItems();
-                    if (choices.length > 0) cells[row * 3 + col] = choices[0].copy();
-                }
-            }
-        } else {
-            for (int i = 0; i < Math.min(9, ingredients.size()); i++) {
-                ItemStack[] choices = ingredients.get(i).getItems();
-                if (choices.length > 0) cells[i] = choices[0].copy();
-            }
+        List<ItemStack> recovered = new ArrayList<>();
+        for (Ingredient ingredient : holder.value().getIngredients()) {
+            if (ingredient.isEmpty()) continue;
+            ItemStack[] choices = ingredient.getItems();
+            if (choices.length > 0) recovered.add(choices[0].copy());
+        }
+        int start = syncedPage * PAGE_SIZE;
+        for (int i = 0; i < PAGE_SIZE && start + i < recovered.size(); i++) {
+            cells[i] = recovered.get(start + i);
         }
         return Arrays.asList(cells);
     }
