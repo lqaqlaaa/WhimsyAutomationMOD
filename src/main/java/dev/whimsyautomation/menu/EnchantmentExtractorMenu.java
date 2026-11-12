@@ -46,13 +46,15 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         int y = 42 + (visibleIndex / 9) * 18;
         addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, x, y) {
             private int actualSlot() { return 1 + syncedPage * PAGE_SIZE + visibleIndex; }
-            @Override public ItemStack getItem() { return handler.getStackInSlot(actualSlot()); }
+            private boolean isActualSlotValid() { return actualSlot() >= 0 && actualSlot() < handler.getSlots(); }
+            @Override public ItemStack getItem() { return isActualSlotValid() ? handler.getStackInSlot(actualSlot()) : ItemStack.EMPTY; }
             @Override public boolean hasItem() { return !getItem().isEmpty(); }
-            @Override public void set(ItemStack stack) { handler.setStackInSlot(actualSlot(), stack); setChanged(); }
-            @Override public ItemStack remove(int amount) { return handler.extractItem(actualSlot(), amount, false); }
+            @Override public void set(ItemStack stack) { if (isActualSlotValid()) handler.setStackInSlot(actualSlot(), stack); }
+            @Override public ItemStack remove(int amount) { return isActualSlotValid() ? handler.extractItem(actualSlot(), amount, false) : ItemStack.EMPTY; }
             @Override public boolean mayPlace(ItemStack stack) { return false; }
-            @Override public int getMaxStackSize() { return handler.getSlotLimit(actualSlot()); }
-            @Override public void setChanged() { handler.setStackInSlot(actualSlot(), handler.getStackInSlot(actualSlot())); }
+            @Override public int getMaxStackSize() { return isActualSlotValid() ? handler.getSlotLimit(actualSlot()) : 0; }
+            // ItemStackHandler already marks the block entity dirty on mutations.
+            @Override public void setChanged() { }
         });
     }
 
