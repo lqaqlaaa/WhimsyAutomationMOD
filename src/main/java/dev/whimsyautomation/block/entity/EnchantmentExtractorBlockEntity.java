@@ -65,7 +65,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (stack.isEmpty()) return false;
             if (slot == 0) return !getStackEnchantments(stack).isEmpty();
-            return stack.is(Items.ENCHANTED_BOOK) && !stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY).isEmpty();
+            return stack.is(Items.ENCHANTED_BOOK)
+                    && !stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY).isEmpty()
+                    && canApplyBook(getStackInSlot(0), stack);
         }
         @Override protected void onContentsChanged(int slot) {
             if (internalInventoryUpdate) { setChanged(); return; }
