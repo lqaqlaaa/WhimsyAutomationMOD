@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class DeconstructionTableScreen extends AbstractContainerScreen<DeconstructionTableMenu> {
+    private Button autoButton;
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 240;
@@ -24,10 +25,20 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         super.init();
         addRenderableWidget(Button.builder(Component.literal("<"), b -> send(0)).bounds(leftPos + 12, topPos + 104, 20, 18).build());
         addRenderableWidget(Button.builder(Component.literal(">"), b -> send(1)).bounds(leftPos + 35, topPos + 104, 20, 18).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.auto"), b -> send(2)).bounds(leftPos + 12, topPos + 124, 48, 18).build());
+        autoButton = addRenderableWidget(Button.builder(autoLabel(), b -> send(2)).bounds(leftPos + 12, topPos + 124, 48, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(3)).bounds(leftPos + 64, topPos + 124, 66, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.previous"), b -> send(4)).bounds(leftPos + 140, topPos + 104, 38, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.next"), b -> send(5)).bounds(leftPos + 182, topPos + 104, 42, 18).build());
+    }
+
+    private Component autoLabel() {
+        return Component.translatable("screen.whimsy_automation.auto_state", Component.translatable(menu.isAutoMode() ? "screen.whimsy_automation.on" : "screen.whimsy_automation.off"));
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (autoButton != null) autoButton.setMessage(autoLabel());
     }
 
     private void slot(GuiGraphics g, int x, int y) {
