@@ -1,12 +1,20 @@
 package dev.whimsyautomation.block.entity;
 
+import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
+import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -20,12 +28,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Reverse-processes recipes from every registered recipe type.
- * This includes crafting, smelting, blasting, smoking, stonecutting and
- * modded recipes that expose a result and ingredient list.
- */
-public final class DeconstructionTableBlockEntity extends BlockEntity {
+/** Reverse-processes all registered recipes that expose a result and ingredients. */
+public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
     public static final int OUTPUT_SLOTS = 27;
 
@@ -47,6 +51,19 @@ public final class DeconstructionTableBlockEntity extends BlockEntity {
         super(ModBlockEntities.DECONSTRUCTION_TABLE.get(), pos, state);
     }
 
+    public ItemStackHandler getInventory() { return inventory; }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("container.whimsy_automation.deconstruction_table");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int id, Inventory playerInventory, Player player) {
+        return new DeconstructionTableMenu(id, playerInventory,
+                new FriendlyByteBuf(Unpooled.buffer()).writeBlockPos(worldPosition));
+    }
+
     public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
         if (side == null) return unsidedHandler;
         if (side == Direction.DOWN) return bottomHandler;
@@ -54,11 +71,8 @@ public final class DeconstructionTableBlockEntity extends BlockEntity {
         return sideHandler;
     }
 
-    public String getLockedRecipe() {
-        return lockedRecipe;
-    }
+    public String getLockedRecipe() { return lockedRecipe; }
 
-    /** A blank ID unlocks the table and returns it to automatic recipe selection. */
     public void setLockedRecipe(@Nullable ResourceLocation recipeId) {
         lockedRecipe = recipeId == null ? "" : recipeId.toString();
         setChanged();
@@ -80,7 +94,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity {
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             if (!lockedRecipe.isEmpty() && !holder.id().toString().equals(lockedRecipe)) continue;
             ItemStack result = holder.value().getResultItem(level.registryAccess());
-            // Compare components as well as item ID: don't strip custom-named or data-bearing items.
             if (result.isEmpty() || !ItemStack.isSameItemSameComponents(result, input)) continue;
             if (holder.value().getIngredients().isEmpty()) continue;
             candidates.add(holder);
@@ -104,11 +117,8 @@ public final class DeconstructionTableBlockEntity extends BlockEntity {
 
         int[] outputSlots = findEmptyOutputSlots(recovered.size());
         if (outputSlots == null) return;
+        for (int i = 0; i < recovered.size(); i++) inventory.setStackInSlot(outputSlots[i], recovered.get(i));
 
-        // Reserve all outputs first; only then consume the finished item.
-        for (int i = 0; i < recovered.size(); i++) {
-            inventory.setStackInSlot(outputSlots[i], recovered.get(i));
-        }
         input.shrink(inputCost);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
