@@ -6,6 +6,8 @@ import dev.whimsyautomation.util.SidedMachineItemHandler;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -16,6 +18,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -192,9 +198,23 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             if (ingredient.isEmpty()) continue;
             ItemStack[] options = ingredient.getItems();
             if (options.length == 0) return;
-            // Ingredient tags can contain several valid items. The preview uses
-            // the same deterministic first option that the machine will return.
+            // The recipe API does not retain which tag alternative was originally
+            // used in the crafted item. Until a player-selected alternative is
+            // stored, use the first registered representative consistently.
             recovered.add(options[0].copy());
+        }
+
+        // Enchantments are item data, not recipe ingredients. Preserve every
+        // enchantment as its own enchanted book when the source item is dismantled.
+        ItemEnchantments itemEnchantments = input.is(Items.ENCHANTED_BOOK)
+                ? input.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY)
+                : input.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : itemEnchantments.entrySet()) {
+            ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+            ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+            stored.set(entry.getKey(), entry.getIntValue());
+            book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
+            recovered.add(book);
         }
         if (recovered.isEmpty()) return;
 
