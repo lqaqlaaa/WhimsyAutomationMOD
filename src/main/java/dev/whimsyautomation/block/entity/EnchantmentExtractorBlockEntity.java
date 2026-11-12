@@ -158,6 +158,14 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     public ItemStackHandler getInventory() { return inventory; }
 
+    /** Grows the dynamic output inventory without moving or replacing existing stacks. */
+    public void ensureOutputInventorySize(int size) {
+        if (size > inventory.getSlots()) {
+            inventory.resize(size);
+            setChanged();
+        }
+    }
+
     /** Highest occupied output index, used to calculate the live page count. */
     public int getGeneratedOutputCount() {
         for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
