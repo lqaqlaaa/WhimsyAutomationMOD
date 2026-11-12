@@ -1,4 +1,5 @@
 {
   "block.whimsy_automation.enchantment_extractor": "Enchantment Extractor",
-  "block.whimsy_automation.deconstruction_table": "Deconstruction Table"
+  "block.whimsy_automation.deconstruction_table": "Deconstruction Table",
+  "itemGroup.whimsy_automation": "Whimsy Automation"
 }
