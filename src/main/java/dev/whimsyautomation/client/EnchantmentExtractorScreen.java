@@ -76,7 +76,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         g.drawString(font, Component.translatable("screen.whimsy_automation.page", menu.getPage() + 1, menu.getPageCount()), 100, 128, 0xD5C5F2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 10, 108, 0xC9D3E1, false);
         if (outputModeButton != null) outputModeButton.setMessage(outputModeLabel());
-        g.drawString(font, font.plainSubstrByWidth(mode, 58), 151, 120, 0xFFE2D4F6, false);
         g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xAAB7C8, false);
         if (processButton != null) processButton.setMessage(Component.translatable("screen.whimsy_automation.process"));
     }
