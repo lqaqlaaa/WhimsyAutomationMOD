@@ -32,7 +32,7 @@ import java.util.List;
 /** Reverse-processes all registered recipes that expose a result and ingredients. */
 public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
-    public static final int OUTPUT_SLOTS = 27;
+    public static final int OUTPUT_SLOTS = 108;
 
     private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
         @Override public int getSlotLimit(int slot) { return 64; }
