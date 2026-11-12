@@ -18,5 +18,10 @@
   "screen.whimsy_automation.recipe_unavailable": "Locked recipe unavailable",
   "screen.whimsy_automation.recipe_select": "Select recipe (%1$s)",
   "screen.whimsy_automation.recipe_changed": "Recipe list changed",
-  "screen.whimsy_automation.recipe_locked": "Locked: %1$s"
+  "screen.whimsy_automation.recipe_locked": "Locked: %1$s",
+  "screen.whimsy_automation.auto_state": "Automation: %s",
+  "screen.whimsy_automation.split_state": "Split levels: %s",
+  "screen.whimsy_automation.on": "ON",
+  "screen.whimsy_automation.off": "OFF",
+  "screen.whimsy_automation.book_input": "Enchanted book"
 }
