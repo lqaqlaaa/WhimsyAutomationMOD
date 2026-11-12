@@ -172,7 +172,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (!canApplyBook(item, book)) return false;
 
         ItemEnchantments stored = book.get(DataComponents.STORED_ENCHANTMENTS);
-        ItemEnchantments existing = item.get(DataComponents.ENCHANTMENTS);
+        ItemEnchantments existing = getStackEnchantments(item);
         ItemEnchantments.Mutable merged = new ItemEnchantments.Mutable(
                 existing == null ? ItemEnchantments.EMPTY : existing);
 
