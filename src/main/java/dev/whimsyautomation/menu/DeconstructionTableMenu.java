@@ -250,22 +250,21 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         List<ItemStack> merged = new ArrayList<>();
         for (ItemStack candidate : source) {
             if (candidate.isEmpty()) continue;
-            ItemStack remaining = candidate.copy();
+            ItemStack existingMatch = null;
             for (ItemStack existing : merged) {
-                if (!ItemStack.isSameItemSameComponents(existing, remaining)) continue;
-                int room = existing.getMaxStackSize() - existing.getCount();
-                int moved = Math.min(room, remaining.getCount());
-                if (moved > 0) {
-                    existing.grow(moved);
-                    remaining.shrink(moved);
+                if (ItemStack.isSameItemSameComponents(existing, candidate)) {
+                    existingMatch = existing;
+                    break;
                 }
-                if (remaining.isEmpty()) break;
             }
-            while (!remaining.isEmpty()) {
-                int moved = Math.min(remaining.getCount(), remaining.getMaxStackSize());
-                merged.add(remaining.copyWithCount(moved));
-                remaining.shrink(moved);
-            }
+            if (existingMatch == null) merged.add(candidate.copy());
+            else existingMatch.grow(candidate.getCount());
+        }
+        // Preview-only stacks may exceed normal inventory limits so one repeated
+        // ingredient is shown in one slot with its complete quantity.
+        for (ItemStack stack : merged) {
+            stack.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE,
+                    Math.max(stack.getMaxStackSize(), stack.getCount()));
         }
         return List.copyOf(merged);
     }
