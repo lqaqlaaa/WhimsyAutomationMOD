@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -35,7 +36,6 @@ import java.util.List;
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
 public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
-    public static final int OUTPUT_SLOTS = 4096;
     private static final int OUTPUT_STACK_LIMIT = 64;
     private int workTicks;
     private boolean autoMode = false;
@@ -80,7 +80,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
     }
 
-    private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
+    private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + 1) {
         @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : OUTPUT_STACK_LIMIT; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (stack.isEmpty()) return false;
@@ -127,13 +127,25 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         @Override
         public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
-            // Older saves stored only 54 output slots. Keep their item data, but
-            // force the current capacity before ItemStackHandler resizes itself.
-            CompoundTag migrated = tag.copy();
-            migrated.putInt("Size", OUTPUT_START + OUTPUT_SLOTS);
-            super.deserializeNBT(registries, migrated);
+            // Preserve the saved dynamic output size. Legacy saves keep their
+            // original contents and are resized again when outputs are rebuilt.
+            super.deserializeNBT(registries, tag);
         }
     };
+
+    private static class DynamicItemStackHandler extends ItemStackHandler {
+        private DynamicItemStackHandler(int size) { super(size); }
+
+        private void resize(int size) {
+            int targetSize = Math.max(OUTPUT_START, size);
+            if (targetSize == stacks.size()) return;
+            NonNullList<ItemStack> resized = NonNullList.withSize(targetSize, ItemStack.EMPTY);
+            for (int i = 0; i < Math.min(stacks.size(), targetSize); i++) {
+                resized.set(i, stacks.get(i));
+            }
+            stacks = resized;
+        }
+    }
 
     private final IItemHandler topHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
     private final IItemHandler bottomHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, false, true);
@@ -174,10 +186,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, EnchantmentExtractorBlockEntity machine) {
         if (level.isClientSide) return;
-        if (!machine.autoMode) return;
-        if (++machine.workTicks < 10) return;
-        machine.workTicks = 0;
-        machine.refreshGeneratedSlots();
+        // Generated output is derived when the input or output mode changes.
+        // Rebuilding it on a timer would refill deliberately emptied output slots.
     }
 
     public boolean canApplyBook(ItemStack item, ItemStack book) {
@@ -251,7 +261,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                         // high-level enchantment therefore consumes ceil(level/64)
                         // slots rather than one slot for every individual level.
                         int remaining = enchantmentLevel;
-                        while (remaining > 0 && generated.size() < OUTPUT_SLOTS) {
+                        while (remaining > 0) {
                             int stackCount = Math.min(OUTPUT_STACK_LIMIT, remaining);
                             ItemStack stack = createBook(entry.getKey(), 1);
                             stack.setCount(stackCount);
@@ -261,16 +271,14 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                     } else {
                         generated.add(createBook(entry.getKey(), enchantmentLevel));
                     }
-                    if (generated.size() >= OUTPUT_SLOTS) break;
                 }
             }
         }
 
         internalInventoryUpdate = true;
-        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
-            ItemStack next = slot - OUTPUT_START < generated.size()
-                    ? generated.get(slot - OUTPUT_START) : ItemStack.EMPTY;
-            inventory.setStackInSlot(slot, next);
+        inventory.resize(OUTPUT_START + generated.size());
+        for (int index = 0; index < generated.size(); index++) {
+            inventory.setStackInSlot(OUTPUT_START + index, generated.get(index));
         }
         internalInventoryUpdate = false;
         setChanged();
