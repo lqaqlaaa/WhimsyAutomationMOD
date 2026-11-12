@@ -97,13 +97,17 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 refreshGeneratedSlots();
             } else {
                 ItemStack offeredBook = getStackInSlot(slot);
-                if (!offeredBook.isEmpty() && offeredBook.is(Items.ENCHANTED_BOOK)
-                        && applyBookToInput(offeredBook)) {
-                    internalInventoryUpdate = true;
-                    setStackInSlot(slot, ItemStack.EMPTY);
-                    internalInventoryUpdate = false;
+                // Only an inserted enchanted book should trigger the apply-book
+                // path and rebuild. An extracted output becoming empty must stay
+                // empty; otherwise all remaining outputs are compacted forward.
+                if (!offeredBook.isEmpty()) {
+                    if (offeredBook.is(Items.ENCHANTED_BOOK) && applyBookToInput(offeredBook)) {
+                        internalInventoryUpdate = true;
+                        setStackInSlot(slot, ItemStack.EMPTY);
+                        internalInventoryUpdate = false;
+                    }
+                    refreshGeneratedSlots();
                 }
-                refreshGeneratedSlots();
             }
             setChanged();
         }
