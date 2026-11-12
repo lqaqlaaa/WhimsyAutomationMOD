@@ -201,23 +201,30 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         ItemEnchantments enchantments = getStackEnchantments(input);
         if (enchantments.isEmpty()) return;
 
+        boolean splitSingleBook = splitLevels && input.is(Items.ENCHANTED_BOOK) && enchantments.size() == 1;
+        List<Integer> splitBookLevels = splitSingleBook
+                ? splitSingleEnchantmentLevels(enchantments.entrySet().iterator().next().getIntValue())
+                : List.of();
         int bookCount = 0;
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-            bookCount += splitLevels ? Math.max(0, entry.getIntValue()) : 1;
+            bookCount += splitSingleBook ? splitBookLevels.size() : 1;
         }
-        if (bookCount + 1 > OUTPUT_SLOTS) return;
+        int cleanedItemCount = input.is(Items.ENCHANTED_BOOK) ? 0 : 1;
+        if (bookCount + cleanedItemCount > OUTPUT_SLOTS || bookCount == 0) return;
 
-        ItemStack[] results = new ItemStack[bookCount + 1];
-        ItemStack cleaned = input.copyWithCount(1);
-        if (input.is(Items.ENCHANTED_BOOK)) cleaned.set(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-        else cleaned.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-        results[0] = cleaned;
+        ItemStack[] results = new ItemStack[bookCount + cleanedItemCount];
+        int index = 0;
+        if (cleanedItemCount == 1) {
+            ItemStack cleaned = input.copyWithCount(1);
+            cleaned.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+            results[index++] = cleaned;
+        }
 
-        int index = 1;
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-            int amount = splitLevels ? Math.max(0, entry.getIntValue()) : 1;
-            int storedLevel = splitLevels ? 1 : entry.getIntValue();
-            for (int n = 0; n < amount; n++) {
+            List<Integer> levels = splitSingleBook
+                    ? splitBookLevels
+                    : List.of(entry.getIntValue());
+            for (int storedLevel : levels) {
                 ItemStack outputBook = new ItemStack(Items.ENCHANTED_BOOK);
                 ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
                 stored.set(entry.getKey(), storedLevel);
@@ -235,6 +242,20 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         input.shrink(1);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
+    }
+
+
+    private static List<Integer> splitSingleEnchantmentLevels(int sourceLevel) {
+        if (sourceLevel <= 1) return List.of();
+        List<Integer> levels = new ArrayList<>();
+        java.util.Set<Integer> seen = new java.util.LinkedHashSet<>();
+        int remaining = sourceLevel;
+        while (remaining > 1) {
+            int levelToAdd = remaining / 2;
+            if (seen.add(levelToAdd)) levels.add(levelToAdd);
+            remaining -= levelToAdd;
+        }
+        return List.copyOf(levels);
     }
 
     private int[] findEmptyOutputSlots(int count) {
