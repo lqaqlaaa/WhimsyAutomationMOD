@@ -28,7 +28,7 @@
   "screen.whimsy_automation.split_short": "拆分等级",
   "screen.whimsy_automation.recipe_auto": "已自动匹配：%1$s",
   "screen.whimsy_automation.recipe_default": "默认配方：%1$s（共 %2$s 个，可切换）",
-  "screen.whimsy_automation.recipe_locked_mismatch": "锁定配方与当前输入不匹配，已暂停拆解",
+  "screen.whimsy_automation.recipe_locked_mismatch": "锁定配方 %1$s 与当前输入不匹配，已暂停拆解",
   "screen.whimsy_automation.recipe_select_hint": "检测到 %1$s 个配方，使用左右键预览",
   "screen.whimsy_automation.recipe_selected": "预览配方：%1$s",
   "screen.whimsy_automation.preview_empty": "暂无材料预览",
@@ -37,5 +37,7 @@
   "screen.whimsy_automation.apply_need_item": "放入要附魔的装备",
   "screen.whimsy_automation.apply_need_book": "放入附魔书以添加或升级附魔",
   "screen.whimsy_automation.apply_invalid": "无法应用：附魔不适用于该物品或彼此冲突",
-  "screen.whimsy_automation.apply_ready": "准备应用：%1$s（点击处理）"
+  "screen.whimsy_automation.apply_ready": "准备应用：%1$s（点击处理）",
+  "screen.whimsy_automation.recipe_locked_missing": "锁定配方不存在（可能缺少对应模组）",
+  "screen.whimsy_automation.recipe_materials": "材料预览"
 }
