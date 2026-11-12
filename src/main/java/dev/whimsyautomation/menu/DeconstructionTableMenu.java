@@ -159,6 +159,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private RecipeHolder<?> getPreviewRecipe() {
         if (syncedLocked) return getLockedRecipeHolder();
         List<RecipeHolder<?>> found = candidates();
+        if (found.isEmpty()) return null;
         int index = level.isClientSide ? syncedRecipeIndex : getServerRecipeIndex();
         if (index < 0 || index >= found.size()) index = 0;
         return found.get(index);
