@@ -117,7 +117,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
             ItemStack extracted = super.extractItem(slot, amount, simulate);
             if (!simulate && !internalInventoryUpdate && slot > 0 && !extracted.isEmpty()) {
-                removeGeneratedBook(slot, extracted);
+                removeGeneratedBook(slot, extracted, true);
             }
             return extracted;
         }
@@ -297,7 +297,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (outputSlot < OUTPUT_START || outputSlot >= inventory.getSlots()
                 || book.isEmpty() || !book.is(Items.ENCHANTED_BOOK)) return false;
         ItemStack currentOutput = inventory.getStackInSlot(outputSlot);
-        if (currentOutput.isEmpty() || !ItemStack.isSameItemSameComponents(currentOutput, book)) return false;
+        if (currentOutput.isEmpty() || !ItemStack.isSameItemSameComponents(currentOutput, book)
+                || book.getCount() > currentOutput.getCount()) return false;
         ItemEnchantments available = getStackEnchantments(inventory.getStackInSlot(0));
         ItemEnchantments requested = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
         if (requested.isEmpty()) return false;
@@ -305,11 +306,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             long requestedLevel = (long) entry.getIntValue() * book.getCount();
             if (available.getLevel(entry.getKey()) < requestedLevel) return false;
         }
-        removeGeneratedBook(outputSlot, book);
+        removeGeneratedBook(outputSlot, book, false);
         return true;
     }
 
-    private void removeGeneratedBook(int outputSlot, ItemStack book) {
+    private void removeGeneratedBook(int outputSlot, ItemStack book, boolean outputAlreadyExtracted) {
         if (level == null || level.isClientSide || book.isEmpty()) return;
         ItemStack input = inventory.getStackInSlot(0);
         if (input.isEmpty()) return;
@@ -333,7 +334,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         // Keep every other generated book in its original slot. Rebuilding the
         // entire output list here compacts the remaining books and makes a
         // shift-click/automation extraction drain more than the requested slot.
-        inventory.setStackInSlot(outputSlot, ItemStack.EMPTY);
+        if (!outputAlreadyExtracted) {
+            ItemStack remainingOutput = inventory.getStackInSlot(outputSlot).copy();
+            remainingOutput.shrink(book.getCount());
+            inventory.setStackInSlot(outputSlot, remainingOutput);
+        }
         internalInventoryUpdate = false;
         setChanged();
     }
