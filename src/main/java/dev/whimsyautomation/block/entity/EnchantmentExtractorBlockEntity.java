@@ -23,6 +23,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Containers;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
@@ -33,6 +34,24 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     public static final int OUTPUT_START = 1;
     public static final int OUTPUT_SLOTS = 54;
     private int workTicks;
+    private boolean autoMode = false;
+    private boolean splitLevels = false;
+
+    public boolean isAutoMode() { return autoMode; }
+    public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
+    public boolean isSplitLevels() { return splitLevels; }
+    public void setSplitLevels(boolean enabled) { splitLevels = enabled; setChanged(); }
+    public void processOnce() { if (level != null && !level.isClientSide) processOneItem(); }
+    public void dropAllContents() {
+        if (level == null || level.isClientSide) return;
+        for (int slot = 0; slot < inventory.getSlots(); slot++) {
+            ItemStack stack = inventory.getStackInSlot(slot);
+            if (!stack.isEmpty()) {
+                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, stack);
+                inventory.setStackInSlot(slot, ItemStack.EMPTY);
+            }
+        }
+    }
 
     private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
         @Override public int getSlotLimit(int slot) { return 1; }
@@ -71,6 +90,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, EnchantmentExtractorBlockEntity machine) {
         if (level.isClientSide) return;
+        if (!machine.autoMode) return;
         if (++machine.workTicks < 10) return;
         machine.workTicks = 0;
         machine.processOneItem();
@@ -127,6 +147,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.putInt("WorkTicks", workTicks);
+        tag.putBoolean("AutoMode", autoMode);
+        tag.putBoolean("SplitLevels", splitLevels);
     }
 
     @Override
@@ -134,5 +156,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         workTicks = tag.getInt("WorkTicks");
+        autoMode = tag.getBoolean("AutoMode");
+        splitLevels = tag.getBoolean("SplitLevels");
     }
 }
