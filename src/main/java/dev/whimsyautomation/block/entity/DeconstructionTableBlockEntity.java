@@ -143,8 +143,12 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         ItemStack supplied = input.copy();
         // Durability is consumed by normal use and must not invalidate an otherwise
         // identical recipe output. Other data components remain significant.
-        expected.remove(net.minecraft.core.component.DataComponents.DAMAGE);
-        supplied.remove(net.minecraft.core.component.DataComponents.DAMAGE);
+        expected.remove(DataComponents.DAMAGE);
+        supplied.remove(DataComponents.DAMAGE);
+        expected.remove(DataComponents.ENCHANTMENTS);
+        supplied.remove(DataComponents.ENCHANTMENTS);
+        expected.remove(DataComponents.STORED_ENCHANTMENTS);
+        supplied.remove(DataComponents.STORED_ENCHANTMENTS);
         return ItemStack.isSameItemSameComponents(expected, supplied);
     }
 
