@@ -132,8 +132,8 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, DeconstructionTableBlockEntity machine) {
         if (level.isClientSide || !machine.autoMode) return;
-        if (++machine.workTicks < 10) return;
-        machine.workTicks = 0;
+        // Batch processing makes a full hopper-fed stack progress in one tick
+        // instead of requiring one ten-tick cycle per item.
         machine.processOneItem(true);
     }
 
@@ -194,24 +194,18 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
         if (selected == null) return;
         Recipe<?> recipe = selected.value();
-
-        ItemStack recipeResult = selected.value().getResultItem(level.registryAccess());
+        ItemStack recipeResult = recipe.getResultItem(level.registryAccess());
         if (!matchesRecipeOutput(recipeResult, input)) return;
 
-
-        List<ItemStack> recovered = new ArrayList<>();
+        List<ItemStack> recoveredPerBatch = new ArrayList<>();
         for (Ingredient ingredient : recipe.getIngredients()) {
             if (ingredient.isEmpty()) continue;
             ItemStack[] options = ingredient.getItems();
             if (options.length == 0) return;
-            // The recipe API does not retain which tag alternative was originally
-            // used in the crafted item. Until a player-selected alternative is
-            // stored, use the first registered representative consistently.
-            recovered.add(options[0].copy());
+            recoveredPerBatch.add(options[0].copy());
         }
 
-        // Enchantments are item data, not recipe ingredients. Preserve every
-        // enchantment as its own enchanted book when the source item is dismantled.
+        // Enchantments travel with each dismantled item and are returned as books.
         ItemEnchantments itemEnchantments = input.is(Items.ENCHANTED_BOOK)
                 ? input.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY)
                 : input.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
@@ -220,28 +214,41 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
             stored.set(entry.getKey(), entry.getIntValue());
             book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
-            recovered.add(book);
+            recoveredPerBatch.add(book);
         }
-        if (recovered.isEmpty()) return;
+        if (recoveredPerBatch.isEmpty()) return;
 
         List<ItemStack> outputPlan = new ArrayList<>(OUTPUT_SLOTS);
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
-        for (ItemStack result : recovered) {
-            if (!insertIntoOutputPlan(outputPlan, result.copy())) return;
-        }
 
-        // Commit only after every ingredient fits. This prevents partial
-        // output delivery followed by input consumption.
+        int processed = 0;
+        int maxBatch = Math.min(input.getCount(), 64);
+        for (int batch = 0; batch < maxBatch; batch++) {
+            List<ItemStack> candidatePlan = new ArrayList<>(outputPlan.size());
+            for (ItemStack stack : outputPlan) candidatePlan.add(stack.copy());
+            boolean fits = true;
+            for (ItemStack result : recoveredPerBatch) {
+                if (!insertIntoOutputPlan(candidatePlan, result.copy())) {
+                    fits = false;
+                    break;
+                }
+            }
+            if (!fits) break;
+            outputPlan = candidatePlan;
+            processed++;
+        }
+        if (processed == 0) return;
+
+        // Commit the largest complete batch that fits. Never consume input for
+        // ingredients that could not be delivered to the output inventory.
         for (int i = 0; i < outputPlan.size(); i++) {
             ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
             ItemStack after = outputPlan.get(i);
             if (!ItemStack.matches(before, after)) inventory.setStackInSlot(OUTPUT_START + i, after);
         }
-        // One crafted output stack item represents one completed recipe batch,
-        // regardless of the recipe's output stack size.
-        input.shrink(1);
+        input.shrink(processed);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
     }
