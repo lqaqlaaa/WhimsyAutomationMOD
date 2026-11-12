@@ -140,16 +140,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         machine.refreshGeneratedSlots();
     }
 
-    private void processOneItem(boolean automatic) {
-        if (level == null) return;
-
-        ItemStack item = inventory.getStackInSlot(0);
-        // Prevent automatic mode from immediately stripping an item again after
-        // the player has just applied a book to it. Changing the item input clears this.
-        if (automatic && autoExtractionPaused) return;
-        extractEnchantments(item);
-    }
-
     public boolean canApplyBook(ItemStack item, ItemStack book) {
         if (item.isEmpty() || !book.is(Items.ENCHANTED_BOOK)) return false;
         ItemEnchantments stored = book.get(DataComponents.STORED_ENCHANTMENTS);
