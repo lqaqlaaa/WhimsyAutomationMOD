@@ -9,6 +9,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -42,14 +43,13 @@ import java.util.List;
  */
 public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
-    public static final int OUTPUT_SLOTS = 108;
 
     private String selectedRecipe = "";
     private String lockedRecipe = "";
     private int workTicks;
     private boolean autoMode = false;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
+    private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + 27) {
         @Override public int getSlotLimit(int slot) { return 64; }
 
         @Override
@@ -67,11 +67,23 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
         @Override
         public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
-            CompoundTag migrated = tag.copy();
-            migrated.putInt("Size", OUTPUT_START + OUTPUT_SLOTS);
-            super.deserializeNBT(registries, migrated);
+            super.deserializeNBT(registries, tag);
         }
     };
+
+    private static class DynamicItemStackHandler extends ItemStackHandler {
+        private DynamicItemStackHandler(int size) { super(size); }
+
+        private void resize(int size) {
+            int targetSize = Math.max(OUTPUT_START, size);
+            if (targetSize == stacks.size()) return;
+            NonNullList<ItemStack> resized = NonNullList.withSize(targetSize, ItemStack.EMPTY);
+            for (int i = 0; i < Math.min(stacks.size(), targetSize); i++) {
+                resized.set(i, stacks.get(i));
+            }
+            stacks = resized;
+        }
+    }
 
     private final IItemHandler topHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
     private final IItemHandler bottomHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, false, true);
@@ -218,7 +230,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
         if (recoveredPerBatch.isEmpty()) return;
 
-        List<ItemStack> outputPlan = new ArrayList<>(OUTPUT_SLOTS);
+        List<ItemStack> outputPlan = new ArrayList<>(Math.max(27, inventory.getSlots() - OUTPUT_START));
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
@@ -243,6 +255,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
         // Commit the largest complete batch that fits. Never consume input for
         // ingredients that could not be delivered to the output inventory.
+        inventory.resize(OUTPUT_START + outputPlan.size());
         for (int i = 0; i < outputPlan.size(); i++) {
             ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
             ItemStack after = outputPlan.get(i);
@@ -269,7 +282,14 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             plan.set(i, incoming.copyWithCount(moved));
             incoming.shrink(moved);
         }
-        return incoming.isEmpty();
+        // The output inventory grows to fit large machine recipes instead of
+        // rejecting an otherwise valid dismantle when all existing slots fill.
+        while (!incoming.isEmpty()) {
+            int moved = Math.min(incoming.getCount(), Math.min(incoming.getMaxStackSize(), inventory.getSlotLimit(OUTPUT_START)));
+            plan.add(incoming.copyWithCount(moved));
+            incoming.shrink(moved);
+        }
+        return true;
     }
 
     @Override
