@@ -1,0 +1,1 @@
+{"type":"minecraft:crafting_shaped","category":"misc","pattern":["LBL","EQE","QQQ"],"key":{"L":{"item":"minecraft:lapis_block"},"B":{"item":"minecraft:book"},"E":{"item":"minecraft:emerald_block"},"Q":{"tag":"whimsy_automation:quartz_blocks"}},"result":{"id":"whimsy_automation:enchantment_conversion_table"}}

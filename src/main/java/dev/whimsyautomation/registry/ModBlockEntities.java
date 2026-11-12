@@ -3,6 +3,7 @@ package dev.whimsyautomation.registry;
 import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.block.entity.EnchantmentExtractorBlockEntity;
+import dev.whimsyautomation.block.entity.EnchantmentConversionTableBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -14,6 +15,10 @@ public final class ModBlockEntities {
     public static final net.neoforged.neoforge.registries.DeferredHolder<BlockEntityType<?>, BlockEntityType<EnchantmentExtractorBlockEntity>> ENCHANTMENT_EXTRACTOR =
             BLOCK_ENTITIES.register("enchantment_extractor", () ->
                     BlockEntityType.Builder.of(EnchantmentExtractorBlockEntity::new, ModBlocks.ENCHANTMENT_EXTRACTOR.get()).build(null));
+
+    public static final net.neoforged.neoforge.registries.DeferredHolder<BlockEntityType<?>, BlockEntityType<EnchantmentConversionTableBlockEntity>> ENCHANTMENT_CONVERSION_TABLE =
+            BLOCK_ENTITIES.register("enchantment_conversion_table", () ->
+                    BlockEntityType.Builder.of(EnchantmentConversionTableBlockEntity::new, ModBlocks.ENCHANTMENT_CONVERSION_TABLE.get()).build(null));
 
     public static final net.neoforged.neoforge.registries.DeferredHolder<BlockEntityType<?>, BlockEntityType<DeconstructionTableBlockEntity>> DECONSTRUCTION_TABLE =
             BLOCK_ENTITIES.register("deconstruction_table", () ->

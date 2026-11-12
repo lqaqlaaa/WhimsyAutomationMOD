@@ -15,5 +15,6 @@ public final class ClientModEvents {
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.ENCHANTMENT_EXTRACTOR.get(), EnchantmentExtractorScreen::new);
         event.register(ModMenus.DECONSTRUCTION_TABLE.get(), DeconstructionTableScreen::new);
+        event.register(ModMenus.ENCHANTMENT_CONVERSION_TABLE.get(), EnchantmentConversionTableScreen::new);
     }
 }

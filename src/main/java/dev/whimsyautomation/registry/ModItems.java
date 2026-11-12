@@ -11,6 +11,8 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> ENCHANTMENT_EXTRACTOR =
             ITEMS.register("enchantment_extractor", () -> new BlockItem(ModBlocks.ENCHANTMENT_EXTRACTOR.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> ENCHANTMENT_CONVERSION_TABLE =
+            ITEMS.register("enchantment_conversion_table", () -> new BlockItem(ModBlocks.ENCHANTMENT_CONVERSION_TABLE.get(), new Item.Properties()));
     public static final DeferredItem<BlockItem> DECONSTRUCTION_TABLE =
             ITEMS.register("deconstruction_table", () -> new BlockItem(ModBlocks.DECONSTRUCTION_TABLE.get(), new Item.Properties()));
 
