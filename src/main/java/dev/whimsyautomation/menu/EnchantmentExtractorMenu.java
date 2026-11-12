@@ -52,6 +52,16 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     }
 
     @Override
+    public boolean clickMenuButton(Player player, int buttonId) {
+        if (machine == null || player.level().isClientSide) return false;
+        if (buttonId == 0) machine.setAutoMode(!machine.isAutoMode());
+        else if (buttonId == 1) machine.processOnce();
+        else if (buttonId == 2) machine.setSplitLevels(!machine.isSplitLevels());
+        else return false;
+        return true;
+    }
+
+    @Override
     public ItemStack quickMoveStack(Player player, int index) {
         if (index < 0 || index >= slots.size()) return ItemStack.EMPTY;
         Slot slot = slots.get(index);
