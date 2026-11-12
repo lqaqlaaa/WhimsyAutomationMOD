@@ -107,8 +107,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             if (!(holder.value() instanceof CraftingRecipe craftingRecipe)) continue;
             ItemStack result = holder.value().getResultItem(level.registryAccess());
-            if (!matchesRecipeOutput(result, input) || result.getCount() > input.getCount()
-                    || craftingRecipe.getIngredients().isEmpty()) continue;
+            if (!matchesRecipeOutput(result, input) || craftingRecipe.getIngredients().isEmpty()) continue;
             found.add(holder);
         }
         found.sort((a, b) -> a.id().compareTo(b.id()));
@@ -194,6 +193,15 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             }
         }
         return Arrays.asList(cells);
+    }
+
+    public ItemStack getPreviewResult() {
+        RecipeHolder<?> recipe = getPreviewRecipe();
+        return recipe == null ? ItemStack.EMPTY : recipe.value().getResultItem(level.registryAccess()).copy();
+    }
+
+    public int getCandidateCount() {
+        return candidates().size();
     }
 
     public String getPreviewRecipeId() {
