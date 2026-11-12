@@ -195,7 +195,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (level.isClientSide && !target.isEmpty()) {
             for (WhimsyJeiPlugin.Entry entry : WhimsyJeiPlugin.findByOutput(target)) {
                 if (entry.recipeId().equals(holder.id().toString())) {
-                    return entry.inputs().stream().map(ItemStack::copy).toList();
+                    return mergeIdenticalStacks(entry.inputs());
                 }
             }
         }
