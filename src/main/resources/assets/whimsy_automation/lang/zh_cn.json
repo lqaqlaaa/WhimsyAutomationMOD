@@ -1,5 +1,11 @@
 {
   "block.whimsy_automation.enchantment_extractor": "附魔提取器",
   "block.whimsy_automation.deconstruction_table": "物品拆解台",
-  "itemGroup.whimsy_automation": "奇思妙想自动化"
+  "itemGroup.whimsy_automation": "奇思妙想自动化",
+  "container.whimsy_automation.enchantment_extractor": "附魔提取器",
+  "container.whimsy_automation.deconstruction_table": "物品拆解台",
+  "screen.whimsy_automation.extractor": "附魔提取器",
+  "screen.whimsy_automation.deconstruction": "物品拆解台",
+  "screen.whimsy_automation.input": "输入",
+  "screen.whimsy_automation.outputs": "输出"
 }
