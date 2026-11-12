@@ -32,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
 /** Input slot 0; output slots 1-54. Each enchantment level becomes a level-I book. */
 public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
-    public static final int OUTPUT_SLOTS = 54;
+    public static final int OUTPUT_SLOTS = 216;
     private int workTicks;
     private boolean autoMode = false;
     private boolean splitLevels = false;
