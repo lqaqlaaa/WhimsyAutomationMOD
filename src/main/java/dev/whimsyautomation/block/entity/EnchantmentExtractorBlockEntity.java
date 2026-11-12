@@ -148,6 +148,16 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
             Holder<Enchantment> enchantment = entry.getKey();
             if (!enchantment.value().isSupportedItem(item)) continue;
+            boolean compatible = true;
+            if (existing != null) {
+                for (Object2IntMap.Entry<Holder<Enchantment>> oldEntry : existing.entrySet()) {
+                    if (!Enchantment.areCompatible(enchantment, oldEntry.getKey())) {
+                        compatible = false;
+                        break;
+                    }
+                }
+            }
+            if (!compatible) continue;
 
             int oldLevel = existing == null ? 0 : existing.getLevel(enchantment);
             int bookLevel = entry.getIntValue();
