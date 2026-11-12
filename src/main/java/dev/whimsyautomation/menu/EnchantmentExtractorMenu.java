@@ -74,6 +74,16 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) addSlot(new Slot(inventory, col, x + col * 18, y + 58));
     }
 
+    public String getApplyPreview() {
+        if (machine == null) return "";
+        ItemStack item = slots.get(0).getItem();
+        ItemStack book = slots.get(1).getItem();
+        if (item.isEmpty()) return Component.translatable("screen.whimsy_automation.apply_need_item").getString();
+        if (book.isEmpty()) return Component.translatable("screen.whimsy_automation.apply_need_book").getString();
+        if (!machine.canApplyBook(item, book)) return Component.translatable("screen.whimsy_automation.apply_invalid").getString();
+        return Component.translatable("screen.whimsy_automation.apply_ready", book.getHoverName()).getString();
+    }
+
     public int getPage() { return syncedPage; }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isSplitLevels() { return syncedSplitLevels; }
