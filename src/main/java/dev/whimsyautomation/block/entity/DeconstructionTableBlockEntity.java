@@ -243,26 +243,16 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
 
-        int processed = 0;
-        int maxBatch = Math.min(input.getCount(), 64);
-        for (int batch = 0; batch < maxBatch; batch++) {
-            List<ItemStack> candidatePlan = new ArrayList<>(outputPlan.size());
-            for (ItemStack stack : outputPlan) candidatePlan.add(stack.copy());
-            boolean fits = true;
-            for (ItemStack result : recoveredPerBatch) {
-                if (!insertIntoOutputPlan(candidatePlan, result.copy())) {
-                    fits = false;
-                    break;
-                }
-            }
-            if (!fits) break;
-            outputPlan = candidatePlan;
-            processed++;
+        int processed = Math.min(input.getCount(), 64);
+        // Scale the per-item recovery list once, then insert each aggregated
+        // result. This avoids cloning the entire output inventory 64 times for
+        // large machine recipes while still delivering every dismantled item.
+        for (ItemStack result : recoveredPerBatch) {
+            ItemStack total = result.copy();
+            total.setCount(Math.multiplyExact(result.getCount(), processed));
+            insertIntoOutputPlan(outputPlan, total);
         }
-        if (processed == 0) return;
 
-        // Commit the largest complete batch that fits. Never consume input for
-        // ingredients that could not be delivered to the output inventory.
         inventory.resize(OUTPUT_START + outputPlan.size());
         for (int i = 0; i < outputPlan.size(); i++) {
             ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
