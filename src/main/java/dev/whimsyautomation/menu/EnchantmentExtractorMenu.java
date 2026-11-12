@@ -16,6 +16,8 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
+    private static final int OUTPUT_START = 1;
+    private static final int OUTPUT_SLOTS = 216;
     private static final int MACHINE_SLOT_COUNT = 218;
     private static final int OUTPUT_PAGES = 8;
     private final EnchantmentExtractorBlockEntity machine;
