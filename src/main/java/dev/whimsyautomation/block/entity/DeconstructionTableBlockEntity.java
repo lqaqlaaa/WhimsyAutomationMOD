@@ -34,7 +34,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     public static final int OUTPUT_SLOTS = 27;
 
     private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
-        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : 64; }
+        @Override public int getSlotLimit(int slot) { return 64; }
         @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty(); }
         @Override protected void onContentsChanged(int slot) { setChanged(); }
     };
