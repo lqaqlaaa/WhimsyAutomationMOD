@@ -16,8 +16,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 260;
-        imageHeight = 260;
-        inventoryLabelY = 172;
+        imageHeight = 280;
+        inventoryLabelY = 192;
         titleLabelY = 8;
     }
 
@@ -69,7 +69,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         g.fill(x, y, x + imageWidth, y + imageHeight, 0xF0101116);
         g.fill(x + 5, y + 24, x + 255, y + 100, 0xFF24221F);
         g.fill(x + 5, y + 102, x + 255, y + 150, 0xFF171B20);
-        g.fill(x + 5, y + 154, x + 255, y + 170, 0xFF171B20);
+        g.fill(x + 5, y + 152, x + 255, y + 190, 0xFF171B20);
+        g.fill(x + 5, y + 192, x + 255, y + 280, 0xFF171B20);
         g.fill(x + 5, y + 24, x + 255, y + 25, 0xFFB77C45);
         g.fill(x + 5, y + 100, x + 255, y + 101, 0xFF65503C);
 
@@ -77,8 +78,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         for (int i = 0; i < 27; i++) {
             slot(g, x + 50 + (i % 9) * 18, y + 42 + (i / 9) * 18);
         }
-        for (int i = 0; i < 27; i++) slot(g, x + 26 + (i % 9) * 18, y + 182 + (i / 9) * 18);
-        for (int i = 0; i < 9; i++) slot(g, x + 26 + i * 18, y + 240);
+        for (int i = 0; i < 27; i++) slot(g, x + 26 + (i % 9) * 18, y + 202 + (i / 9) * 18);
+        for (int i = 0; i < 9; i++) slot(g, x + 26 + i * 18, y + 260);
 
         List<ItemStack> preview = menu.getPreviewStacks();
         int columns = Math.max(1, Math.min(9, menu.getPreviewColumns()));
@@ -102,9 +103,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         g.drawString(font, Component.translatable("screen.whimsy_automation.recipe_materials"), 50, 102, 0xA9D5B8, false);
         String status = font.plainSubstrByWidth(menu.getRecipeStatus(), 220);
         g.drawString(font, status, 12, 88, menu.isLocked() ? 0xFFFFC66E : 0xFFE0C49B, false);
-        g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 44, 158, 0xFFC9D3E1, false);
-        g.drawString(font, Component.translatable("screen.whimsy_automation.page", menu.getPage() + 1, menu.getPageCount()), 78, 158, 0xFFD4C7AF, false);
-        g.drawString(font, Component.translatable("screen.whimsy_automation.preview_page", menu.getPreviewPage() + 1, menu.getPreviewPageCount()), 128, 158, 0xFFD4C7AF, false);
+        g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 44, 176, 0xFFC9D3E1, false);
+        g.drawString(font, Component.translatable("screen.whimsy_automation.page", menu.getPage() + 1, menu.getPageCount()), 78, 176, 0xFFD4C7AF, false);
+        g.drawString(font, Component.translatable("screen.whimsy_automation.preview_page", menu.getPreviewPage() + 1, menu.getPreviewPageCount()), 128, 176, 0xFFD4C7AF, false);
         g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xFFB6B8BC, false);
         if (lockButton != null) {
             lockButton.setMessage(Component.translatable(menu.isLocked()
