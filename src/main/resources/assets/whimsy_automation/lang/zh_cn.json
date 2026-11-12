@@ -25,5 +25,6 @@
   "screen.whimsy_automation.off": "关闭",
   "screen.whimsy_automation.book_input": "附魔书",
   "screen.whimsy_automation.auto_short": "自动化",
-  "screen.whimsy_automation.split_short": "拆分等级"
+  "screen.whimsy_automation.split_short": "拆分等级",
+  "screen.whimsy_automation.recipe_auto": "已自动匹配：%1$s"
 }
