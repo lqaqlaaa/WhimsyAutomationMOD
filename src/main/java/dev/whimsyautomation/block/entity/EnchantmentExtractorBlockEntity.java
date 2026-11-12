@@ -166,12 +166,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
     }
 
-    /** Highest occupied output index, used to calculate the live page count. */
+    /** Allocated output positions, including intentionally emptied stable slots. */
     public int getGeneratedOutputCount() {
-        for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
-            if (!inventory.getStackInSlot(slot).isEmpty()) return slot - OUTPUT_START + 1;
-        }
-        return 0;
+        return Math.max(0, inventory.getSlots() - OUTPUT_START);
     }
 
     @Override
