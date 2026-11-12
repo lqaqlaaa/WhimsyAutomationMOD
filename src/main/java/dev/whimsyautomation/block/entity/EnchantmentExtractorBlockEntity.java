@@ -112,7 +112,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
             ItemStack extracted = super.extractItem(slot, amount, simulate);
             if (!simulate && !internalInventoryUpdate && slot > 0 && !extracted.isEmpty()) {
-                removeGeneratedBook(extracted);
+                removeGeneratedBook(slot, extracted);
             }
             return extracted;
         }
@@ -273,19 +273,22 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     /** Called by the menu after a shift-click has actually transferred a generated book. */
-    public boolean consumeGeneratedBook(ItemStack book) {
-        if (book.isEmpty() || !book.is(Items.ENCHANTED_BOOK)) return false;
+    public boolean consumeGeneratedBook(int outputSlot, ItemStack book) {
+        if (outputSlot < OUTPUT_START || outputSlot >= inventory.getSlots()
+                || book.isEmpty() || !book.is(Items.ENCHANTED_BOOK)) return false;
+        ItemStack currentOutput = inventory.getStackInSlot(outputSlot);
+        if (currentOutput.isEmpty() || !ItemStack.isSameItemSameComponents(currentOutput, book)) return false;
         ItemEnchantments available = getStackEnchantments(inventory.getStackInSlot(0));
         ItemEnchantments requested = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
         if (requested.isEmpty()) return false;
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : requested.entrySet()) {
             if (available.getLevel(entry.getKey()) < entry.getIntValue()) return false;
         }
-        removeGeneratedBook(book);
+        removeGeneratedBook(outputSlot, book);
         return true;
     }
 
-    private void removeGeneratedBook(ItemStack book) {
+    private void removeGeneratedBook(int outputSlot, ItemStack book) {
         if (level == null || level.isClientSide || book.isEmpty()) return;
         ItemStack input = inventory.getStackInSlot(0);
         if (input.isEmpty()) return;
@@ -304,8 +307,12 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (input.is(Items.ENCHANTED_BOOK)) input.set(DataComponents.STORED_ENCHANTMENTS, remaining.toImmutable());
         else input.set(DataComponents.ENCHANTMENTS, remaining.toImmutable());
         inventory.setStackInSlot(0, input);
+        // Keep every other generated book in its original slot. Rebuilding the
+        // entire output list here compacts the remaining books and makes a
+        // shift-click/automation extraction drain more than the requested slot.
+        inventory.setStackInSlot(outputSlot, ItemStack.EMPTY);
         internalInventoryUpdate = false;
-        refreshGeneratedSlots();
+        setChanged();
     }
 
     private static List<Integer> splitSingleEnchantmentLevels(int sourceLevel) {
