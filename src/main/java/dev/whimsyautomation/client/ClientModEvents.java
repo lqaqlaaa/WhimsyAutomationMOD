@@ -13,7 +13,7 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(ModMenus.ENCHANTMENT_EXTRACTOR.get(), VellumEnchantmentExtractorScreen::new);
-        event.register(ModMenus.DECONSTRUCTION_TABLE.get(), VellumDeconstructionTableScreen::new);
+        event.register(ModMenus.ENCHANTMENT_EXTRACTOR.get(), EnchantmentExtractorScreen::new);
+        event.register(ModMenus.DECONSTRUCTION_TABLE.get(), DeconstructionTableScreen::new);
     }
 }
