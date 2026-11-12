@@ -16,7 +16,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
-    private static final int MACHINE_SLOT_COUNT = 217;
+    private static final int MACHINE_SLOT_COUNT = 218;
     private static final int OUTPUT_PAGES = 8;
     private final EnchantmentExtractorBlockEntity machine;
     private final ContainerLevelAccess access;
@@ -31,6 +31,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         if (machine != null) {
             addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getInventory(), 0, 18, 52));
+            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getBookInput(), 0, 18, 76));
             for (int i = 0; i < 216; i++) addPagedOutputSlot(machine.getInventory(), i);
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 52));
@@ -93,7 +94,12 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         ItemStack copy = source.copy();
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
-        } else if (!moveItemStackTo(source, 0, 1, false)) return ItemStack.EMPTY;
+        } else {
+            boolean moved = source.is(net.minecraft.world.item.Items.ENCHANTED_BOOK)
+                    ? moveItemStackTo(source, 1, 2, false)
+                    : moveItemStackTo(source, 0, 1, false);
+            if (!moved) return ItemStack.EMPTY;
+        }
         if (source.isEmpty()) slot.set(ItemStack.EMPTY); else slot.setChanged();
         return copy;
     }
