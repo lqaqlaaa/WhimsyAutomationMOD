@@ -43,6 +43,7 @@ import java.util.List;
  */
 public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
+    private static final int PAGE_SIZE = 27;
 
     private String selectedRecipe = "";
     private String lockedRecipe = "";
