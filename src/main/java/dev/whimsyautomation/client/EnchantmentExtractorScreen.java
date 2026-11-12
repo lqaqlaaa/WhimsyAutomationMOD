@@ -25,12 +25,12 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override protected void init() {
         super.init();
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 82, topPos + 104, 64, 18).build();
+                .bounds(leftPos + 82, topPos + 104, 60, 18).build();
         addRenderableWidget(processButton);
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.previous"), b -> send(3)).bounds(leftPos + 52, topPos + 124, 42, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.next"), b -> send(4)).bounds(leftPos + 146, topPos + 124, 42, 18).build());
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 145, topPos + 103, 88, 34).build();
+                .bounds(leftPos + 145, topPos + 104, 88, 18).build();
         addRenderableWidget(outputModeButton);
     }
 
