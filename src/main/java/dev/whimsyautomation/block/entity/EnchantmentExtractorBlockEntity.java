@@ -36,12 +36,25 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private int workTicks;
     private boolean autoMode = false;
     private boolean splitLevels = false;
+    private boolean autoExtractionPaused;
+
+    // Separate manual input for enchanted books; the original inventory layout stays intact.
+    private final ItemStackHandler bookInput = new ItemStackHandler(1) {
+        @Override public int getSlotLimit(int slot) { return 1; }
+        @Override public boolean isItemValid(int slot, ItemStack stack) {
+            ItemEnchantments stored = stack.get(DataComponents.STORED_ENCHANTMENTS);
+            return slot == 0 && stack.is(Items.ENCHANTED_BOOK) && stored != null && !stored.isEmpty();
+        }
+        @Override protected void onContentsChanged(int slot) { if (slot == 0) autoExtractionPaused = false; setChanged(); }
+    };
+
+    public ItemStackHandler getBookInput() { return bookInput; }
 
     public boolean isAutoMode() { return autoMode; }
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
     public boolean isSplitLevels() { return splitLevels; }
     public void setSplitLevels(boolean enabled) { splitLevels = enabled; setChanged(); }
-    public void processOnce() { if (level != null && !level.isClientSide) processOneItem(); }
+    public void processOnce() { if (level != null && !level.isClientSide) processOneItem(false); }
     public void dropAllContents() {
         if (level == null || level.isClientSide) return;
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
@@ -102,11 +115,60 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (!machine.autoMode) return;
         if (++machine.workTicks < 10) return;
         machine.workTicks = 0;
-        machine.processOneItem();
+        machine.processOneItem(true);
     }
 
-    private void processOneItem() {
-        ItemStack input = inventory.getStackInSlot(0);
+    private void processOneItem(boolean automatic) {
+        if (level == null) return;
+
+        ItemStack item = inventory.getStackInSlot(0);
+        ItemStack book = bookInput.getStackInSlot(0);
+
+        // A book in the second input slot means "apply", never "extract".
+        if (!item.isEmpty() && !book.isEmpty()) {
+            applyBook(item, book);
+            return;
+        }
+
+        // Prevent automatic mode from immediately stripping an item again after
+        // the player has just applied a book to it. Changing the item input clears this.
+        if (automatic && autoExtractionPaused) return;
+        extractEnchantments(item);
+    }
+
+    private void applyBook(ItemStack item, ItemStack book) {
+        ItemEnchantments stored = book.get(DataComponents.STORED_ENCHANTMENTS);
+        if (stored == null || stored.isEmpty()) return;
+
+        ItemEnchantments existing = item.get(DataComponents.ENCHANTMENTS);
+        ItemEnchantments.Mutable merged = new ItemEnchantments.Mutable(
+                existing == null ? ItemEnchantments.EMPTY : existing);
+        boolean changed = false;
+
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
+            Holder<Enchantment> enchantment = entry.getKey();
+            if (!enchantment.value().isSupportedItem(item)) continue;
+
+            int oldLevel = existing == null ? 0 : existing.getLevel(enchantment);
+            int bookLevel = entry.getIntValue();
+            int nextLevel = oldLevel == bookLevel ? oldLevel + 1 : Math.max(oldLevel, bookLevel);
+            nextLevel = Math.min(nextLevel, enchantment.value().getMaxLevel());
+            if (nextLevel > oldLevel) {
+                merged.set(enchantment, nextLevel);
+                changed = true;
+            }
+        }
+
+        if (!changed) return;
+        item.set(DataComponents.ENCHANTMENTS, merged.toImmutable());
+        inventory.setStackInSlot(0, item);
+        book.shrink(1);
+        bookInput.setStackInSlot(0, book.isEmpty() ? ItemStack.EMPTY : book);
+        autoExtractionPaused = true;
+        setChanged();
+    }
+
+    private void extractEnchantments(ItemStack input) {
         if (input.isEmpty()) return;
         ItemEnchantments enchantments = input.get(DataComponents.ENCHANTMENTS);
         if (enchantments == null || enchantments.isEmpty()) return;
@@ -127,11 +189,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int amount = splitLevels ? Math.max(0, entry.getIntValue()) : 1;
             int storedLevel = splitLevels ? 1 : entry.getIntValue();
             for (int n = 0; n < amount; n++) {
-                ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+                ItemStack outputBook = new ItemStack(Items.ENCHANTED_BOOK);
                 ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
                 stored.set(entry.getKey(), storedLevel);
-                book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
-                results[index++] = book;
+                outputBook.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
+                results[index++] = outputBook;
             }
         }
 
@@ -157,6 +219,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
+        tag.put("BookInput", bookInput.serializeNBT(registries));
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
         tag.putBoolean("SplitLevels", splitLevels);
@@ -166,6 +229,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        if (tag.contains("BookInput")) bookInput.deserializeNBT(registries, tag.getCompound("BookInput"));
+        autoExtractionPaused = false;
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
         splitLevels = tag.getBoolean("SplitLevels");
