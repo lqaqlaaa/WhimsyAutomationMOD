@@ -145,30 +145,30 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         extractEnchantments(item);
     }
 
-    private void applyBook(ItemStack item, ItemStack book) {
+    public boolean canApplyBook(ItemStack item, ItemStack book) {
+        if (item.isEmpty() || book.isEmpty()) return false;
         ItemEnchantments stored = book.get(DataComponents.STORED_ENCHANTMENTS);
-        if (stored == null || stored.isEmpty()) return;
+        if (stored == null || stored.isEmpty()) return false;
 
         ItemEnchantments existing = item.get(DataComponents.ENCHANTMENTS);
-        ItemEnchantments.Mutable merged = new ItemEnchantments.Mutable(
-                existing == null ? ItemEnchantments.EMPTY : existing);
-        boolean changed = false;
-
         List<Holder<Enchantment>> additions = new ArrayList<>();
         CustomData customData = book.get(DataComponents.CUSTOM_DATA);
         boolean splitFragment = customData != null && customData.copyTag().getBoolean("WhimsySplitLevelFragment");
+        boolean changed = false;
 
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
             Holder<Enchantment> enchantment = entry.getKey();
-            // Never consume a multi-enchantment book partially.
-            if (!enchantment.value().isSupportedItem(item)) return;
+            if (!enchantment.value().isSupportedItem(item)) return false;
+
             if (existing != null) {
                 for (Object2IntMap.Entry<Holder<Enchantment>> oldEntry : existing.entrySet()) {
-                    if (!Enchantment.areCompatible(enchantment, oldEntry.getKey())) return;
+                    // The same enchantment is allowed: it may be upgraded by the book.
+                    if (!enchantment.equals(oldEntry.getKey())
+                            && !Enchantment.areCompatible(enchantment, oldEntry.getKey())) return false;
                 }
             }
             for (Holder<Enchantment> added : additions) {
-                if (!Enchantment.areCompatible(enchantment, added)) return;
+                if (!Enchantment.areCompatible(enchantment, added)) return false;
             }
             additions.add(enchantment);
 
@@ -178,13 +178,32 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                     ? oldLevel + 1
                     : oldLevel == bookLevel ? oldLevel + 1 : Math.max(oldLevel, bookLevel);
             nextLevel = Math.min(nextLevel, enchantment.value().getMaxLevel());
-            if (nextLevel > oldLevel) {
-                merged.set(enchantment, nextLevel);
-                changed = true;
-            }
+            if (nextLevel > oldLevel) changed = true;
+        }
+        return changed;
+    }
+
+    private void applyBook(ItemStack item, ItemStack book) {
+        if (!canApplyBook(item, book)) return;
+
+        ItemEnchantments stored = book.get(DataComponents.STORED_ENCHANTMENTS);
+        ItemEnchantments existing = item.get(DataComponents.ENCHANTMENTS);
+        ItemEnchantments.Mutable merged = new ItemEnchantments.Mutable(
+                existing == null ? ItemEnchantments.EMPTY : existing);
+        CustomData customData = book.get(DataComponents.CUSTOM_DATA);
+        boolean splitFragment = customData != null && customData.copyTag().getBoolean("WhimsySplitLevelFragment");
+
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
+            Holder<Enchantment> enchantment = entry.getKey();
+            int oldLevel = existing == null ? 0 : existing.getLevel(enchantment);
+            int bookLevel = entry.getIntValue();
+            int nextLevel = splitFragment && oldLevel > 0
+                    ? oldLevel + 1
+                    : oldLevel == bookLevel ? oldLevel + 1 : Math.max(oldLevel, bookLevel);
+            nextLevel = Math.min(nextLevel, enchantment.value().getMaxLevel());
+            if (nextLevel > oldLevel) merged.set(enchantment, nextLevel);
         }
 
-        if (!changed) return;
         item.set(DataComponents.ENCHANTMENTS, merged.toImmutable());
         inventory.setStackInSlot(0, item);
         book.shrink(1);
@@ -192,7 +211,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         autoExtractionPaused = true;
         setChanged();
     }
-
     private void extractEnchantments(ItemStack input) {
         if (input.isEmpty()) return;
         ItemEnchantments enchantments = input.get(DataComponents.ENCHANTMENTS);
