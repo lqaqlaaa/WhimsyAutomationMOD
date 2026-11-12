@@ -68,7 +68,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
         @Override public int getSlotLimit(int slot) { return 1; }
-        @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty(); }
+        @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty() && !stack.is(Items.ENCHANTED_BOOK); }
         @Override protected void onContentsChanged(int slot) { setChanged(); }
 
         @Override
