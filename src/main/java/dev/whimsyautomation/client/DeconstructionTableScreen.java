@@ -28,9 +28,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     @Override
     protected void init() {
         super.init();
-        addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(0))
+        addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .bounds(leftPos + 12, topPos + 126, 20, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("›"), b -> send(1))
+        addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .bounds(leftPos + 35, topPos + 126, 20, 18).build());
         lockButton = Button.builder(Component.translatable("screen.whimsy_automation.lock"), b -> send(6))
                 .bounds(leftPos + 64, topPos + 126, 68, 18).build();
