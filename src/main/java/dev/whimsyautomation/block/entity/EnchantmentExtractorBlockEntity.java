@@ -44,6 +44,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private boolean autoExtractionPaused;
 
     private boolean internalInventoryUpdate;
+    private boolean extractingGeneratedOutput;
 
     public boolean isAutoMode() { return autoMode; }
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
@@ -89,7 +90,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                     && canApplyBook(getStackInSlot(0), stack);
         }
         @Override protected void onContentsChanged(int slot) {
-            if (internalInventoryUpdate) { setChanged(); return; }
+            if (internalInventoryUpdate || extractingGeneratedOutput) { setChanged(); return; }
             // Menu slot synchronization also writes stacks into the client-side
             // ItemStackHandler. The client must never apply an incoming enchanted
             // book to the input or clear the synchronized generated output slot.
@@ -115,7 +116,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            if (!simulate && slot > 0) extractingGeneratedOutput = true;
             ItemStack extracted = super.extractItem(slot, amount, simulate);
+            extractingGeneratedOutput = false;
             if (!simulate && !internalInventoryUpdate && slot > 0 && !extracted.isEmpty()) {
                 removeGeneratedBook(slot, extracted, true);
             }
