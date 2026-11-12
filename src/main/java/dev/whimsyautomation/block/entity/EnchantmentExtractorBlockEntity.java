@@ -36,6 +36,7 @@ import java.util.List;
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
 public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
+    private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_STACK_LIMIT = Integer.MAX_VALUE;
     private static final int BOOK_STACK_COMPONENT_LIMIT = 99;
     private int workTicks;
