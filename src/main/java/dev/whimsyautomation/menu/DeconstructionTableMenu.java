@@ -4,7 +4,6 @@ import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -85,11 +84,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        ItemStack normalizedResult = recipeResult.copy();
-        ItemStack normalizedInput = input.copy();
-        normalizedResult.remove(DataComponents.DAMAGE);
-        normalizedInput.remove(DataComponents.DAMAGE);
-        return ItemStack.isSameItemSameComponents(normalizedResult, normalizedInput);
+        // Durability and other runtime components do not change the recipe result item.
+        return ItemStack.isSameItem(recipeResult, input);
     }
 
     private List<RecipeHolder<?>> candidates() {
@@ -117,7 +113,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (syncedRecipeIndex < 0) {
             if (machine != null && !machine.getLockedRecipe().isEmpty()) return Component.translatable("screen.whimsy_automation.recipe_unavailable").getString();
             if (found.size() == 1) return Component.translatable("screen.whimsy_automation.recipe_auto", found.getFirst().id()).getString();
-            return Component.translatable("screen.whimsy_automation.recipe_select", found.size()).getString();
+            return Component.translatable("screen.whimsy_automation.recipe_default", found.getFirst().id(), found.size()).getString();
         }
         if (syncedRecipeIndex >= found.size()) return Component.translatable("screen.whimsy_automation.recipe_changed").getString();
         return Component.translatable("screen.whimsy_automation.recipe_locked", found.get(syncedRecipeIndex).id()).getString();
@@ -135,7 +131,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         List<RecipeHolder<?>> found = candidates();
         if (found.isEmpty() || (buttonId != 0 && buttonId != 1)) return false;
         int index = getServerRecipeIndex();
-        if (index < 0) index = 0;
+        if (index < 0) index = buttonId == 0 ? found.size() - 1 : 0;
         else index = Math.floorMod(index + (buttonId == 0 ? -1 : 1), found.size());
         machine.setLockedRecipe(found.get(index).id());
         return true;
