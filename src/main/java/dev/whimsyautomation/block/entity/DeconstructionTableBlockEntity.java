@@ -217,6 +217,12 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         ItemStack recipeResult = recipe.getResultItem(level.registryAccess());
         if (!matchesRecipeOutput(recipeResult, input)) return;
 
+        // A recipe result may represent several items from one craft. Consume
+        // that many input items for each recovered ingredient set.
+        int inputCost = Math.max(1, recipeResult.getCount());
+        int processedBatches = Math.min(input.getCount() / inputCost, 64);
+        if (processedBatches <= 0) return;
+
         List<ItemStack> recoveredPerBatch = new ArrayList<>();
         for (Ingredient ingredient : dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe)) {
             if (ingredient.isEmpty()) continue;
@@ -243,13 +249,11 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
 
-        int processed = Math.min(input.getCount(), 64);
-        // Scale the per-item recovery list once, then insert each aggregated
-        // result. This avoids cloning the entire output inventory 64 times for
-        // large machine recipes while still delivering every dismantled item.
+        // Scale the per-craft recovery list once, then insert each aggregated
+        // result. This avoids cloning the entire output inventory for every batch.
         for (ItemStack result : recoveredPerBatch) {
             ItemStack total = result.copy();
-            total.setCount(Math.multiplyExact(result.getCount(), processed));
+            total.setCount(Math.multiplyExact(result.getCount(), processedBatches));
             insertIntoOutputPlan(outputPlan, total);
         }
 
@@ -259,7 +263,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             ItemStack after = outputPlan.get(i);
             if (!ItemStack.matches(before, after)) inventory.setStackInSlot(OUTPUT_START + i, after);
         }
-        input.shrink(processed);
+        input.shrink(processedBatches * inputCost);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
     }
