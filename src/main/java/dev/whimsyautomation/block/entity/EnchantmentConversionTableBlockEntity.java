@@ -34,6 +34,11 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
             };
         }
         @Override protected void onContentsChanged(int slot) { setChanged(); if (slot != RESULT_SLOT) refreshCopyResult(); }
+        @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            ItemStack extracted = super.extractItem(slot, amount, simulate);
+            if (slot == RESULT_SLOT && !simulate && !extracted.isEmpty()) refreshCopyResult();
+            return extracted;
+        }
     };
     public EnchantmentConversionTableBlockEntity(BlockPos pos, BlockState state) { super(ModBlockEntities.ENCHANTMENT_CONVERSION_TABLE.get(), pos, state); }
     public ItemStackHandler getInventory() { return inventory; }
