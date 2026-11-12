@@ -95,6 +95,14 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     public ItemStackHandler getInventory() { return inventory; }
+
+    /** Expands the real output inventory on demand; it never discards existing stacks. */
+    public void ensureOutputInventorySize(int size) {
+        if (size > inventory.getSlots()) {
+            inventory.resize(size);
+            setChanged();
+        }
+    }
     public boolean isAutoMode() { return autoMode; }
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
     public String getSelectedRecipe() { return selectedRecipe; }
