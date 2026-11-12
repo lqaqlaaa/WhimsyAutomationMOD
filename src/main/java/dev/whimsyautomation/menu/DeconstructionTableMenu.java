@@ -23,6 +23,7 @@ import java.util.List;
 public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private final DeconstructionTableBlockEntity machine;
     private final ContainerLevelAccess access;
+    private final Level level;
     private int syncedRecipeIndex = -1;
 
     public DeconstructionTableMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
@@ -31,7 +32,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     public DeconstructionTableMenu(int id, Inventory playerInventory, BlockPos pos) {
         super(ModMenus.DECONSTRUCTION_TABLE.get(), id);
-        this.machine = playerInventory.player.level().getBlockEntity(pos) instanceof DeconstructionTableBlockEntity be ? be : null;
+        this.level = playerInventory.player.level();
+        this.machine = level.getBlockEntity(pos) instanceof DeconstructionTableBlockEntity be ? be : null;
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
 
         if (machine != null) {
@@ -65,7 +67,6 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private List<RecipeHolder<?>> candidates() {
         ItemStack input = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
         if (input.isEmpty()) return List.of();
-        Level level = player.level();
         List<RecipeHolder<?>> found = new ArrayList<>();
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             ItemStack result = holder.value().getResultItem(level.registryAccess());
