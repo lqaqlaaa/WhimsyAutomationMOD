@@ -96,7 +96,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        return !recipeResult.isEmpty() && !input.isEmpty() && ItemStack.isSameItem(recipeResult, input);
+        return !recipeResult.isEmpty() && !input.isEmpty() && ItemStack.isSameItemSameComponents(recipeResult, input);
     }
 
     private List<RecipeHolder<?>> candidates() {
