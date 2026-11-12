@@ -7,5 +7,16 @@
   "screen.whimsy_automation.extractor": "附魔提取器",
   "screen.whimsy_automation.deconstruction": "物品拆解台",
   "screen.whimsy_automation.input": "输入",
-  "screen.whimsy_automation.outputs": "输出"
+  "screen.whimsy_automation.outputs": "输出",
+  "screen.whimsy_automation.auto": "自动",
+  "screen.whimsy_automation.process": "处理一次",
+  "screen.whimsy_automation.split_levels": "拆分等级",
+  "screen.whimsy_automation.previous": "上一页",
+  "screen.whimsy_automation.next": "下一页",
+  "screen.whimsy_automation.page": "第 %1$s/%2$s 页",
+  "screen.whimsy_automation.recipe_none": "没有匹配的配方",
+  "screen.whimsy_automation.recipe_unavailable": "锁定的配方不可用",
+  "screen.whimsy_automation.recipe_select": "选择配方（%1$s）",
+  "screen.whimsy_automation.recipe_changed": "配方列表已更改",
+  "screen.whimsy_automation.recipe_locked": "已锁定：%1$s"
 }
