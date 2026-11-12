@@ -1,5 +1,6 @@
 package dev.whimsyautomation.block;
 
+import com.mojang.serialization.MapCodec;
 import dev.whimsyautomation.block.entity.EnchantmentExtractorBlockEntity;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -13,8 +14,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public final class EnchantmentExtractorBlock extends BaseEntityBlock {
+    public static final MapCodec<EnchantmentExtractorBlock> CODEC = simpleCodec(EnchantmentExtractorBlock::new);
+
     public EnchantmentExtractorBlock() {
         super(BlockBehaviour.Properties.of().strength(3.5F).requiresCorrectToolForDrops());
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override
