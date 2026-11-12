@@ -33,5 +33,9 @@
   "screen.whimsy_automation.recipe_selected": "Preview: %1$s",
   "screen.whimsy_automation.preview_empty": "No material preview",
   "screen.whimsy_automation.lock": "LOCK",
-  "screen.whimsy_automation.unlock": "UNLOCK"
+  "screen.whimsy_automation.unlock": "UNLOCK",
+  "screen.whimsy_automation.apply_need_item": "Insert the item to enchant",
+  "screen.whimsy_automation.apply_need_book": "Insert an enchanted book to add or upgrade enchantments",
+  "screen.whimsy_automation.apply_invalid": "Cannot apply: unsupported item or incompatible enchantments",
+  "screen.whimsy_automation.apply_ready": "Ready to apply: %1$s (press Process)"
 }
