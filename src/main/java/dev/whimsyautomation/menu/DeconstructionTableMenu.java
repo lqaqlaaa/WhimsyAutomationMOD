@@ -5,6 +5,7 @@ import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -101,7 +102,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     public String getRecipeStatus() {
         List<RecipeHolder<?>> found = candidates();
         if (found.isEmpty()) return Component.translatable("screen.whimsy_automation.recipe_none").getString();
-        if (syncedRecipeIndex < 0) return machine != null && !machine.getLockedRecipe().isEmpty()\n                ? Component.translatable("screen.whimsy_automation.recipe_unavailable").getString()\n                : Component.translatable("screen.whimsy_automation.recipe_select", found.size()).getString();
+        if (syncedRecipeIndex < 0) return machine != null && !machine.getLockedRecipe().isEmpty()
+                ? Component.translatable("screen.whimsy_automation.recipe_unavailable").getString()
+                : Component.translatable("screen.whimsy_automation.recipe_select", found.size()).getString();
         if (syncedRecipeIndex >= found.size()) return Component.translatable("screen.whimsy_automation.recipe_changed").getString();
         return Component.translatable("screen.whimsy_automation.recipe_locked", found.get(syncedRecipeIndex).id()).getString();
     }
