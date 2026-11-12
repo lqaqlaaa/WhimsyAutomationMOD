@@ -95,6 +95,16 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack source = slot.getItem();
         ItemStack copy = source.copy();
+        if (index >= OUTPUT_START && index < MACHINE_SLOT_COUNT) {
+            // Do not shift-click the live generated stack: that bypasses
+            // ItemStackHandler.extractItem and would leave the source enchantment intact.
+            ItemStack moving = source.copy();
+            if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
+            int movedCount = copy.getCount() - moving.getCount();
+            if (movedCount <= 0) return ItemStack.EMPTY;
+            machine.consumeGeneratedBook(copy.copyWithCount(movedCount));
+            return copy.copyWithCount(movedCount);
+        }
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
         } else {
