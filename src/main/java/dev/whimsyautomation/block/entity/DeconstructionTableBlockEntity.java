@@ -304,6 +304,14 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        int requiredOutputSize = OUTPUT_START + 27;
+        for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
+            if (!inventory.getStackInSlot(slot).isEmpty()) {
+                requiredOutputSize = Math.max(requiredOutputSize, slot + 1);
+                break;
+            }
+        }
+        inventory.resize(requiredOutputSize);
         selectedRecipe = tag.getString("SelectedRecipe");
         lockedRecipe = tag.getString("LockedRecipe");
         workTicks = tag.getInt("WorkTicks");
