@@ -84,7 +84,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private void addPagedOutputSlot(ItemStackHandler handler, int outputIndex) {
         int actualSlot = OUTPUT_START + outputIndex;
         int visibleIndex = outputIndex % PAGE_SIZE;
-        int x = 66 + (visibleIndex % 9) * 18;
+        int x = 50 + (visibleIndex % 9) * 18;
         int y = 42 + (visibleIndex / 9) * 18;
         addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler, actualSlot, x, y) {
             @Override public boolean isActive() { return outputIndex / PAGE_SIZE == syncedPage; }
@@ -248,10 +248,6 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     public int getPreviewColumns() {
         int count = getPreviewStacks().size();
         if (count <= 9) return 3;
-        if (count <= 16) return 4;
-        if (count <= 25) return 5;
-        if (count <= 36) return 6;
-        if (count <= 49) return 7;
         return 9;
     }
 
@@ -286,9 +282,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             if (locked == null) return Component.translatable("screen.whimsy_automation.recipe_locked_missing").getString();
             ItemStack input = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
             if (!input.isEmpty() && !matchesRecipeOutput(locked.value().getResultItem(level.registryAccess()), input)) {
-                return Component.translatable("screen.whimsy_automation.recipe_locked_mismatch", locked.id()).getString();
+                return Component.translatable("screen.whimsy_automation.recipe_locked_count", candidates().size()).getString();
             }
-            return Component.translatable("screen.whimsy_automation.recipe_locked", locked.id()).getString();
+            return Component.translatable("screen.whimsy_automation.recipe_locked_count", candidates().size()).getString();
         }
         List<RecipeHolder<?>> found = candidates();
         if (found.isEmpty()) return Component.translatable("screen.whimsy_automation.recipe_none").getString();
