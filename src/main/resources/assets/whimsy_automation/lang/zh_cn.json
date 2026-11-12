@@ -52,5 +52,8 @@
   "screen.whimsy_automation.apply_ready": "准备应用：%1$s（点击处理）",
   "screen.whimsy_automation.recipe_locked_missing": "锁定配方不存在（可能缺少对应模组）",
   "screen.whimsy_automation.recipe_materials": "材料预览",
-  "screen.whimsy_automation.apply_book": "应用附魔"
+  "screen.whimsy_automation.apply_book": "应用附魔",
+  "screen.whimsy_automation.mode_combined_short": "合并全部附魔",
+  "screen.whimsy_automation.mode_enchantments_short": "拆分附魔",
+  "screen.whimsy_automation.mode_levels_short": "拆分等级"
 }
