@@ -129,7 +129,14 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        return !recipeResult.isEmpty() && !input.isEmpty() && ItemStack.isSameItemSameComponents(recipeResult, input);
+        if (recipeResult.isEmpty() || input.isEmpty() || !ItemStack.isSameItem(recipeResult, input)) return false;
+        ItemStack expected = recipeResult.copy();
+        ItemStack supplied = input.copy();
+        // Durability is consumed by normal use and must not invalidate an otherwise
+        // identical recipe output. Other data components remain significant.
+        expected.remove(net.minecraft.core.component.DataComponents.DAMAGE);
+        supplied.remove(net.minecraft.core.component.DataComponents.DAMAGE);
+        return ItemStack.isSameItemSameComponents(expected, supplied);
     }
 
     private boolean matchesRecipeIdOutput(String recipeId, ItemStack input) {
