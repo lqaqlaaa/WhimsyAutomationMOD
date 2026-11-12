@@ -166,8 +166,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         ItemStack recipeResult = selected.value().getResultItem(level.registryAccess());
         if (!matchesRecipeOutput(recipeResult, input)) return;
 
-        int inputCost = Math.max(1, recipeResult.getCount());
-        if (input.getCount() < inputCost) return;
 
         List<ItemStack> recovered = new ArrayList<>();
         for (Ingredient ingredient : craftingRecipe.getIngredients()) {
@@ -195,7 +193,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             ItemStack after = outputPlan.get(i);
             if (!ItemStack.matches(before, after)) inventory.setStackInSlot(OUTPUT_START + i, after);
         }
-        input.shrink(inputCost);
+        // One crafted output stack item represents one completed recipe batch,
+        // regardless of the recipe's output stack size.
+        input.shrink(1);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
     }
