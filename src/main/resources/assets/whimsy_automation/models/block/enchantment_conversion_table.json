@@ -1,0 +1,1 @@
+{"parent":"minecraft:block/cube_bottom_top","textures":{"bottom":"whimsy_automation:block/extractor_bottom","top":"whimsy_automation:block/extractor_top","side":"whimsy_automation:block/extractor_side"}}
