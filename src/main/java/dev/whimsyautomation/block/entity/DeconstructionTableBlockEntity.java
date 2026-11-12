@@ -164,9 +164,19 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         // A recipe must be explicitly selected. A locked recipe always takes
         // priority, and a mismatch is a hard stop: never fall back to another recipe.
         String chosenId = !lockedRecipe.isEmpty() ? lockedRecipe : selectedRecipe;
-        if (chosenId.isEmpty()) return;
-
-        RecipeHolder<?> selected = findRecipe(chosenId);
+        RecipeHolder<?> selected = chosenId.isEmpty() ? null : findRecipe(chosenId);
+        if (selected == null && lockedRecipe.isEmpty()) {
+            List<RecipeHolder<?>> matches = new ArrayList<>();
+            for (RecipeHolder<?> candidate : level.getRecipeManager().getRecipes()) {
+                if (matchesRecipeOutput(candidate.value().getResultItem(level.registryAccess()), input)
+                        && !candidate.value().getIngredients().isEmpty()) matches.add(candidate);
+            }
+            matches.sort((a, b) -> a.id().compareTo(b.id()));
+            if (!matches.isEmpty()) {
+                selected = matches.get(0);
+                selectedRecipe = selected.id().toString();
+            }
+        }
         if (selected == null) return;
         Recipe<?> recipe = selected.value();
 
