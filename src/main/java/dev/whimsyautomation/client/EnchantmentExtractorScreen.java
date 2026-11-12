@@ -8,6 +8,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentExtractorScreen extends AbstractContainerScreen<EnchantmentExtractorMenu> {
+    private Button autoButton;
+    private Button splitButton;
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 240;
@@ -22,11 +24,26 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override protected void init() {
         super.init();
-        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.auto"), b -> send(0)).bounds(leftPos + 12, topPos + 104, 48, 18).build());
+        autoButton = addRenderableWidget(Button.builder(autoLabel(), b -> send(0)).bounds(leftPos + 12, topPos + 104, 48, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1)).bounds(leftPos + 64, topPos + 104, 62, 18).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.split_levels"), b -> send(2)).bounds(leftPos + 130, topPos + 104, 62, 18).build());
+        splitButton = addRenderableWidget(Button.builder(splitLabel(), b -> send(2)).bounds(leftPos + 130, topPos + 104, 62, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.previous"), b -> send(3)).bounds(leftPos + 52, topPos + 124, 42, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.next"), b -> send(4)).bounds(leftPos + 146, topPos + 124, 42, 18).build());
+    }
+
+    private Component autoLabel() {
+        return Component.translatable("screen.whimsy_automation.auto_state", Component.translatable(menu.isAutoMode() ? "screen.whimsy_automation.on" : "screen.whimsy_automation.off"));
+    }
+
+    private Component splitLabel() {
+        return Component.translatable("screen.whimsy_automation.split_state", Component.translatable(menu.isSplitLevels() ? "screen.whimsy_automation.on" : "screen.whimsy_automation.off"));
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (autoButton != null) autoButton.setMessage(autoLabel());
+        if (splitButton != null) splitButton.setMessage(splitLabel());
     }
 
     private void slot(GuiGraphics g, int x, int y) {
