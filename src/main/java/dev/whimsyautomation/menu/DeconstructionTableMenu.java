@@ -100,10 +100,10 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     public String getRecipeStatus() {
         List<RecipeHolder<?>> found = candidates();
-        if (found.isEmpty()) return "No matching recipe";
-        if (syncedRecipeIndex < 0) return machine != null && !machine.getLockedRecipe().isEmpty() ? "Locked recipe unavailable" : "Select recipe (" + found.size() + ")";
-        if (syncedRecipeIndex >= found.size()) return "Recipe list changed";
-        return "Locked: " + found.get(syncedRecipeIndex).id();
+        if (found.isEmpty()) return Component.translatable("screen.whimsy_automation.recipe_none").getString();
+        if (syncedRecipeIndex < 0) return machine != null && !machine.getLockedRecipe().isEmpty()\n                ? Component.translatable("screen.whimsy_automation.recipe_unavailable").getString()\n                : Component.translatable("screen.whimsy_automation.recipe_select", found.size()).getString();
+        if (syncedRecipeIndex >= found.size()) return Component.translatable("screen.whimsy_automation.recipe_changed").getString();
+        return Component.translatable("screen.whimsy_automation.recipe_locked", found.get(syncedRecipeIndex).id()).getString();
     }
     public int getPage() { return syncedPage; }
     public int getPageCount() { return OUTPUT_PAGES; }
