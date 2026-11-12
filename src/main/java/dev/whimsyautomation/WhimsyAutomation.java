@@ -3,6 +3,7 @@ package dev.whimsyautomation;
 import dev.whimsyautomation.init.ModCapabilities;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.registry.ModBlocks;
+import dev.whimsyautomation.registry.ModCreativeTabs;
 import dev.whimsyautomation.registry.ModItems;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -15,6 +16,7 @@ public final class WhimsyAutomation {
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus);
+        ModCreativeTabs.register(modEventBus);
         modEventBus.addListener(ModCapabilities::register);
     }
 }
