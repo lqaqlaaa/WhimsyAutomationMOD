@@ -18,9 +18,8 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_START = 1;
-    private static final int OUTPUT_SLOTS = 216;
-    private static final int MACHINE_SLOT_COUNT = 217;
-    private static final int OUTPUT_PAGES = 8;
+    private static final int OUTPUT_SLOTS = EnchantmentExtractorBlockEntity.OUTPUT_SLOTS;
+    private static final int MACHINE_SLOT_COUNT = OUTPUT_START + OUTPUT_SLOTS;
     private final EnchantmentExtractorBlockEntity machine;
     private final ContainerLevelAccess access;
     private int syncedPage;
@@ -34,7 +33,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         if (machine != null) {
             addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getInventory(), 0, 18, 52));
-            for (int i = 0; i < 216; i++) addPagedOutputSlot(machine.getInventory(), i);
+            for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(machine.getInventory(), i);
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 52));
             ItemStackHandler dummyHandler = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS);
@@ -43,7 +42,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         addPlayerInventory(playerInventory, 26, 158);
         addDataSlot(new DataSlot() {
             @Override public int get() { return syncedPage; }
-            @Override public void set(int value) { syncedPage = Math.max(0, Math.min(OUTPUT_PAGES - 1, value)); }
+            @Override public void set(int value) { syncedPage = Math.max(0, Math.min(getPageCount() - 1, value)); }
         });
         addDataSlot(new DataSlot() {
             @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
@@ -77,7 +76,10 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isSplitLevels() { return syncedOutputMode == 2; }
     public int getOutputMode() { return syncedOutputMode; }
-    public int getPageCount() { return OUTPUT_PAGES; }
+    public int getPageCount() {
+        if (machine == null) return 1;
+        return Math.max(1, (machine.getGeneratedOutputCount() + PAGE_SIZE - 1) / PAGE_SIZE);
+    }
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
@@ -85,7 +87,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         else if (buttonId == 1) machine.processOnce();
         else if (buttonId == 2) machine.setOutputMode((machine.getOutputMode() + 1) % 3);
         else if (buttonId == 3) syncedPage = Math.max(0, syncedPage - 1);
-        else if (buttonId == 4) syncedPage = Math.min(OUTPUT_PAGES - 1, syncedPage + 1);
+        else if (buttonId == 4) syncedPage = Math.min(getPageCount() - 1, syncedPage + 1);
         else return false;
         return true;
     }
