@@ -141,7 +141,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         ItemEnchantments stored = book.get(DataComponents.STORED_ENCHANTMENTS);
         if (stored == null || stored.isEmpty()) return false;
 
-        ItemEnchantments existing = item.get(DataComponents.ENCHANTMENTS);
+        ItemEnchantments existing = getStackEnchantments(item);
         List<Holder<Enchantment>> additions = new ArrayList<>();
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
             Holder<Enchantment> enchantment = entry.getKey();
@@ -183,7 +183,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             merged.set(entry.getKey(), oldLevel + entry.getIntValue());
         }
 
-        item.set(DataComponents.ENCHANTMENTS, merged.toImmutable());
+        if (item.is(Items.ENCHANTED_BOOK)) item.set(DataComponents.STORED_ENCHANTMENTS, merged.toImmutable());
+        else item.set(DataComponents.ENCHANTMENTS, merged.toImmutable());
         inventory.setStackInSlot(0, item);
         autoExtractionPaused = true;
         setChanged();
