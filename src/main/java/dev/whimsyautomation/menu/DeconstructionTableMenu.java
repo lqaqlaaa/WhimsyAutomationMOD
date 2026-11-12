@@ -29,13 +29,14 @@ import java.util.List;
 
 public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
+    private static final int MIN_OUTPUT_PAGES = 10;
     private static final int OUTPUT_START = 1;
     private static final int MACHINE_SLOT_COUNT = 1 + PAGE_SIZE;
     private final DeconstructionTableBlockEntity machine;
     private final ContainerLevelAccess access;
     private final Level level;
     private final IItemHandler pageHandler;
-    private int syncedOutputSlotCount = 28;
+    private int syncedOutputSlotCount = 1 + PAGE_SIZE * MIN_OUTPUT_PAGES;
     private int syncedRecipeIndex = -1;
     private int syncedPage;
     private int syncedPreviewPage;
@@ -104,9 +105,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             @Override public void set(int value) { syncedPage = Math.max(0, Math.min(getPageCount() - 1, value)); }
         });
         addDataSlot(new DataSlot() {
-            @Override public int get() { return machine == null ? 28 : Math.min(32767, machine.getInventory().getSlots()); }
+            @Override public int get() { return machine == null ? 1 + PAGE_SIZE * MIN_OUTPUT_PAGES : Math.min(32767, machine.getInventory().getSlots()); }
             @Override public void set(int value) {
-                syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE, value);
+                syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES, value);
                 if (machine != null) machine.ensureOutputInventorySize(syncedOutputSlotCount);
             }
         });
@@ -137,11 +138,23 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        // Recipe viewers such as JEI associate recipes with the output item, not
-        // with one exact component payload. Crafted/damaged/renamed variants of
-        // the same item must therefore still expose the same reverse recipes.
-        return !recipeResult.isEmpty() && !input.isEmpty()
-                && ItemStack.isSameItem(recipeResult, input);
+        // Keep model/variant components for modded items, but ignore ordinary
+        // mutable state such as damage, enchantments and custom display names.
+        if (recipeResult.isEmpty() || input.isEmpty()
+                || !ItemStack.isSameItem(recipeResult, input)) return false;
+        ItemStack expected = recipeResult.copy();
+        ItemStack actual = input.copy();
+        for (net.minecraft.core.component.DataComponentType<?> component : java.util.List.of(
+                net.minecraft.core.component.DataComponents.DAMAGE,
+                net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                net.minecraft.core.component.DataComponents.ITEM_NAME,
+                net.minecraft.core.component.DataComponents.REPAIR_COST,
+                net.minecraft.core.component.DataComponents.ENCHANTMENTS,
+                net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS)) {
+            expected.remove(component);
+            actual.remove(component);
+        }
+        return ItemStack.isSameItemSameComponents(expected, actual);
     }
 
     private List<RecipeHolder<?>> candidates() {
@@ -278,7 +291,6 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     public int getPreviewColumns() {
         int count = getPreviewStacks().size();
-        if (count <= 9) return 3;
         return 9;
     }
 
