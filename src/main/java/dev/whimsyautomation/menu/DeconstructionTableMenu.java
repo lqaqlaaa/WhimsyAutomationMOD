@@ -26,11 +26,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class DeconstructionTableMenu extends AbstractContainerMenu {
-    private static final int PAGE_SIZE = 27;
+    private static final int PAGE_SIZE = 9;
     private static final int OUTPUT_START = 1;
     private static final int OUTPUT_SLOTS = 108;
     private static final int MACHINE_SLOT_COUNT = 109;
-    private static final int OUTPUT_PAGES = 4;
+    private static final int OUTPUT_PAGES = 12;
     private final DeconstructionTableBlockEntity machine;
     private final ContainerLevelAccess access;
     private final Level level;
@@ -57,7 +57,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             ItemStackHandler dummyHandler = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS);
             for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(dummyHandler, i);
         }
-        addPlayerInventory(playerInventory, 26, 218);
+        addPlayerInventory(playerInventory, 26, 178);
         addDataSlot(new DataSlot() {
             @Override public int get() { return getServerRecipeIndex(); }
             @Override public void set(int value) { syncedRecipeIndex = value; }
@@ -83,8 +83,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private void addPagedOutputSlot(ItemStackHandler handler, int outputIndex) {
         int actualSlot = OUTPUT_START + outputIndex;
         int visibleIndex = outputIndex % PAGE_SIZE;
-        int x = 26 + (visibleIndex % 9) * 18;
-        int y = 150 + (visibleIndex / 9) * 18;
+        int x = 66 + (visibleIndex % 3) * 18;
+        int y = 42 + (visibleIndex / 3) * 18;
         addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler, actualSlot, x, y) {
             @Override public boolean isActive() { return outputIndex / PAGE_SIZE == syncedPage; }
         });
