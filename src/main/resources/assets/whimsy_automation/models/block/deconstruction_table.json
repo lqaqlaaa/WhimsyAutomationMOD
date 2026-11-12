@@ -1,8 +1,8 @@
 {
   "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "bottom": "minecraft:block/cut_copper",
-    "top": "minecraft:block/crafting_table_top",
-    "side": "minecraft:block/chiseled_copper"
+    "bottom": "whimsy_automation:block/deconstruction_bottom",
+    "top": "whimsy_automation:block/deconstruction_top",
+    "side": "whimsy_automation:block/deconstruction_side"
   }
 }
