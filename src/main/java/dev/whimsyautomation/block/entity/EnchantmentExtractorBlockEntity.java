@@ -248,6 +248,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
         tag.putBoolean("SplitLevels", splitLevels);
+        tag.putBoolean("AutoExtractionPaused", autoExtractionPaused);
     }
 
     @Override
@@ -255,7 +256,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         if (tag.contains("BookInput")) bookInput.deserializeNBT(registries, tag.getCompound("BookInput"));
-        autoExtractionPaused = false;
+        autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
         splitLevels = tag.getBoolean("SplitLevels");
