@@ -57,7 +57,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         setChanged();
     }
     public void setSplitLevels(boolean enabled) {
-        if (splitLevels == enabled) return;
+        if (splitLevels == enabled && !combinedOutput) return;
         splitLevels = enabled;
         combinedOutput = false;
         // The split option is a display/extraction rule, not an automation task.
