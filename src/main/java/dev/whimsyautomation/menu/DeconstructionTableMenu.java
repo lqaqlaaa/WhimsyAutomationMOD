@@ -3,6 +3,7 @@ package dev.whimsyautomation.menu;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.integration.jei.WhimsyJeiPlugin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -113,7 +114,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             Recipe<?> recipe = holder.value();
             ItemStack result = recipe.getResultItem(level.registryAccess());
-            if (!matchesRecipeOutput(result, input) || recipe.getIngredients().isEmpty()) continue;
+            if (!matchesRecipeOutput(result, input)) continue;
             found.add(holder);
         }
         found.sort((a, b) -> a.id().compareTo(b.id()));
@@ -188,6 +189,17 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             if (ingredient.isEmpty()) continue;
             ItemStack[] choices = ingredient.getItems();
             if (choices.length > 0) recovered.add(choices[0].copy());
+        }
+        // JEI's displayed ingredients are the fallback for modded recipe types
+        // whose Recipe#getIngredients does not expose their real machine inputs.
+        if (recovered.isEmpty() && level.isClientSide) {
+            ItemStack target = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
+            for (WhimsyJeiPlugin.Entry entry : WhimsyJeiPlugin.findByOutput(target)) {
+                if (entry.recipeId().equals(holder.id().toString())) {
+                    recovered.addAll(entry.inputs().stream().map(ItemStack::copy).toList());
+                    break;
+                }
+            }
         }
         int start = syncedPage * PAGE_SIZE;
         for (int i = 0; i < PAGE_SIZE && start + i < recovered.size(); i++) {
