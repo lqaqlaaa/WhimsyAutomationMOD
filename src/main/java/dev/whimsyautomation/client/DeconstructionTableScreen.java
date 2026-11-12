@@ -38,13 +38,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(3))
                 .bounds(leftPos + 122, topPos + 152, 74, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
-                .bounds(leftPos + 200, topPos + 152, 20, 18).build());
+                .bounds(leftPos + 200, topPos + 8, 20, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
-                .bounds(leftPos + 222, topPos + 152, 20, 18).build());
+                .bounds(leftPos + 222, topPos + 8, 20, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
-                .bounds(leftPos + 200, topPos + 174, 20, 18).build());
+                .bounds(leftPos + 200, topPos + 152, 20, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
-                .bounds(leftPos + 222, topPos + 174, 20, 18).build());
+                .bounds(leftPos + 222, topPos + 152, 20, 18).build());
     }
 
     private void drawSwitch(GuiGraphics g, int x, int y, boolean enabled) {
