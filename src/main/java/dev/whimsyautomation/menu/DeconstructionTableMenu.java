@@ -116,8 +116,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     private RecipeHolder<?> getPreviewRecipe() {
         List<RecipeHolder<?>> found = candidates();
-        if (syncedRecipeIndex < 0 || syncedRecipeIndex >= found.size()) return null;
-        return found.get(syncedRecipeIndex);
+        int index = level.isClientSide ? syncedRecipeIndex : getServerRecipeIndex();
+        if (index < 0 || index >= found.size()) return null;
+        return found.get(index);
     }
 
     public List<String> getPreviewLines() {
@@ -139,11 +140,11 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     public String getRecipeStatus() {
         List<RecipeHolder<?>> found = candidates();
-        if (machine != null && !machine.getLockedRecipe().isEmpty()) {
-            if (getPreviewRecipe() == null || !machine.getLockedRecipe().equals(getPreviewRecipe().id().toString())) {
+        if (syncedLocked) {
+            if (getPreviewRecipe() == null) {
                 return Component.translatable("screen.whimsy_automation.recipe_locked_mismatch").getString();
             }
-            return Component.translatable("screen.whimsy_automation.recipe_locked", machine.getLockedRecipe()).getString();
+            return Component.translatable("screen.whimsy_automation.recipe_locked", getPreviewRecipe().id()).getString();
         }
         if (found.isEmpty()) return Component.translatable("screen.whimsy_automation.recipe_none").getString();
         if (getPreviewRecipe() == null) return Component.translatable("screen.whimsy_automation.recipe_select_hint", found.size()).getString();
