@@ -104,7 +104,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         int bookCount = 0;
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-            bookCount += Math.max(0, entry.getIntValue());
+            bookCount += splitLevels ? Math.max(0, entry.getIntValue()) : 1;
         }
         if (bookCount + 1 > OUTPUT_SLOTS) return;
 
@@ -115,10 +115,12 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         int index = 1;
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-            for (int level = 0; level < entry.getIntValue(); level++) {
+            int amount = splitLevels ? Math.max(0, entry.getIntValue()) : 1;
+            int storedLevel = splitLevels ? 1 : entry.getIntValue();
+            for (int n = 0; n < amount; n++) {
                 ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
                 ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
-                stored.set(entry.getKey(), 1);
+                stored.set(entry.getKey(), storedLevel);
                 book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
                 results[index++] = book;
             }
