@@ -149,6 +149,8 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         supplied.remove(DataComponents.ENCHANTMENTS);
         expected.remove(DataComponents.STORED_ENCHANTMENTS);
         supplied.remove(DataComponents.STORED_ENCHANTMENTS);
+        expected.remove(DataComponents.REPAIR_COST);
+        supplied.remove(DataComponents.REPAIR_COST);
         return ItemStack.isSameItemSameComponents(expected, supplied);
     }
 
