@@ -39,6 +39,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private int workTicks;
     private boolean autoMode = false;
     private boolean splitLevels = false;
+    private boolean combinedOutput = false;
     private boolean autoExtractionPaused;
 
     private boolean internalInventoryUpdate;
@@ -46,9 +47,19 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     public boolean isAutoMode() { return autoMode; }
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
     public boolean isSplitLevels() { return splitLevels; }
+    public boolean isCombinedOutput() { return combinedOutput; }
+    public int getOutputMode() { return combinedOutput ? 0 : (splitLevels ? 2 : 1); }
+    public void setOutputMode(int mode) {
+        int normalized = Math.floorMod(mode, 3);
+        combinedOutput = normalized == 0;
+        splitLevels = normalized == 2;
+        refreshGeneratedSlots();
+        setChanged();
+    }
     public void setSplitLevels(boolean enabled) {
         if (splitLevels == enabled) return;
         splitLevels = enabled;
+        combinedOutput = false;
         // The split option is a display/extraction rule, not an automation task.
         // Rebuild outputs immediately even when automatic mode is disabled.
         refreshGeneratedSlots();
@@ -209,18 +220,23 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         List<ItemStack> generated = new ArrayList<>();
 
         if (!input.isEmpty() && !enchantments.isEmpty()) {
-            for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
-                int enchantmentLevel = entry.getIntValue();
-                if (splitLevels) {
-                    // One output slot per level: e.g. Sharpness V becomes five
-                    // separate Sharpness I books, for weapons and enchanted books alike.
-                    for (int i = 0; i < enchantmentLevel && generated.size() < OUTPUT_SLOTS; i++) {
-                        generated.add(createBook(entry.getKey(), 1));
+            if (combinedOutput) {
+                // One book contains every enchantment and its original level.
+                generated.add(createCombinedBook(enchantments));
+            } else {
+                for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
+                    int enchantmentLevel = entry.getIntValue();
+                    if (splitLevels) {
+                        // One output slot per level: e.g. Sharpness V becomes five
+                        // separate Sharpness I books.
+                        for (int i = 0; i < enchantmentLevel && generated.size() < OUTPUT_SLOTS; i++) {
+                            generated.add(createBook(entry.getKey(), 1));
+                        }
+                    } else {
+                        generated.add(createBook(entry.getKey(), enchantmentLevel));
                     }
-                } else {
-                    generated.add(createBook(entry.getKey(), enchantmentLevel));
+                    if (generated.size() >= OUTPUT_SLOTS) break;
                 }
-                if (generated.size() >= OUTPUT_SLOTS) break;
             }
         }
 
@@ -232,6 +248,16 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
         internalInventoryUpdate = false;
         setChanged();
+    }
+
+    private ItemStack createCombinedBook(ItemEnchantments enchantments) {
+        ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+        ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
+            stored.set(entry.getKey(), entry.getIntValue());
+        }
+        book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
+        return book;
     }
 
     private ItemStack createBook(Holder<Enchantment> enchantment, int level) {
@@ -307,6 +333,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
         tag.putBoolean("SplitLevels", splitLevels);
+        tag.putBoolean("CombinedOutput", combinedOutput);
         tag.putBoolean("AutoExtractionPaused", autoExtractionPaused);
     }
 
@@ -318,6 +345,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
         splitLevels = tag.getBoolean("SplitLevels");
+        combinedOutput = tag.getBoolean("CombinedOutput");
         // Rebuild only after mode flags have been restored from disk.
         if (level != null && !level.isClientSide) refreshGeneratedSlots();
     }
