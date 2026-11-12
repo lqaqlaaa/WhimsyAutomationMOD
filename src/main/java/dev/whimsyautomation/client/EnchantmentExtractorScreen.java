@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentExtractorScreen extends AbstractContainerScreen<EnchantmentExtractorMenu> {
+    private Button processButton;
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 240;
@@ -22,7 +23,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override protected void init() {
         super.init();
-        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1)).bounds(leftPos + 82, topPos + 104, 64, 18).build());
+        processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
+                .bounds(leftPos + 82, topPos + 104, 64, 18).build();
+        addRenderableWidget(processButton);
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.previous"), b -> send(3)).bounds(leftPos + 52, topPos + 124, 42, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.next"), b -> send(4)).bounds(leftPos + 146, topPos + 124, 42, 18).build());
     }
@@ -66,6 +69,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 10, 108, 0xC9D3E1, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.split_short"), 151, 108, 0xC9D3E1, false);
         g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xAAB7C8, false);
+        if (processButton != null) {
+            processButton.setMessage(Component.translatable(menu.isApplying()
+                    ? "screen.whimsy_automation.apply_book" : "screen.whimsy_automation.process"));
+        }
     }
 
     @Override
