@@ -87,7 +87,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         internalInventoryUpdate = false;
     }
 
-    private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + 1) {
+    private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
         @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : OUTPUT_STACK_LIMIT; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (stack.isEmpty()) return false;
@@ -148,7 +148,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
 
         private void resize(int size) {
-            int targetSize = Math.max(OUTPUT_START, size);
+            int targetSize = Math.max(OUTPUT_START + PAGE_SIZE * 10, size);
             if (targetSize == stacks.size()) return;
             NonNullList<ItemStack> resized = NonNullList.withSize(targetSize, ItemStack.EMPTY);
             for (int i = 0; i < Math.min(stacks.size(), targetSize); i++) {
@@ -287,7 +287,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
 
         internalInventoryUpdate = true;
-        inventory.resize(OUTPUT_START + generated.size());
+        inventory.resize(Math.max(OUTPUT_START + 27 * 10, OUTPUT_START + generated.size()));
         for (int index = 0; index < generated.size(); index++) {
             inventory.setStackInSlot(OUTPUT_START + index, generated.get(index));
         }
