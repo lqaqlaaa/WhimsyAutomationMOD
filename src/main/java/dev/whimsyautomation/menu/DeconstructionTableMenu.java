@@ -43,6 +43,12 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private boolean syncedAutoMode;
     private boolean syncedLocked;
     private int syncedLockedRecipeIndex = -1;
+    private ItemStack cachedCandidateInput = ItemStack.EMPTY;
+    private List<RecipeHolder<?>> cachedCandidateRecipes = List.of();
+    private List<RecipeHolder<?>> cachedAllRecipes;
+    private ItemStack cachedPreviewInput = ItemStack.EMPTY;
+    private String cachedPreviewRecipeId = "";
+    private List<ItemStack> cachedPreviewStacks = List.of();
 
     public DeconstructionTableMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos());
@@ -150,25 +156,31 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     private List<RecipeHolder<?>> candidates() {
         ItemStack input = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
-        if (input.isEmpty()) return List.of();
+        if (ItemStack.matches(cachedCandidateInput, input)) return cachedCandidateRecipes;
+        cachedCandidateInput = input.copy();
+        if (input.isEmpty()) {
+            cachedCandidateRecipes = List.of();
+            return cachedCandidateRecipes;
+        }
         List<RecipeHolder<?>> found = new ArrayList<>();
-        for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
+        for (RecipeHolder<?> holder : allRecipes()) {
             Recipe<?> recipe = holder.value();
             ItemStack result = recipe.getResultItem(level.registryAccess());
             if (!matchesRecipeOutput(result, input)) continue;
             found.add(holder);
         }
         found.sort((a, b) -> a.id().compareTo(b.id()));
-        return found;
+        cachedCandidateRecipes = List.copyOf(found);
+        return cachedCandidateRecipes;
     }
 
     private List<RecipeHolder<?>> allRecipes() {
+        if (cachedAllRecipes != null) return cachedAllRecipes;
         List<RecipeHolder<?>> all = new ArrayList<>();
-        for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
-            all.add(holder);
-        }
+        for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) all.add(holder);
         all.sort((a, b) -> a.id().compareTo(b.id()));
-        return all;
+        cachedAllRecipes = List.copyOf(all);
+        return cachedAllRecipes;
     }
 
     private int getServerLockedRecipeIndex() {
@@ -224,26 +236,35 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private List<ItemStack> getAllPreviewStacks() {
         RecipeHolder<?> holder = getPreviewRecipe();
         if (holder == null) return List.of();
-
         ItemStack target = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
+        String recipeId = holder.id().toString();
+        if (recipeId.equals(cachedPreviewRecipeId) && ItemStack.matches(cachedPreviewInput, target)) {
+            return cachedPreviewStacks;
+        }
+
+        List<ItemStack> result = null;
         if (level.isClientSide && !target.isEmpty()) {
             for (WhimsyJeiPlugin.Entry entry : WhimsyJeiPlugin.findByOutput(target)) {
-                if (entry.recipeId().equals(holder.id().toString())) {
-                    return mergeIdenticalStacks(entry.inputs());
+                if (entry.recipeId().equals(recipeId)) {
+                    result = mergeIdenticalStacks(entry.inputs());
+                    break;
                 }
             }
         }
-
-        List<ItemStack> recovered = new ArrayList<>();
-        for (Ingredient ingredient : holder.value().getIngredients()) {
-            if (ingredient.isEmpty()) continue;
-            ItemStack[] choices = ingredient.getItems();
-            // A tag/ingredient alternative is one recipe slot, not a list of
-            // simultaneously consumed items. Preview one representative just as
-            // JEI shows one cycling ingredient slot.
-            if (choices.length > 0 && !choices[0].isEmpty()) recovered.add(choices[0].copy());
+        if (result == null) {
+            List<ItemStack> recovered = new ArrayList<>();
+            for (Ingredient ingredient : holder.value().getIngredients()) {
+                if (ingredient.isEmpty()) continue;
+                ItemStack[] choices = ingredient.getItems();
+                // One ingredient alternative represents one consumed recipe slot.
+                if (choices.length > 0 && !choices[0].isEmpty()) recovered.add(choices[0].copy());
+            }
+            result = mergeIdenticalStacks(recovered);
         }
-        return mergeIdenticalStacks(recovered);
+        cachedPreviewRecipeId = recipeId;
+        cachedPreviewInput = target.copy();
+        cachedPreviewStacks = result;
+        return cachedPreviewStacks;
     }
 
     private static List<ItemStack> mergeIdenticalStacks(List<ItemStack> source) {
