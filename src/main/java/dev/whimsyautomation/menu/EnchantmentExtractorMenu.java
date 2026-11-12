@@ -26,6 +26,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final IItemHandler pageHandler;
     private int syncedPage;
+    private int syncedOutputSlotCount = OUTPUT_START + 1;
     private boolean syncedAutoMode;
     private int syncedOutputMode = 1;
 
@@ -91,6 +92,13 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public void set(int value) { syncedPage = Math.max(0, Math.min(getPageCount() - 1, value)); }
         });
         addDataSlot(new DataSlot() {
+            @Override public int get() { return machine == null ? OUTPUT_START + 1 : Math.min(32767, machine.getInventory().getSlots()); }
+            @Override public void set(int value) {
+                syncedOutputSlotCount = Math.max(OUTPUT_START + 1, value);
+                if (machine != null) machine.ensureOutputInventorySize(syncedOutputSlotCount);
+            }
+        });
+        addDataSlot(new DataSlot() {
             @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
             @Override public void set(int value) { syncedAutoMode = value != 0; }
         });
@@ -121,8 +129,9 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     public boolean isSplitLevels() { return syncedOutputMode == 2; }
     public int getOutputMode() { return syncedOutputMode; }
     public int getPageCount() {
-        if (machine == null) return 1;
-        return Math.max(1, (machine.getGeneratedOutputCount() + PAGE_SIZE - 1) / PAGE_SIZE);
+        int outputSlots = machine == null ? syncedOutputSlotCount - OUTPUT_START
+                : machine.getGeneratedOutputCount();
+        return Math.max(1, (outputSlots + PAGE_SIZE - 1) / PAGE_SIZE);
     }
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
