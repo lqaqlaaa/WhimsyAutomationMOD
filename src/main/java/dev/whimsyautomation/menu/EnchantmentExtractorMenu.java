@@ -16,11 +16,13 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
-    private static final int MACHINE_SLOT_COUNT = 28;
+    private static final int MACHINE_SLOT_COUNT = 217;
     private static final int OUTPUT_PAGES = 8;
     private final EnchantmentExtractorBlockEntity machine;
     private final ContainerLevelAccess access;
     private int syncedPage;
+    private boolean syncedAutoMode;
+    private boolean syncedSplitLevels;
 
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, FriendlyByteBuf data) { this(id, playerInventory, data.readBlockPos()); }
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, BlockPos pos) {
@@ -29,7 +31,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         if (machine != null) {
             addSlot(new net.neoforged.neoforge.items.SlotItemHandler(machine.getInventory(), 0, 18, 52));
-            for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(machine.getInventory(), i);
+            for (int i = 0; i < 216; i++) addPagedOutputSlot(machine.getInventory(), i);
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 52));
             for (int i = 0; i < PAGE_SIZE; i++) addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 48 + (i % 9) * 18, 42 + (i / 9) * 18));
@@ -39,22 +41,25 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public int get() { return syncedPage; }
             @Override public void set(int value) { syncedPage = Math.max(0, Math.min(OUTPUT_PAGES - 1, value)); }
         });
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
+            @Override public void set(int value) { syncedAutoMode = value != 0; }
+        });
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return machine != null && machine.isSplitLevels() ? 1 : 0; }
+            @Override public void set(int value) { syncedSplitLevels = value != 0; }
+        });
     }
 
-    private void addPagedOutputSlot(ItemStackHandler handler, int visibleIndex) {
+    private void addPagedOutputSlot(ItemStackHandler handler, int outputIndex) {
+        int actualSlot = 1 + outputIndex;
+        int visibleIndex = outputIndex % PAGE_SIZE;
         int x = 48 + (visibleIndex % 9) * 18;
         int y = 42 + (visibleIndex / 9) * 18;
-        addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, x, y) {
-            private int actualSlot() { return 1 + syncedPage * PAGE_SIZE + visibleIndex; }
-            private boolean isActualSlotValid() { return actualSlot() >= 0 && actualSlot() < handler.getSlots(); }
-            @Override public ItemStack getItem() { return isActualSlotValid() ? handler.getStackInSlot(actualSlot()) : ItemStack.EMPTY; }
-            @Override public boolean hasItem() { return !getItem().isEmpty(); }
-            @Override public void set(ItemStack stack) { if (isActualSlotValid()) handler.setStackInSlot(actualSlot(), stack); }
-            @Override public ItemStack remove(int amount) { return isActualSlotValid() ? handler.extractItem(actualSlot(), amount, false) : ItemStack.EMPTY; }
-            @Override public boolean mayPlace(ItemStack stack) { return false; }
-            @Override public int getMaxStackSize() { return isActualSlotValid() ? handler.getSlotLimit(actualSlot()) : 0; }
-            // ItemStackHandler already marks the block entity dirty on mutations.
-            @Override public void setChanged() { }
+        addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler, actualSlot, x, y) {
+            @Override public boolean isActive() {
+                return outputIndex / PAGE_SIZE == syncedPage;
+            }
         });
     }
 
@@ -65,6 +70,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     }
 
     public int getPage() { return syncedPage; }
+    public boolean isAutoMode() { return syncedAutoMode; }
+    public boolean isSplitLevels() { return syncedSplitLevels; }
     public int getPageCount() { return OUTPUT_PAGES; }
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
