@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "whimsy_automation:block/enchantment_extractor" }
+  }
+}
