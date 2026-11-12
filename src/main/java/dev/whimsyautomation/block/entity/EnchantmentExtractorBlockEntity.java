@@ -143,6 +143,14 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     public ItemStackHandler getInventory() { return inventory; }
 
+    /** Highest occupied output index, used to calculate the live page count. */
+    public int getGeneratedOutputCount() {
+        for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
+            if (!inventory.getStackInSlot(slot).isEmpty()) return slot - OUTPUT_START + 1;
+        }
+        return 0;
+    }
+
     @Override
     public Component getDisplayName() {
         return Component.translatable("container.whimsy_automation.enchantment_extractor");
