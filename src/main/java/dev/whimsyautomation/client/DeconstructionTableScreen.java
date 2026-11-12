@@ -31,6 +31,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             if (minecraft != null && minecraft.gameMode != null)
                 minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 2);
         }).bounds(leftPos + 12, topPos + 106, 43, 16).build());
+        addRenderableWidget(Button.builder(Component.literal("PROCESS"), button -> {
+            if (minecraft != null && minecraft.gameMode != null)
+                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 3);
+        }).bounds(leftPos + 58, topPos + 106, 62, 16).build());
     }
 
     @Override
