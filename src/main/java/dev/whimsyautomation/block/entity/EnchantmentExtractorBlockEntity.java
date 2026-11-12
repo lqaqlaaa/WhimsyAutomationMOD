@@ -89,6 +89,10 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
         @Override protected void onContentsChanged(int slot) {
             if (internalInventoryUpdate) { setChanged(); return; }
+            // Menu slot synchronization also writes stacks into the client-side
+            // ItemStackHandler. The client must never apply an incoming enchanted
+            // book to the input or clear the synchronized generated output slot.
+            if (level == null || level.isClientSide) { setChanged(); return; }
             if (slot == 0) {
                 refreshGeneratedSlots();
             } else {
