@@ -204,22 +204,55 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         for (Ingredient ingredient : holder.value().getIngredients()) {
             if (ingredient.isEmpty()) continue;
             ItemStack[] choices = ingredient.getItems();
-            for (ItemStack choice : choices) {
-                if (!choice.isEmpty()) recovered.add(choice.copy());
+            // A tag/ingredient alternative is one recipe slot, not a list of
+            // simultaneously consumed items. Preview one representative just as
+            // JEI shows one cycling ingredient slot.
+            if (choices.length > 0 && !choices[0].isEmpty()) recovered.add(choices[0].copy());
+        }
+        return mergeIdenticalStacks(recovered);
+    }
+
+    private static List<ItemStack> mergeIdenticalStacks(List<ItemStack> source) {
+        List<ItemStack> merged = new ArrayList<>();
+        for (ItemStack candidate : source) {
+            if (candidate.isEmpty()) continue;
+            ItemStack remaining = candidate.copy();
+            for (ItemStack existing : merged) {
+                if (!ItemStack.isSameItemSameComponents(existing, remaining)) continue;
+                int room = existing.getMaxStackSize() - existing.getCount();
+                int moved = Math.min(room, remaining.getCount());
+                if (moved > 0) {
+                    existing.grow(moved);
+                    remaining.shrink(moved);
+                }
+                if (remaining.isEmpty()) break;
+            }
+            while (!remaining.isEmpty()) {
+                int moved = Math.min(remaining.getCount(), remaining.getMaxStackSize());
+                merged.add(remaining.copyWithCount(moved));
+                remaining.shrink(moved);
             }
         }
-        return List.copyOf(recovered);
+        return List.copyOf(merged);
     }
 
     public List<ItemStack> getPreviewStacks() {
         List<ItemStack> all = getAllPreviewStacks();
         int start = getPreviewPage() * PAGE_SIZE;
-        List<ItemStack> page = new ArrayList<>(PAGE_SIZE);
-        for (int i = 0; i < PAGE_SIZE; i++) {
-            int index = start + i;
-            page.add(index < all.size() ? all.get(index).copy() : ItemStack.EMPTY);
-        }
+        int end = Math.min(all.size(), start + PAGE_SIZE);
+        List<ItemStack> page = new ArrayList<>();
+        for (int index = start; index < end; index++) page.add(all.get(index).copy());
         return List.copyOf(page);
+    }
+
+    public int getPreviewColumns() {
+        int count = getPreviewStacks().size();
+        if (count <= 9) return 3;
+        if (count <= 16) return 4;
+        if (count <= 25) return 5;
+        if (count <= 36) return 6;
+        if (count <= 49) return 7;
+        return 9;
     }
 
     public int getPreviewPage() {
