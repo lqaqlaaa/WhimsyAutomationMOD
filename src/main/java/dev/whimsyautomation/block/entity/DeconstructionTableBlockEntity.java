@@ -16,7 +16,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -136,7 +136,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (level == null || recipeId == null || recipeId.isEmpty() || input.isEmpty()) return false;
         for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
             if (!holder.id().toString().equals(recipeId)) continue;
-            if (!(holder.value() instanceof CraftingRecipe)) return false;
             return matchesRecipeOutput(holder.value().getResultItem(level.registryAccess()), input);
         }
         return false;
@@ -161,14 +160,15 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (chosenId.isEmpty()) return;
 
         RecipeHolder<?> selected = findRecipe(chosenId);
-        if (selected == null || !(selected.value() instanceof CraftingRecipe craftingRecipe)) return;
+        if (selected == null) return;
+        Recipe<?> recipe = selected.value();
 
         ItemStack recipeResult = selected.value().getResultItem(level.registryAccess());
         if (!matchesRecipeOutput(recipeResult, input)) return;
 
 
         List<ItemStack> recovered = new ArrayList<>();
-        for (Ingredient ingredient : craftingRecipe.getIngredients()) {
+        for (Ingredient ingredient : recipe.getIngredients()) {
             if (ingredient.isEmpty()) continue;
             ItemStack[] options = ingredient.getItems();
             if (options.length == 0) return;
