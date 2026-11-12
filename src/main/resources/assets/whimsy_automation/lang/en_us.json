@@ -52,5 +52,8 @@
   "screen.whimsy_automation.apply_ready": "Ready to apply: %1$s (press Process)",
   "screen.whimsy_automation.recipe_locked_missing": "Locked recipe is missing (a required mod may be absent)",
   "screen.whimsy_automation.recipe_materials": "Ingredient preview",
-  "screen.whimsy_automation.apply_book": "APPLY BOOK"
+  "screen.whimsy_automation.apply_book": "APPLY BOOK",
+  "screen.whimsy_automation.mode_combined_short": "Combine All",
+  "screen.whimsy_automation.mode_enchantments_short": "Split Enchants",
+  "screen.whimsy_automation.mode_levels_short": "Split Levels"
 }
