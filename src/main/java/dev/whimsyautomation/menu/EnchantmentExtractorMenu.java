@@ -25,7 +25,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private int syncedPage;
     private boolean syncedAutoMode;
-    private boolean syncedSplitLevels;
+    private int syncedOutputMode = 1;
 
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, FriendlyByteBuf data) { this(id, playerInventory, data.readBlockPos()); }
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, BlockPos pos) {
@@ -50,8 +50,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public void set(int value) { syncedAutoMode = value != 0; }
         });
         addDataSlot(new DataSlot() {
-            @Override public int get() { return machine != null && machine.isSplitLevels() ? 1 : 0; }
-            @Override public void set(int value) { syncedSplitLevels = value != 0; }
+            @Override public int get() { return machine != null ? machine.getOutputMode() : 1; }
+            @Override public void set(int value) { syncedOutputMode = Math.max(0, Math.min(2, value)); }
         });
     }
 
@@ -75,14 +75,15 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
     public int getPage() { return syncedPage; }
     public boolean isAutoMode() { return syncedAutoMode; }
-    public boolean isSplitLevels() { return syncedSplitLevels; }
+    public boolean isSplitLevels() { return syncedOutputMode == 2; }
+    public int getOutputMode() { return syncedOutputMode; }
     public int getPageCount() { return OUTPUT_PAGES; }
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
         if (buttonId == 0) machine.setAutoMode(!machine.isAutoMode());
         else if (buttonId == 1) machine.processOnce();
-        else if (buttonId == 2) machine.setSplitLevels(!machine.isSplitLevels());
+        else if (buttonId == 2) machine.setOutputMode((machine.getOutputMode() + 1) % 3);
         else if (buttonId == 3) syncedPage = Math.max(0, syncedPage - 1);
         else if (buttonId == 4) syncedPage = Math.min(OUTPUT_PAGES - 1, syncedPage + 1);
         else return false;
