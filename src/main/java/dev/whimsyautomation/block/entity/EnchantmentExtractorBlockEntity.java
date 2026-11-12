@@ -1,7 +1,9 @@
 package dev.whimsyautomation.block.entity;
 
+import dev.whimsyautomation.menu.EnchantmentExtractorMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
+import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -9,6 +11,12 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -21,7 +29,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 /** Input slot 0; output slots 1-54. Each enchantment level becomes a level-I book. */
-public final class EnchantmentExtractorBlockEntity extends BlockEntity {
+public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
     public static final int OUTPUT_SLOTS = 54;
     private int workTicks;
@@ -39,6 +47,19 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity {
 
     public EnchantmentExtractorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), pos, state);
+    }
+
+    public ItemStackHandler getInventory() { return inventory; }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("container.whimsy_automation.enchantment_extractor");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int id, Inventory playerInventory, Player player) {
+        return new EnchantmentExtractorMenu(id, playerInventory,
+                new FriendlyByteBuf(Unpooled.buffer()).writeBlockPos(worldPosition));
     }
 
     public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
