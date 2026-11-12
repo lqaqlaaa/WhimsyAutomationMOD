@@ -96,7 +96,14 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        return !recipeResult.isEmpty() && !input.isEmpty() && ItemStack.isSameItemSameComponents(recipeResult, input);
+        if (recipeResult.isEmpty() || input.isEmpty() || !ItemStack.isSameItem(recipeResult, input)) return false;
+        ItemStack expected = recipeResult.copy();
+        ItemStack supplied = input.copy();
+        // Durability is consumed by normal use and must not invalidate an otherwise
+        // identical recipe output. Other data components remain significant.
+        expected.remove(net.minecraft.core.component.DataComponents.DAMAGE);
+        supplied.remove(net.minecraft.core.component.DataComponents.DAMAGE);
+        return ItemStack.isSameItemSameComponents(expected, supplied);
     }
 
     private List<RecipeHolder<?>> candidates() {
@@ -138,8 +145,10 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private int getServerRecipeIndex() {
-        if (machine == null || machine.getSelectedRecipe().isEmpty()) return -1;
+        if (machine == null) return -1;
         List<RecipeHolder<?>> found = candidates();
+        if (found.isEmpty()) return -1;
+        if (machine.getSelectedRecipe().isEmpty()) return 0;
         for (int i = 0; i < found.size(); i++) {
             if (found.get(i).id().toString().equals(machine.getSelectedRecipe())) return i;
         }
@@ -150,7 +159,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (syncedLocked) return getLockedRecipeHolder();
         List<RecipeHolder<?>> found = candidates();
         int index = level.isClientSide ? syncedRecipeIndex : getServerRecipeIndex();
-        if (index < 0 || index >= found.size()) return null;
+        if (index < 0 || index >= found.size()) index = 0;
         return found.get(index);
     }
 
