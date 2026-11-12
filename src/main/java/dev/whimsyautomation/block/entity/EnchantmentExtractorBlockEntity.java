@@ -36,7 +36,7 @@ import java.util.List;
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
 public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
-    private static final int OUTPUT_STACK_LIMIT = 64;
+    private static final int OUTPUT_STACK_LIMIT = Integer.MAX_VALUE;
     private int workTicks;
     private boolean autoMode = false;
     private boolean splitLevels = false;
@@ -262,17 +262,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
                     int enchantmentLevel = entry.getIntValue();
                     if (splitLevels) {
-                        // Aggregate identical level-I books into stack counts. A
-                        // high-level enchantment therefore consumes ceil(level/64)
-                        // slots rather than one slot for every individual level.
-                        int remaining = enchantmentLevel;
-                        while (remaining > 0) {
-                            int stackCount = Math.min(OUTPUT_STACK_LIMIT, remaining);
-                            ItemStack stack = createBook(entry.getKey(), 1);
-                            stack.setCount(stackCount);
-                            generated.add(stack);
-                            remaining -= stackCount;
-                        }
+                        // One slot represents every extracted level of this
+                        // enchantment: Sharpness 1000 becomes Sharpness I x1000.
+                        ItemStack stack = createBook(entry.getKey(), 1);
+                        stack.setCount(enchantmentLevel);
+                        generated.add(stack);
                     } else {
                         generated.add(createBook(entry.getKey(), enchantmentLevel));
                     }
