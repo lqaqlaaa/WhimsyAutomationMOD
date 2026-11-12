@@ -152,17 +152,13 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
             Holder<Enchantment> enchantment = entry.getKey();
             int bookLevel = entry.getIntValue();
+            // Follow EnchantmentCustomTable: do not reject an enchanted book merely
+            // because its enchantment conflicts with another enchantment on the item.
             if (bookLevel <= 0 || !enchantment.value().isSupportedItem(item)) return false;
-
-            for (Object2IntMap.Entry<Holder<Enchantment>> oldEntry : existing.entrySet()) {
-                if (!enchantment.equals(oldEntry.getKey())
-                        && !Enchantment.areCompatible(enchantment, oldEntry.getKey())) return false;
-            }
-            for (Holder<Enchantment> added : additions) {
-                if (!Enchantment.areCompatible(enchantment, added)) return false;
-            }
             int oldLevel = existing.getLevel(enchantment);
-            if ((long) oldLevel + bookLevel > enchantment.value().getMaxLevel()) return false;
+            int mergedLevel = oldLevel == 0 ? bookLevel
+                    : oldLevel == bookLevel ? oldLevel + 1 : oldLevel + bookLevel;
+            if (mergedLevel <= 0) return false;
             additions.add(enchantment);
         }
         return !additions.isEmpty();
@@ -180,7 +176,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         // enchantments merge by adding levels, subject to the normal max-level rule.
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : stored.entrySet()) {
             int oldLevel = existing.getLevel(entry.getKey());
-            merged.set(entry.getKey(), oldLevel + entry.getIntValue());
+            int addedLevel = entry.getIntValue();
+            merged.set(entry.getKey(), oldLevel == 0 ? addedLevel
+                    : oldLevel == addedLevel ? oldLevel + 1 : oldLevel + addedLevel);
         }
 
         internalInventoryUpdate = true;
@@ -233,6 +231,19 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         stored.set(enchantment, level);
         book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
         return book;
+    }
+
+    /** Called by the menu after a shift-click has actually transferred a generated book. */
+    public boolean consumeGeneratedBook(ItemStack book) {
+        if (book.isEmpty() || !book.is(Items.ENCHANTED_BOOK)) return false;
+        ItemEnchantments available = getStackEnchantments(inventory.getStackInSlot(0));
+        ItemEnchantments requested = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+        if (requested.isEmpty()) return false;
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : requested.entrySet()) {
+            if (available.getLevel(entry.getKey()) < entry.getIntValue()) return false;
+        }
+        removeGeneratedBook(book);
+        return true;
     }
 
     private void removeGeneratedBook(ItemStack book) {
