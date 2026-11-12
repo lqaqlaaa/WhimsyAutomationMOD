@@ -277,6 +277,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     private ItemStack createBook(Holder<Enchantment> enchantment, int level) {
         ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+        book.set(DataComponents.MAX_STACK_SIZE, OUTPUT_STACK_LIMIT);
         ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
         stored.set(enchantment, level);
         book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
