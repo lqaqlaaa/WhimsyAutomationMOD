@@ -159,7 +159,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     private final IItemHandler topHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
-    private final IItemHandler bottomHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, false, true);
+    private final IItemHandler bottomHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, false, true,
+            () -> getStackEnchantments(inventory.getStackInSlot(0)).isEmpty());
     private final IItemHandler sideHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
     private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, true);
 
