@@ -72,13 +72,19 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     public void processOnce() { if (level != null && !level.isClientSide) refreshGeneratedSlots(); }
     public void dropAllContents() {
         if (level == null || level.isClientSide) return;
-        for (int slot = 0; slot < inventory.getSlots(); slot++) {
-            ItemStack stack = inventory.getStackInSlot(slot);
-            if (!stack.isEmpty()) {
-                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, stack);
-                inventory.setStackInSlot(slot, ItemStack.EMPTY);
-            }
+        // Output books are virtual projections of the enchantments still stored
+        // on the input item. Drop only the input; dropping both would duplicate
+        // every enchantment that had not yet been extracted.
+        ItemStack input = inventory.getStackInSlot(0);
+        if (!input.isEmpty()) {
+            Containers.dropItemStack(level, worldPosition.getX() + 0.5,
+                    worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, input);
         }
+        internalInventoryUpdate = true;
+        for (int slot = 0; slot < inventory.getSlots(); slot++) {
+            inventory.setStackInSlot(slot, ItemStack.EMPTY);
+        }
+        internalInventoryUpdate = false;
     }
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + 1) {
