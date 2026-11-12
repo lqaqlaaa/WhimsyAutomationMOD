@@ -130,24 +130,51 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             if (options.length == 0) return;
             recovered.add(options[0].copy());
         }
-        if (recovered.isEmpty() || recovered.size() > OUTPUT_SLOTS) return;
+        if (recovered.isEmpty()) return;
 
-        int[] outputSlots = findEmptyOutputSlots(recovered.size());
-        if (outputSlots == null) return;
-        for (int i = 0; i < recovered.size(); i++) inventory.setStackInSlot(outputSlots[i], recovered.get(i));
+        // Plan all output changes on copies first. Existing compatible stacks are
+        // filled before empty slots, so repeated ingredients do not clutter pages.
+        List<ItemStack> outputPlan = new ArrayList<>(OUTPUT_SLOTS);
+        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
+            outputPlan.add(inventory.getStackInSlot(slot).copy());
+        }
+        for (ItemStack result : recovered) {
+            if (!insertIntoOutputPlan(outputPlan, result.copy())) return;
+        }
 
+        // Commit outputs and input consumption only after the complete plan fits.
+        for (int i = 0; i < outputPlan.size(); i++) {
+            ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
+            ItemStack after = outputPlan.get(i);
+            if (!ItemStack.matches(before, after)) {
+                inventory.setStackInSlot(OUTPUT_START + i, after);
+            }
+        }
         input.shrink(inputCost);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
     }
 
-    private int[] findEmptyOutputSlots(int count) {
-        int[] slots = new int[count];
-        int found = 0;
-        for (int slot = OUTPUT_START; slot < inventory.getSlots() && found < count; slot++) {
-            if (inventory.getStackInSlot(slot).isEmpty()) slots[found++] = slot;
+    private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
+        // Merge with matching item+components first.
+        for (ItemStack existing : plan) {
+            if (incoming.isEmpty()) return true;
+            if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, incoming)) continue;
+            int limit = Math.min(existing.getMaxStackSize(), inventory.getSlotLimit(OUTPUT_START));
+            int moved = Math.min(incoming.getCount(), Math.max(0, limit - existing.getCount()));
+            if (moved > 0) {
+                existing.grow(moved);
+                incoming.shrink(moved);
+            }
         }
-        return found == count ? slots : null;
+        // Then distribute any remainder across empty slots.
+        for (int i = 0; i < plan.size() && !incoming.isEmpty(); i++) {
+            if (!plan.get(i).isEmpty()) continue;
+            int moved = Math.min(incoming.getCount(), Math.min(incoming.getMaxStackSize(), inventory.getSlotLimit(OUTPUT_START)));
+            plan.set(i, incoming.copyWithCount(moved));
+            incoming.shrink(moved);
+        }
+        return incoming.isEmpty();
     }
 
     @Override
