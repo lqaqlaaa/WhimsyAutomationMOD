@@ -35,7 +35,8 @@ import java.util.List;
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
 public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
     public static final int OUTPUT_START = 1;
-    public static final int OUTPUT_SLOTS = 216;
+    public static final int OUTPUT_SLOTS = 4096;
+    private static final int OUTPUT_STACK_LIMIT = 64;
     private int workTicks;
     private boolean autoMode = false;
     private boolean splitLevels = false;
@@ -79,7 +80,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     private final ItemStackHandler inventory = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS) {
-        @Override public int getSlotLimit(int slot) { return 1; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : OUTPUT_STACK_LIMIT; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (stack.isEmpty()) return false;
             if (slot == 0) return !getStackEnchantments(stack).isEmpty();
@@ -235,10 +236,16 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
                     int enchantmentLevel = entry.getIntValue();
                     if (splitLevels) {
-                        // One output slot per level: e.g. Sharpness V becomes five
-                        // separate Sharpness I books.
-                        for (int i = 0; i < enchantmentLevel && generated.size() < OUTPUT_SLOTS; i++) {
-                            generated.add(createBook(entry.getKey(), 1));
+                        // Aggregate identical level-I books into stack counts. A
+                        // high-level enchantment therefore consumes ceil(level/64)
+                        // slots rather than one slot for every individual level.
+                        int remaining = enchantmentLevel;
+                        while (remaining > 0 && generated.size() < OUTPUT_SLOTS) {
+                            int stackCount = Math.min(OUTPUT_STACK_LIMIT, remaining);
+                            ItemStack stack = createBook(entry.getKey(), 1);
+                            stack.setCount(stackCount);
+                            generated.add(stack);
+                            remaining -= stackCount;
                         }
                     } else {
                         generated.add(createBook(entry.getKey(), enchantmentLevel));
@@ -286,7 +293,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         ItemEnchantments requested = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
         if (requested.isEmpty()) return false;
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : requested.entrySet()) {
-            if (available.getLevel(entry.getKey()) < entry.getIntValue()) return false;
+            long requestedLevel = (long) entry.getIntValue() * book.getCount();
+            if (available.getLevel(entry.getKey()) < requestedLevel) return false;
         }
         removeGeneratedBook(outputSlot, book);
         return true;
@@ -301,10 +309,12 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (removed.isEmpty()) return;
 
         ItemEnchantments.Mutable remaining = new ItemEnchantments.Mutable(current);
+        int extractedCount = book.getCount();
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : removed.entrySet()) {
+            long totalRemoved = (long) entry.getIntValue() * extractedCount;
             int currentLevel = current.getLevel(entry.getKey());
-            if (currentLevel < entry.getIntValue()) return;
-            remaining.set(entry.getKey(), currentLevel - entry.getIntValue());
+            if (totalRemoved > currentLevel) return;
+            remaining.set(entry.getKey(), currentLevel - (int) totalRemoved);
         }
 
         internalInventoryUpdate = true;
