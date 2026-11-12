@@ -27,5 +27,11 @@
   "screen.whimsy_automation.auto_short": "Auto",
   "screen.whimsy_automation.split_short": "Split",
   "screen.whimsy_automation.recipe_auto": "Auto-matched: %1$s",
-  "screen.whimsy_automation.recipe_default": "Default recipe: %1$s (%2$s available; cycle to change)"
+  "screen.whimsy_automation.recipe_default": "Default recipe: %1$s (%2$s available; cycle to change)",
+  "screen.whimsy_automation.recipe_locked_mismatch": "Locked recipe does not match input; processing paused",
+  "screen.whimsy_automation.recipe_select_hint": "%1$s recipes found; use arrows to preview",
+  "screen.whimsy_automation.recipe_selected": "Preview: %1$s",
+  "screen.whimsy_automation.preview_empty": "No material preview",
+  "screen.whimsy_automation.lock": "LOCK",
+  "screen.whimsy_automation.unlock": "UNLOCK"
 }
