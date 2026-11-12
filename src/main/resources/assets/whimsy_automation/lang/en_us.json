@@ -1,5 +1,11 @@
 {
   "block.whimsy_automation.enchantment_extractor": "Enchantment Extractor",
   "block.whimsy_automation.deconstruction_table": "Deconstruction Table",
-  "itemGroup.whimsy_automation": "Whimsy Automation"
+  "itemGroup.whimsy_automation": "Whimsy Automation",
+  "container.whimsy_automation.enchantment_extractor": "Enchantment Extractor",
+  "container.whimsy_automation.deconstruction_table": "Deconstruction Table",
+  "screen.whimsy_automation.extractor": "ENCHANTMENT EXTRACTOR",
+  "screen.whimsy_automation.deconstruction": "DECONSTRUCTION TABLE",
+  "screen.whimsy_automation.input": "INPUT",
+  "screen.whimsy_automation.outputs": "OUTPUT"
 }
