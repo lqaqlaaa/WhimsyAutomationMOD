@@ -8,7 +8,7 @@
 html { width:100%; height:100%; shape-rendering:crispEdges; color:#242424; font-family:minecraft:default; }
 body { height:100%; min-height:0; overflow:hidden; padding:4px; gap:4px; }
 body { margin:0; min-height:100%; padding:8px; display:flex; flex-direction:column; align-items:center; gap:8px; }
-.window { width:96%; max-width:620px; max-height:none; min-height:0; flex:1 1 auto; overflow-x:hidden; overflow-y:auto; padding:10px; background:#c6c6c6; border:3px solid #101010; box-shadow:0 0 0 2px #777; }
+.window { width:94%; max-width:520px; max-height:none; min-height:0; flex:1 1 auto; overflow-x:hidden; overflow-y:auto; padding:10px; background:#c6c6c6; border:3px solid #101010; box-shadow:0 0 0 2px #777; }
 .machine-head { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #888; padding:2px 2px 8px; margin-bottom:9px; gap:8px; }
 .machine-title { display:flex; align-items:center; gap:9px; font-size:16px; font-weight:bold; }
 .machine-icon { width:30px; height:30px; display:grid; place-items:center; background:#667d52; border:2px solid #303b29; box-shadow:inset 2px 2px #a9b78f,inset -2px -2px #3b4b30; color:white; }
@@ -42,17 +42,21 @@ button:disabled { opacity:.45; }
 .switch i { width:10px; height:10px; background:#ddd; display:block; box-shadow:1px 1px #333; }
 .switch.on { background:#5e7d4c; justify-content:flex-end; }
 .switch.on i { background:#e9f1dc; }
-.inventory { width:96%; max-width:620px; flex:0 0 auto; background:#c6c6c6; border:2px solid #101010; padding:8px 10px; }
+.inventory { width:94%; max-width:520px; flex:0 0 auto; background:#c6c6c6; border:2px solid #101010; padding:8px 10px; }
 .inventory-title { font-size:11px; font-weight:bold; margin:0 0 6px; color:#333; }
 .inv-grid { display:grid; grid-template-columns:repeat(9,18px); gap:3px; justify-content:center; }
 .inv-grid slot { width:18px; height:18px; }
 .hotbar { margin-top:8px; }
 @media(max-width:560px) {
- .machine-body { grid-template-columns:1fr; }
- .control-area { display:grid; grid-template-columns:1fr 1fr; }
- .window,.inventory { width:96%; padding:6px; }
+ .machine-body { grid-template-columns:minmax(0,1fr) 112px; }
+ .control-area { display:flex; }
+ .window,.inventory { width:94%; padding:6px; }
  .machine-title { font-size:14px; }
  .work-area { padding:6px; }
+}
+@media(max-width:360px) {
+ .machine-body { grid-template-columns:1fr; }
+ .control-area { display:grid; grid-template-columns:1fr 1fr; }
 }
 @media(max-height:420px) {
  body { padding:3px; gap:3px; }
