@@ -35,7 +35,9 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             for (int i = 0; i < 216; i++) addPagedOutputSlot(machine.getInventory(), i);
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 52));
-            for (int i = 0; i < PAGE_SIZE; i++) addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 48 + (i % 9) * 18, 42 + (i / 9) * 18));
+            addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 18, 76));
+            ItemStackHandler dummyHandler = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS);
+            for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(dummyHandler, i);
         }
         addPlayerInventory(playerInventory, 26, 158);
         addDataSlot(new DataSlot() {
