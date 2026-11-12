@@ -137,7 +137,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     public boolean isSplitLevels() { return syncedOutputMode == 2; }
     public int getOutputMode() { return syncedOutputMode; }
     public int getPageCount() {
-        int outputSlots = level.isClientSide || machine == null
+        int outputSlots = machine == null || (machine.getLevel() != null && machine.getLevel().isClientSide)
                 ? syncedOutputSlotCount - OUTPUT_START
                 : machine.getGeneratedOutputCount();
         return Math.max(1, (outputSlots + PAGE_SIZE - 1) / PAGE_SIZE);
