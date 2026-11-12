@@ -20,6 +20,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Containers;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
@@ -46,6 +47,21 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
     private String lockedRecipe = "";
     private int workTicks;
+    private boolean autoMode = false;
+
+    public boolean isAutoMode() { return autoMode; }
+    public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
+    public void processOnce() { if (level != null && !level.isClientSide) processOneItem(); }
+    public void dropAllContents() {
+        if (level == null || level.isClientSide) return;
+        for (int slot = 0; slot < inventory.getSlots(); slot++) {
+            ItemStack stack = inventory.getStackInSlot(slot);
+            if (!stack.isEmpty()) {
+                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, stack);
+                inventory.setStackInSlot(slot, ItemStack.EMPTY);
+            }
+        }
+    }
 
     public DeconstructionTableBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.DECONSTRUCTION_TABLE.get(), pos, state);
@@ -80,6 +96,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, DeconstructionTableBlockEntity machine) {
         if (level.isClientSide) return;
+        if (!machine.autoMode) return;
         if (++machine.workTicks < 10) return;
         machine.workTicks = 0;
         machine.processOneItem();
@@ -139,6 +156,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.putString("LockedRecipe", lockedRecipe);
         tag.putInt("WorkTicks", workTicks);
+        tag.putBoolean("AutoMode", autoMode);
     }
 
     @Override
@@ -147,5 +165,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         lockedRecipe = tag.getString("LockedRecipe");
         workTicks = tag.getInt("WorkTicks");
+        autoMode = tag.getBoolean("AutoMode");
     }
 }
