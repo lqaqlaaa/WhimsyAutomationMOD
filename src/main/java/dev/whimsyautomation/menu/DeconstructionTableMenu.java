@@ -46,7 +46,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             for (int i = 0; i < 108; i++) addPagedOutputSlot(machine.getInventory(), i);
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 22, 52));
-            for (int i = 0; i < PAGE_SIZE; i++) addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 66 + (i % 9) * 18, 42 + (i / 9) * 18));
+            ItemStackHandler dummyHandler = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS);
+            for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(dummyHandler, i);
         }
         addPlayerInventory(playerInventory, 26, 158);
         addDataSlot(new DataSlot() {
