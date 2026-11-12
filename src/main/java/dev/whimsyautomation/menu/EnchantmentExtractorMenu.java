@@ -89,6 +89,10 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         return Component.translatable("screen.whimsy_automation.apply_ready", book.getHoverName()).getString();
     }
 
+    public boolean isApplying() {
+        return !slots.get(0).getItem().isEmpty() && !slots.get(1).getItem().isEmpty();
+    }
+
     public int getPage() { return syncedPage; }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isSplitLevels() { return syncedSplitLevels; }
