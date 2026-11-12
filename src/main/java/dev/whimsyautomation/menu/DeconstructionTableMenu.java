@@ -58,7 +58,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             ItemStackHandler dummyHandler = new ItemStackHandler(OUTPUT_START + OUTPUT_SLOTS);
             for (int i = 0; i < OUTPUT_SLOTS; i++) addPagedOutputSlot(dummyHandler, i);
         }
-        addPlayerInventory(playerInventory, 26, 178);
+        addPlayerInventory(playerInventory, 26, 220);
         addDataSlot(new DataSlot() {
             @Override public int get() { return getServerRecipeIndex(); }
             @Override public void set(int value) { syncedRecipeIndex = value; }
