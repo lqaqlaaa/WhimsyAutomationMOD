@@ -22,6 +22,8 @@
   "screen.whimsy_automation.next": "NEXT",
   "screen.whimsy_automation.page": "Page %1$s/%2$s",
   "screen.whimsy_automation.recipe_none": "No matching recipe",
+  "screen.whimsy_automation.recipe_count": "Available recipes: %1$s",
+  "screen.whimsy_automation.recipe_locked_count": "Recipe locked · Available: %1$s",
   "screen.whimsy_automation.recipe_unavailable": "Locked recipe unavailable",
   "screen.whimsy_automation.recipe_select": "Select recipe (%1$s)",
   "screen.whimsy_automation.recipe_changed": "Recipe list changed",
