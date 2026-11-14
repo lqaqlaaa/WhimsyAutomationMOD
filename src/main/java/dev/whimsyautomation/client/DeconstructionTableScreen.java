@@ -202,7 +202,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 8, inventoryLabelY, 0x404040, false);
         graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 130, 0x404040, false);
         graphics.drawString(font, Component.literal("输入"), 202, 57, 0x404040, false);
-        graphics.drawString(font, Component.literal("配方 " + menu.getSelectedRecipePosition() + "/" + menu.getCandidateCount()), 184, 130, 0x404040, false);
+        graphics.drawString(font, Component.literal("配方 " + menu.getSelectedRecipePosition() + "/" + menu.getCandidateCount()), 184, 151, 0x404040, false);
         if (previewPageField != null && !previewPageField.isFocused())
             previewPageField.setValue(Integer.toString(menu.getPreviewPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
