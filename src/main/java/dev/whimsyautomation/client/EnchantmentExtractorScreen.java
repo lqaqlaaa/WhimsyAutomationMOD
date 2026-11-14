@@ -118,10 +118,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private void drawLayoutSlot(GuiGraphics graphics, String id, int menuSlot,
                                 int x, int y) {
         UiLayoutProfile.Element e = layoutEditor.element(id, "slot", x, y, 16, 16);
-        if (menuSlot >= 0 && menuSlot < menu.slots.size()) {
-            menu.slots.get(menuSlot).x = e.x + (e.width - 16) / 2;
-            menu.slots.get(menuSlot).y = e.y + (e.height - 16) / 2;
-        }
         graphics.blitSprite(SLOT, leftPos + e.x, topPos + e.y, e.width, e.height);
     }
 
