@@ -122,7 +122,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
 
             @Override public boolean isItemValid(int slot, ItemStack stack) {
-                return machine != null && !machine.isPersistentOutputMode() && stack.is(Items.ENCHANTED_BOOK)
+                return machine != null && !isPersistentOutputMode() && stack.is(Items.ENCHANTED_BOOK)
                         && machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack);
             }
         };
