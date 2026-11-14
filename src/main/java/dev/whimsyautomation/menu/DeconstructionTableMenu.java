@@ -4,6 +4,7 @@ import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -52,6 +53,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private String cachedPreviewRecipeId = "";
     private List<ItemStack> cachedPreviewStacks = List.of();
     private boolean quickMoveSingle;
+    private final int[] syncedIngredientVariants = new int[32];
+    private final int[] syncedSideModes = new int[] {2, 1, 1, 1, 1, 1};
 
     public DeconstructionTableMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos());
@@ -151,6 +154,24 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             @Override public int get() { return getServerLockedRecipeIndex(); }
             @Override public void set(int value) { syncedLockedRecipeIndex = value; }
         });
+        for (int group = 0; group < syncedIngredientVariants.length; group++) {
+            final int groupIndex = group;
+            addDataSlot(new DataSlot() {
+                @Override public int get() {
+                    RecipeHolder<?> recipe = getPreviewRecipe();
+                    return machine == null || recipe == null ? 0
+                            : machine.getIngredientVariant(recipe.id().toString(), groupIndex);
+                }
+                @Override public void set(int value) { syncedIngredientVariants[groupIndex] = Math.max(0, value); }
+            });
+        }
+        for (int side = 0; side < 6; side++) {
+            final int sideIndex = side;
+            addDataSlot(new DataSlot() {
+                @Override public int get() { return machine == null ? 0 : machine.getSideMode(Direction.values()[sideIndex]); }
+                @Override public void set(int value) { syncedSideModes[sideIndex] = Math.max(0, Math.min(2, value)); }
+            });
+        }
     }
 
     private void addPagedOutputSlot(int outputIndex) {
@@ -247,7 +268,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private RecipeHolder<?> getPreviewRecipe() {
-        if (syncedLocked) return getLockedRecipeHolder();
+        if (level.isClientSide ? syncedLocked : machine != null && !machine.getLockedRecipe().isEmpty()) return getLockedRecipeHolder();
         List<RecipeHolder<?>> found = candidates();
         if (found.isEmpty()) return null;
         int index = level.isClientSide ? syncedRecipeIndex : getServerRecipeIndex();
@@ -275,24 +296,24 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (holder == null) return List.of();
         ItemStack target = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
         String recipeId = holder.id().toString();
-        if (recipeId.equals(cachedPreviewRecipeId) && ItemStack.matches(cachedPreviewInput, target)) {
-            return cachedPreviewStacks;
-        }
 
         // Preview and execution use the same server-registered Recipe ingredients.
         // JEI display alternatives can be client-only or cycle through choices that
         // the actual recipe does not consume, so they must not override this list.
         List<ItemStack> recovered = new ArrayList<>();
-        for (Ingredient ingredient : dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(holder.value())) {
-            if (ingredient.isEmpty()) continue;
-            ItemStack[] choices = ingredient.getItems();
-            if (choices.length > 0 && !choices[0].isEmpty()) recovered.add(choices[0].copy());
+        List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
+                dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(holder.value());
+        for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+            var group = groups.get(groupIndex);
+            ItemStack[] choices = group.ingredient().getItems();
+            if (choices.length == 0) continue;
+            int variant = getSelectedIngredientVariant(groupIndex);
+            ItemStack selected = choices[Math.min(variant, choices.length - 1)].copy();
+            selected.setCount(group.count());
+            recovered.add(selected);
         }
-        List<ItemStack> result = mergeIdenticalStacks(recovered);
-        cachedPreviewRecipeId = recipeId;
-        cachedPreviewInput = target.copy();
-        cachedPreviewStacks = result;
-        return cachedPreviewStacks;
+        List<ItemStack> result = List.copyOf(recovered);
+        return result;
     }
 
     private static List<ItemStack> mergeIdenticalStacks(List<ItemStack> source) {
@@ -313,6 +334,30 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return List.copyOf(merged);
     }
 
+    public List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> getPreviewIngredientGroups() {
+        RecipeHolder<?> holder = getPreviewRecipe();
+        return holder == null ? List.of() : dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(holder.value());
+    }
+
+    public ItemStack[] getIngredientOptions(int groupIndex) {
+        List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups = getPreviewIngredientGroups();
+        if (groupIndex < 0 || groupIndex >= groups.size()) return new ItemStack[0];
+        return groups.get(groupIndex).ingredient().getItems();
+    }
+
+    public int getSelectedIngredientVariant(int groupIndex) {
+        if (groupIndex < 0 || groupIndex >= syncedIngredientVariants.length) return 0;
+        return syncedIngredientVariants[groupIndex];
+    }
+
+    public void chooseIngredientVariant(int groupIndex, int variant) {
+        if (minecraftServerSide() && machine != null) {
+            RecipeHolder<?> holder = getPreviewRecipe();
+            if (holder != null) machine.setIngredientVariant(holder.id().toString(), groupIndex, variant);
+        }
+    }
+
+    private boolean minecraftServerSide() { return !level.isClientSide; }
     public List<ItemStack> getPreviewStacks() {
         List<ItemStack> all = getAllPreviewStacks();
         int start = getPreviewPage() * 18;
@@ -347,6 +392,23 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return candidates().size();
     }
 
+    /** One-based position of the currently displayed recipe among switchable candidates. */
+    public int getSelectedRecipePosition() {
+        List<RecipeHolder<?>> found = candidates();
+        if (found.isEmpty()) return 0;
+        if (syncedLocked) {
+            RecipeHolder<?> locked = getLockedRecipeHolder();
+            if (locked != null) {
+                for (int i = 0; i < found.size(); i++) {
+                    if (found.get(i).id().equals(locked.id())) return i + 1;
+                }
+            }
+        }
+        int index = level.isClientSide ? syncedRecipeIndex : getServerRecipeIndex();
+        if (index < 0 || index >= found.size()) index = 0;
+        return index + 1;
+    }
+
     public String getPreviewRecipeId() {
         RecipeHolder<?> recipe = getPreviewRecipe();
         return recipe == null ? "" : recipe.id().toString();
@@ -375,10 +437,23 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isLocked() { return syncedLocked; }
+    public int getSideMode(int side) { return side < 0 || side >= 6 ? 0 : syncedSideModes[side]; }
     
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
+        if (buttonId >= 10 && buttonId <= 15) { machine.cycleSideMode(Direction.values()[buttonId - 10]); return true; }
+        if (buttonId >= 1000) {
+            int encoded = buttonId - 1000;
+            int group = encoded / 32768;
+            int variant = encoded % 32768;
+            RecipeHolder<?> holder = getPreviewRecipe();
+            if (holder == null || group < 0 || group >= 32) return false;
+            ItemStack[] options = getIngredientOptions(group);
+            if (variant < 0 || variant >= options.length) return false;
+            machine.setIngredientVariant(holder.id().toString(), group, variant);
+            return true;
+        }
         if (buttonId == 2) { machine.setAutoMode(!machine.isAutoMode()); return true; }
         if (buttonId == 3) { machine.processOnce(); return true; }
         if (buttonId == 4) { syncedPage = Math.max(0, syncedPage - 1); return true; }

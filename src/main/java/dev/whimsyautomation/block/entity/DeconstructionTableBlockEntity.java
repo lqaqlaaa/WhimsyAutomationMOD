@@ -36,6 +36,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Reverse-processes supported registered recipes. Recipe preview, recipe lock and
@@ -49,6 +51,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private String lockedRecipe = "";
     private int workTicks;
     private boolean autoMode = false;
+    private final Map<String, List<Integer>> ingredientVariants = new HashMap<>();
+    // 0=disabled, 1=input, 2=output; Direction ordinal order (DOWN, UP, NORTH, SOUTH, WEST, EAST).
+    private final int[] sideModes = new int[] {2, 1, 1, 1, 1, 1};
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
         @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : Integer.MAX_VALUE; }
@@ -86,10 +91,8 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
     }
 
-    private final IItemHandler topHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
-    private final IItemHandler bottomHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, false, true);
-    private final IItemHandler sideHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
     private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, true);
+    private final IItemHandler[] sidedHandlers = new IItemHandler[6];
 
     public DeconstructionTableBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.DECONSTRUCTION_TABLE.get(), pos, state);
@@ -108,6 +111,21 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
     public String getSelectedRecipe() { return selectedRecipe; }
     public String getLockedRecipe() { return lockedRecipe; }
+
+    public int getIngredientVariant(String recipeId, int group) {
+        List<Integer> values = ingredientVariants.get(recipeId);
+        return values == null || group < 0 || group >= values.size() ? 0 : values.get(group);
+    }
+
+    public void setIngredientVariant(String recipeId, int group, int variant) {
+        if (recipeId == null || recipeId.isEmpty() || group < 0 || group >= 64 || variant < 0) return;
+        List<Integer> values = new ArrayList<>(ingredientVariants.getOrDefault(recipeId, List.of()));
+        while (values.size() <= group) values.add(0);
+        values.set(group, variant);
+        ingredientVariants.put(recipeId, List.copyOf(values));
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
 
     public void setSelectedRecipe(@Nullable ResourceLocation recipeId) {
         selectedRecipe = recipeId == null ? "" : recipeId.toString();
@@ -144,11 +162,22 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
                 new FriendlyByteBuf(Unpooled.buffer()).writeBlockPos(worldPosition));
     }
 
+    public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
+    public void cycleSideMode(Direction side) {
+        sideModes[side.ordinal()] = (sideModes[side.ordinal()] + 1) % 3;
+        sidedHandlers[side.ordinal()] = null;
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        setChanged();
+    }
+
     public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
         if (side == null) return unsidedHandler;
-        if (side == Direction.DOWN) return bottomHandler;
-        if (side == Direction.UP) return topHandler;
-        return sideHandler;
+        int index = side.ordinal();
+        if (sidedHandlers[index] == null) {
+            int mode = sideModes[index];
+            sidedHandlers[index] = new SidedMachineItemHandler(inventory, OUTPUT_START, mode == 1, mode == 2);
+        }
+        return sidedHandlers[index];
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, DeconstructionTableBlockEntity machine) {
@@ -209,6 +238,15 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         // priority, and a mismatch is a hard stop: never fall back to another recipe.
         String chosenId = !lockedRecipe.isEmpty() ? lockedRecipe : selectedRecipe;
         RecipeHolder<?> selected = chosenId.isEmpty() ? null : findRecipe(chosenId);
+        // A previously selected recipe can become stale when the player replaces
+        // the input stack. A locked recipe is intentionally strict; an unlocked
+        // selection must be re-resolved against the new input instead of silently
+        // leaving the machine stuck forever.
+        if (selected != null && !matchesRecipeOutput(
+                selected.value().getResultItem(level.registryAccess()), input)) {
+            if (!lockedRecipe.isEmpty()) return;
+            selected = null;
+        }
         if (selected == null && lockedRecipe.isEmpty()) {
             List<RecipeHolder<?>> matches = new ArrayList<>();
             for (RecipeHolder<?> candidate : level.getRecipeManager().getRecipes()) {
@@ -246,11 +284,16 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (processedItems <= 0) return;
 
         List<ItemStack> recoveredPerBatch = new ArrayList<>();
-        for (Ingredient ingredient : dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe)) {
-            if (ingredient.isEmpty()) continue;
-            ItemStack[] options = ingredient.getItems();
+        List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
+                dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(recipe);
+        for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+            var group = groups.get(groupIndex);
+            ItemStack[] options = group.ingredient().getItems();
             if (options.length == 0) return;
-            recoveredPerBatch.add(options[0].copy());
+            int variant = Math.min(getIngredientVariant(selected.id().toString(), groupIndex), options.length - 1);
+            ItemStack recovered = options[variant].copy();
+            recovered.setCount(group.count());
+            recoveredPerBatch.add(recovered);
         }
 
         // Enchantments travel with each dismantled item and are returned as books.
@@ -274,9 +317,17 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         // Scale the per-craft recovery list once, then insert each aggregated
         // result. This avoids cloning the entire output inventory for every batch.
         for (ItemStack result : recoveredPerBatch) {
-            ItemStack total = result.copy();
-            total.setCount(Math.multiplyExact(result.getCount(), processedItems));
-            insertIntoOutputPlan(outputPlan, total);
+            // ItemStack stores its count in a signed int. Multiplying a large
+            // modded ingredient count by the processed input amount must not
+            // overflow and crash the server tick; split the long total into
+            // representable chunks and let the output planner merge each chunk.
+            long remaining = (long) result.getCount() * processedItems;
+            while (remaining > 0) {
+                int chunk = (int) Math.min(Integer.MAX_VALUE, remaining);
+                ItemStack total = result.copyWithCount(chunk);
+                insertIntoOutputPlan(outputPlan, total);
+                remaining -= chunk;
+            }
         }
 
         inventory.resize(OUTPUT_START + outputPlan.size());
@@ -353,6 +404,13 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         tag.putString("LockedRecipe", lockedRecipe);
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
+        CompoundTag variants = new CompoundTag();
+        for (var entry : ingredientVariants.entrySet()) {
+            int[] values = entry.getValue().stream().mapToInt(Integer::intValue).toArray();
+            variants.putIntArray(entry.getKey(), values);
+        }
+        tag.put("IngredientVariants", variants);
+        tag.putIntArray("SideModes", sideModes);
     }
 
     @Override
@@ -371,5 +429,18 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         lockedRecipe = tag.getString("LockedRecipe");
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
+        ingredientVariants.clear();
+        int[] savedSideModes = tag.getIntArray("SideModes");
+        for (int i = 0; i < Math.min(savedSideModes.length, sideModes.length); i++) sideModes[i] = Math.max(0, Math.min(2, savedSideModes[i]));
+        java.util.Arrays.fill(sidedHandlers, null);
+        if (tag.contains("IngredientVariants")) {
+            CompoundTag variants = tag.getCompound("IngredientVariants");
+            for (String key : variants.getAllKeys()) {
+                int[] values = variants.getIntArray(key);
+                List<Integer> stored = new ArrayList<>(values.length);
+                for (int value : values) stored.add(Math.max(0, value));
+                ingredientVariants.put(key, List.copyOf(stored));
+            }
+        }
     }
 }
