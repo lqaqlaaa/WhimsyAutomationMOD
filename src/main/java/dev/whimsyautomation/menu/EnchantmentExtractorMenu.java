@@ -43,6 +43,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private int syncedBufferSlotCount = BUFFER_PAGE_SIZE;
     private int syncedOutputSlotCount = OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES;
     private boolean syncedAutoMode;
+    private boolean syncedPersistentOutputMode;
     private boolean quickMoveSingle;
     private int syncedOutputMode = 1;
     private final int[] syncedSideModes = new int[] {0, 0, 0, 0, 0, 0};
@@ -66,7 +67,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public int getSlots() { return PAGE_SIZE; }
 
             @Override public void setStackInSlot(int slot, ItemStack stack) {
-                if (machine == null || slot < 0 || slot >= PAGE_SIZE || machine.isPersistentOutputMode()) return;
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE || isPersistentOutputMode()) return;
                 if (level.isClientSide) {
                     clientPageStacks[slot] = stack.copy();
                     return;
@@ -85,7 +86,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
 
             @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-                if (machine == null || machine.isPersistentOutputMode() || slot < 0 || slot >= PAGE_SIZE
+                if (machine == null || isPersistentOutputMode() || slot < 0 || slot >= PAGE_SIZE
                         || !stack.is(Items.ENCHANTED_BOOK)
                         || !machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack)) return stack;
                 // Output cells are a projection of the input enchantments. Putting
@@ -181,6 +182,10 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public void set(int value) { syncedAutoMode = value != 0; }
         });
         addDataSlot(new DataSlot() {
+            @Override public int get() { return machine != null && machine.isPersistentOutputMode() ? 1 : 0; }
+            @Override public void set(int value) { syncedPersistentOutputMode = value != 0; }
+        });
+        addDataSlot(new DataSlot() {
             @Override public int get() { return machine != null ? machine.getOutputMode() : 1; }
             @Override public void set(int value) { syncedOutputMode = Math.max(0, Math.min(2, value)); }
         });
@@ -263,6 +268,9 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         return Math.max(1, (int) (((long) count + BUFFER_PAGE_SIZE - 1L) / BUFFER_PAGE_SIZE));
     }
     public boolean isAutoMode() { return syncedAutoMode; }
+    private boolean isPersistentOutputMode() {
+        return machine != null && !level.isClientSide ? machine.isPersistentOutputMode() : syncedPersistentOutputMode;
+    }
     public boolean isSplitLevels() { return syncedOutputMode == 2; }
     public int getOutputMode() { return syncedOutputMode; }
     public int getSideMode(int side) { return side < 0 || side >= 6 ? 0 : syncedSideModes[side]; }
