@@ -153,11 +153,11 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         // player's single native 36-slot inventory. No decorative fake slots.
         for (int i = 0; i < 27; i++)
             drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
-        drawSlot(graphics, leftPos + 184, topPos + 71);
+        drawSlot(graphics, leftPos + 184, topPos + 107);
         // Eighteen real queue slots: two rows of nine, entirely inside the
         // right machine pane and clear of the player's inventory.
         for (int i = 0; i < 18; i++)
-            drawSlot(graphics, leftPos + 184 + (i % 9) * 18, topPos + 174 + (i / 9) * 18);
+            drawSlot(graphics, leftPos + 184 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
         drawPlayerSlots(graphics);
     }
 
