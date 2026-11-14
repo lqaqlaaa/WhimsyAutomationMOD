@@ -73,11 +73,17 @@ public final class UiLayoutEditor {
             return true;
         }
         String hit = null;
+        long bestArea = Long.MAX_VALUE;
         for (Map.Entry<String, UiLayoutProfile.Element> entry : profile.elements().entrySet()) {
             UiLayoutProfile.Element e = entry.getValue();
             double x = originX + e.x, y = originY + e.y;
-            if (mouseX >= x && mouseX < x + e.width && mouseY >= y && mouseY < y + e.height)
-                hit = entry.getKey();
+            if (mouseX >= x && mouseX < x + e.width && mouseY >= y && mouseY < y + e.height) {
+                long area = (long) e.width * e.height;
+                if (area <= bestArea) {
+                    bestArea = area;
+                    hit = entry.getKey();
+                }
+            }
         }
         if (hit == null) return true;
         selected = hit;
@@ -121,7 +127,7 @@ public final class UiLayoutEditor {
 
     public void render(GuiGraphics graphics, int originX, int originY) {
         if (!enabled) return;
-        graphics.fill(originX, originY + 20, originX + 240, originY + 34, 0xCC202020);
+        graphics.fill(originX, originY + 20, originX + 350, originY + 34, 0xCC202020);
         graphics.drawString(net.minecraft.client.Minecraft.getInstance().font,
                 Component.literal("拖动移动 · 右下角缩放 · E导出JSON · R恢复默认 · 点击“布局”退出"),
                 originX + 3, originY + 23, 0xFFFFFFFF, false);
