@@ -56,9 +56,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // backgrounds must use the same leftPos/topPos transform as real slots.
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                drawSlot(g, leftPos + 8 + col * 18, topPos + 138 + row * 18);
+                drawSlot(g, 8 + col * 18, 138 + row * 18);
         for (int col = 0; col < 9; col++)
-            drawSlot(g, leftPos + 8 + col * 18, topPos + 196);
+            drawSlot(g, 8 + col * 18, 196);
     }
 
     @Override
@@ -98,19 +98,19 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        panel(graphics, leftPos, topPos + 54, 176, 166);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 166);
+        panel(graphics, 0, 54, 176, 166);
+        panel(graphics, 176, 54, 176, 166);
 
         // Exactly 27 real machine output slots.
         for (int i = 0; i < 27; i++)
-            drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
+            drawSlot(graphics, 8 + (i % 9) * 18, 71 + (i / 9) * 18);
 
         // One real input slot, followed by exactly 18 non-interactive preview slots.
-        drawSlot(graphics, leftPos + 184, topPos + 71);
+        drawSlot(graphics, 184, 71);
         List<ItemStack> preview = menu.getPreviewStacks();
         for (int i = 0; i < 18; i++) {
-            int x = leftPos + 202 + (i % 6) * 18;
-            int y = topPos + 71 + (i / 6) * 18;
+            int x = 202 + (i % 6) * 18;
+            int y = 71 + (i / 6) * 18;
             drawSlot(graphics, x, y);
             if (i < preview.size()) {
                 ItemStack stack = preview.get(i);
