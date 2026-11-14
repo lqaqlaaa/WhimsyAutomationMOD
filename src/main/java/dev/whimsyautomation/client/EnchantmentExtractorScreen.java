@@ -49,7 +49,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     private EditBox pageField(int x, int y, int initialPage) {
-        EditBox field = new EditBox(font, leftPos + x, topPos + y, 18, 18, Component.literal("页码"));
+        EditBox field = new EditBox(font, leftPos + x, topPos + y, 22, 18, Component.literal("页码"));
         field.setMaxLength(10);
         field.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         field.setValue(Integer.toString(initialPage));
@@ -107,7 +107,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 110, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 114, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(3); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
@@ -129,7 +129,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
                 .bounds(leftPos + 264, topPos + 89, 80, 18).build());
 
-        bufferPageField = pageField(266, 153, menu.getBufferPage() + 1);
+        bufferPageField = pageField(262, 153, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(bufferPageField, menu.getBufferPageCount(), 1))
                 .bounds(leftPos + 286, topPos + 153, 18, 18).build());
