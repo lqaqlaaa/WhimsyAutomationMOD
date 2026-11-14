@@ -11,27 +11,28 @@ import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentExtractorScreen extends AbstractContainerScreen<EnchantmentExtractorMenu> {
     private static final ResourceLocation BACKGROUND =
-            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_27.png");
+    private static final ResourceLocation SLOT =
+            ResourceLocation.withDefaultNamespace("container/slot");
     private Button autoButton;
     private Button processButton;
     private Button outputModeButton;
 
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageWidth = 176;
-        imageHeight = 222;
-        inventoryLabelY = 127;
+        imageWidth = 300;
+        imageHeight = 166;
+        inventoryLabelY = 72;
         titleLabelY = 6;
     }
 
     private void send(int id) {
-        if (minecraft != null && minecraft.gameMode != null) {
+        if (minecraft != null && minecraft.gameMode != null)
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
-        }
     }
 
     private Component autoLabel() {
-        return Component.literal(menu.isAutoMode() ? "自动✓" : "自动×");
+        return Component.literal(menu.isAutoMode() ? "自动：开启" : "自动：关闭");
     }
 
     private Component outputModeLabel() {
@@ -45,32 +46,28 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     protected void init() {
         super.init();
-
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
-                .bounds(leftPos + 136, topPos + 1, 16, 14).build());
+                .bounds(leftPos + 118, topPos + 2, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(4))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.next")))
-                .bounds(leftPos + 154, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 138, topPos + 2, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.auto_state",
-                        Component.translatable(menu.isAutoMode() ? "screen.whimsy_automation.on" : "screen.whimsy_automation.off"))))
-                .bounds(leftPos + 26, topPos + 106, 32, 18).build();
+                .bounds(leftPos + 204, topPos + 17, 88, 18).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 60, topPos + 106, 40, 18).build();
+                .bounds(leftPos + 184, topPos + 42, 52, 18).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.output_mode")))
-                .bounds(leftPos + 102, topPos + 106, 66, 18).build();
+                .bounds(leftPos + 240, topPos + 42, 52, 18).build();
         addRenderableWidget(outputModeButton);
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight, 176, 222);
+        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, 176, 166, 176, 166);
+        graphics.blitSprite(SLOT, leftPos + 184, topPos + 17, 16, 16);
     }
 
     @Override
@@ -78,15 +75,13 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.extractor"),
                 8, titleLabelY, 0x404040, false);
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.page",
-                menu.getPage() + 1, menu.getPageCount()), 82, 7, 0x404040, false);
+                menu.getPage() + 1, menu.getPageCount()), 158, 7, 0x404040, false);
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.book_input"),
-                8, 96, 0x404040, false);
+                184, 36, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (outputModeButton != null) outputModeButton.setMessage(outputModeLabel());
-        if (processButton != null) processButton.setMessage(Component.translatable("screen.whimsy_automation.process"));
     }
 
     @Override
