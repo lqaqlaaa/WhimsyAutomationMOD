@@ -3,6 +3,7 @@ package dev.whimsyautomation.client;
 import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -44,28 +45,38 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // The top row follows the vanilla container title area. Material-preview
         // paging is kept separate from the actual output-inventory paging.
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
+                .tooltip(Tooltip.create(Component.literal("上一页材料预览")))
                 .bounds(leftPos + 100, topPos + 5, 16, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
+                .tooltip(Tooltip.create(Component.literal("下一页材料预览")))
                 .bounds(leftPos + 118, topPos + 5, 16, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
+                .tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
                 .bounds(leftPos + 140, topPos + 5, 16, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
+                .tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
                 .bounds(leftPos + 158, topPos + 5, 16, 18).build());
 
         // The sixth machine row is reserved for controls; the input slot remains
         // a real menu slot at the far left and never shares a button hitbox.
         autoButton = Button.builder(autoLabel(), b -> send(2))
-                .bounds(leftPos + 26, topPos + 106, 52, 18).build();
+                .tooltip(Tooltip.create(autoLabel()))
+                .bounds(leftPos + 26, topPos + 106, 64, 18).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
-                .bounds(leftPos + 80, topPos + 106, 18, 18).build());
+                .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
+                .bounds(leftPos + 92, topPos + 106, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
-                .bounds(leftPos + 100, topPos + 106, 18, 18).build());
+                .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
+                .bounds(leftPos + 112, topPos + 106, 18, 18).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解" : "锁"), b -> send(6))
-                .bounds(leftPos + 120, topPos + 106, 18, 18).build();
+                .tooltip(Tooltip.create(Component.translatable(menu.isLocked()
+                        ? "screen.whimsy_automation.unlock" : "screen.whimsy_automation.lock")))
+                .bounds(leftPos + 132, topPos + 106, 18, 18).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("▶"), b -> send(3))
-                .bounds(leftPos + 140, topPos + 106, 28, 18).build());
+                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
+                .bounds(leftPos + 152, topPos + 106, 18, 18).build());
     }
 
     @Override
