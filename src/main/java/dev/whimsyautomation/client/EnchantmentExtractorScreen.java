@@ -172,7 +172,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 202, 75, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("缓冲"), 184, 59, 0x404040, false);
+        graphics.drawString(font, Component.literal("缓冲页 " + (menu.getBufferPage() + 1) + " / " + Math.max(1, menu.getBufferPageCount())), 184, 42, 0x404040, false);
         if (bufferPageField != null && !bufferPageField.isFocused())
             bufferPageField.setValue(Integer.toString(menu.getBufferPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
