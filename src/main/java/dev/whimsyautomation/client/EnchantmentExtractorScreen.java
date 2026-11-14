@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentExtractorScreen extends AbstractContainerScreen<EnchantmentExtractorMenu> {
     private static final ResourceLocation SLOT_SPRITE = ResourceLocation.withDefaultNamespace("container/slot");
+    private Button autoButton;
     private Button processButton;
     private Button outputModeButton;
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
@@ -26,6 +27,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override protected void init() {
         super.init();
+        autoButton = Button.builder(Component.translatable("screen.whimsy_automation.auto"), b -> send(0))
+                .bounds(leftPos + 8, topPos + 104, 48, 18).build();
+        addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
                 .bounds(leftPos + 82, topPos + 104, 60, 18).build();
         addRenderableWidget(processButton);
@@ -44,15 +48,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         });
     }
 
-    private void drawSwitch(GuiGraphics g, int x, int y, boolean enabled) {
-        int track = enabled ? 0xFF3E9B68 : 0xFF555B66;
-        g.fill(x, y, x + 30, y + 13, 0xFF090B10);
-        g.fill(x + 1, y + 1, x + 29, y + 12, track);
-        int knobX = enabled ? x + 17 : x + 3;
-        g.fill(knobX, y + 2, knobX + 10, y + 11, 0xFFE9EDF2);
-        g.fill(knobX + 1, y + 3, knobX + 9, y + 10, 0xFFFFFFFF);
-    }
-
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         int x = leftPos, y = topPos;
@@ -66,7 +61,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         for (int i = 0; i < 27; i++) slot(g, x + 48 + (i % 9) * 18, y + 42 + (i / 9) * 18);
         for (int i = 0; i < 27; i++) slot(g, x + 26 + (i % 9) * 18, y + 158 + (i / 9) * 18);
         for (int i = 0; i < 9; i++) slot(g, x + 26 + i * 18, y + 216);
-        drawSwitch(g, x + 46, y + 106, menu.isAutoMode());
     }
 
     @Override
@@ -76,23 +70,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         g.drawString(font, Component.translatable("screen.whimsy_automation.outputs"), 48, 30, 0xD5C5F2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.book_input"), 4, 68, 0xD5C5F2, false);
         g.drawString(font, Component.translatable("screen.whimsy_automation.page", menu.getPage() + 1, menu.getPageCount()), 100, 128, 0xD5C5F2, false);
-        g.drawString(font, Component.translatable("screen.whimsy_automation.auto_short"), 10, 108, 0xC9D3E1, false);
         if (outputModeButton != null) outputModeButton.setMessage(outputModeLabel());
+        if (autoButton != null) autoButton.setMessage(Component.translatable("screen.whimsy_automation.auto"));
         g.drawString(font, Component.translatable("container.inventory"), 26, inventoryLabelY, 0xAAB7C8, false);
         if (processButton != null) processButton.setMessage(Component.translatable("screen.whimsy_automation.process"));
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0) {
-            int localX = (int) mouseX - leftPos;
-            int localY = (int) mouseY - topPos;
-            if (localX >= 46 && localX < 76 && localY >= 106 && localY < 119) {
-                send(0);
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private void slot(GuiGraphics g, int x, int y) {
