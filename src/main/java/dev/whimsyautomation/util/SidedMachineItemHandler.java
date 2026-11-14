@@ -5,49 +5,62 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import java.util.function.BooleanSupplier;
 
-/**
- * Hopper-facing view of a machine inventory.
- * Top/sides expose the input slot; the bottom exposes output slots only.
- */
+/** Compact, live view of a machine inventory for external automation. */
 public final class SidedMachineItemHandler implements IItemHandler {
     private final ItemStackHandler inventory;
     private final int outputStart;
     private final boolean input;
     private final boolean output;
     private final BooleanSupplier allowInputExtraction;
+    private final BooleanSupplier enabled;
 
     public SidedMachineItemHandler(ItemStackHandler inventory, int outputStart, boolean input, boolean output) {
-        this(inventory, outputStart, input, output, () -> false);
+        this(inventory, outputStart, input, output, () -> false, () -> true);
     }
 
-    /**
-     * Optional final hopper slot for extracting the machine input after its
-     * generated outputs have been fully consumed.
-     */
-    public SidedMachineItemHandler(ItemStackHandler inventory, int outputStart, boolean input,
-                                   boolean output, BooleanSupplier allowInputExtraction) {
+    public SidedMachineItemHandler(ItemStackHandler inventory, int outputStart, boolean input, boolean output,
+                                   BooleanSupplier allowInputExtraction) {
+        this(inventory, outputStart, input, output, allowInputExtraction, () -> true);
+    }
+
+    public SidedMachineItemHandler(ItemStackHandler inventory, int outputStart, boolean input, boolean output,
+                                   BooleanSupplier allowInputExtraction, BooleanSupplier enabled) {
         this.inventory = inventory;
         this.outputStart = outputStart;
         this.input = input;
         this.output = output;
         this.allowInputExtraction = allowInputExtraction;
+        this.enabled = enabled;
+    }
+
+    private int occupiedOutputSlots() {
+        if (!output) return 0;
+        int count = 0;
+        for (int i = outputStart; i < inventory.getSlots(); i++) {
+            if (!inventory.getStackInSlot(i).isEmpty()) count++;
+        }
+        return count;
     }
 
     @Override
     public int getSlots() {
-        return (input ? 1 : 0) + (output ? inventory.getSlots() - outputStart : 0)
+        if (!enabled.getAsBoolean()) return 0;
+        return (input ? 1 : 0) + occupiedOutputSlots()
                 + (output && allowInputExtraction.getAsBoolean() ? 1 : 0);
     }
 
     private int map(int slot) {
-        if (slot < 0 || slot >= getSlots()) return -1;
+        if (!enabled.getAsBoolean() || slot < 0 || slot >= getSlots()) return -1;
         if (input && slot == 0) return 0;
-        int outputSlots = output ? inventory.getSlots() - outputStart : 0;
         int outputIndex = slot - (input ? 1 : 0);
-        if (outputIndex >= outputSlots) {
-            return output && allowInputExtraction.getAsBoolean() && outputIndex == outputSlots ? 0 : -1;
+        if (output) {
+            for (int i = outputStart; i < inventory.getSlots(); i++) {
+                if (inventory.getStackInSlot(i).isEmpty()) continue;
+                if (outputIndex-- == 0) return i;
+            }
         }
-        return output ? outputStart + outputIndex : -1;
+        if (output && allowInputExtraction.getAsBoolean() && outputIndex == 0) return 0;
+        return -1;
     }
 
     @Override
