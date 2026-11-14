@@ -86,7 +86,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.blit(BACKGROUND, leftPos, topPos + 54, 0, 0, 176, 71, 256, 256);
         graphics.blit(BACKGROUND, leftPos, topPos + 125, 0, 126, 176, 95, 256, 256);
         graphics.blit(BACKGROUND, leftPos + 176, topPos + 54, 0, 0, 176, 71, 256, 256);
-        graphics.blit(BACKGROUND, leftPos + 176, topPos + 125, 0, 126, 176, 95, 256, 256);
+        // The right-hand area is machine-specific preview/storage only.
+        // Do not draw a second vanilla player-inventory panel here.
                 List<ItemStack> preview = menu.getPreviewStacks();
         for (int i = 0; i < 18; i++) {
             int x = leftPos + 202 + (i % 8) * 18;
