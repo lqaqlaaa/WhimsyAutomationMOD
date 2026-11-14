@@ -334,10 +334,16 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             // real slot contents, and widgets exactly once. A second explicit
             // renderBackground call was darkening the world a second time.
             super.render(graphics, -10000, -10000, partialTick);
+            // Finish the base container pass before drawing the modal. Item
+            // stacks use a positive GUI Z offset, so a later fill at Z=0 is
+            // not guaranteed to cover them when depth testing is active.
+            graphics.flush();
             graphics.pose().pushPose();
-            graphics.pose().translate(leftPos, topPos, 0);
+            graphics.pose().translate(leftPos, topPos, 500.0F);
             if (showSideConfig) renderSideConfig(graphics);
             else renderIngredientPicker(graphics, mouseX, mouseY);
+            // Submit the modal while its elevated Z transform is still active.
+            graphics.flush();
             graphics.pose().popPose();
             return;
         }
