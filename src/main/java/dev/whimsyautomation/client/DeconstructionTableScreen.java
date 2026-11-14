@@ -133,6 +133,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.drawString(font, Component.literal("材料预览"), 220, 60, 0x404040, false);
         graphics.drawString(font, Component.literal((menu.getPreviewPage() + 1) + "/" + menu.getPreviewPageCount()),
                 314, 60, 0x404040, false);
+        int recipeCount = menu.getCandidateCount();
+        int recipeIndex = menu.getSelectedRecipePosition();
+        graphics.drawString(font, Component.literal("配方 " + (recipeCount == 0 ? 0 : recipeIndex) + "/" + recipeCount),
+                184, 181, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
     }
