@@ -224,6 +224,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        if (showSideConfig) return true;
         if (selectedIngredientGroup >= 0) {
             int x = pickerX(), y = pickerY();
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
