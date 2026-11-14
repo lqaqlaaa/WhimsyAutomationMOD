@@ -19,6 +19,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private int selectedIngredientGroup = -1;
     private int ingredientPickerScroll;
     private static final int PICKER_VISIBLE_ROWS = 8;
+    private boolean pickerDragging;
     private boolean showSideConfig;
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
@@ -155,7 +156,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private void renderSideConfig(GuiGraphics graphics) {
         if (!showSideConfig) return;
         int x = leftPos + 184, y = topPos + 74;
+        graphics.fill(leftPos, topPos + 54, leftPos + imageWidth, topPos + imageHeight, 0xFF303030);
         panel(graphics, x, y, 160, 66);
+        graphics.fill(x + 2, y + 2, x + 158, y + 64, 0xFFE0E0E0);
         String[] names = {"下", "上", "北", "南", "西", "东"};
         String[] modes = {"关", "入", "出"};
         int[] colors = {0xFFE74C3C, 0xFF2ECC71, 0xFF3498DB, 0xFFF1C40F, 0xFF9B59B6, 0xFF1ABC9C};
@@ -167,11 +170,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             graphics.drawString(font, Component.literal(label), cellX + 10, cellY, 0x404040, false);
         }
         graphics.drawString(font, Component.literal("点击切换：关闭 / 输入 / 输出"), x + 5, y + 54, 0x606060, false);
+        graphics.drawString(font, Component.literal("×"), x + 148, y + 3, 0x404040, false);
     }
 
     private boolean clickSideConfig(double mouseX, double mouseY) {
         if (!showSideConfig) return false;
         int x = leftPos + 184, y = topPos + 74;
+        if (mouseX >= x + 144 && mouseX < x + 160 && mouseY >= y && mouseY < y + 18) { showSideConfig = false; return true; }
         if (mouseX >= x && mouseX < x + 160 && mouseY >= y + 2 && mouseY < y + 52) {
             int col = Math.min(2, (int) ((mouseX - (x + 4)) / 52));
             int row = mouseY < y + 32 ? 0 : 1;
@@ -192,7 +197,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
         if (options.length <= 1) { selectedIngredientGroup = -1; return; }
         int x = pickerX(), y = pickerY(), visible = Math.min(PICKER_VISIBLE_ROWS, options.length);
-        graphics.fill(0, 0, width, height, 0x99000000);
+        graphics.fill(leftPos, topPos + 54, leftPos + imageWidth, topPos + imageHeight, 0xFF303030);
         panel(graphics, x, y, 158, pickerHeight());
         graphics.fill(x + 3, y + 3, x + 155, y + 17, 0xFF8B8B8B);
         graphics.drawString(font, Component.literal("选择材料"), x + 7, y + 6, 0xFFFFFFFF, false);
@@ -242,6 +247,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 selectedIngredientGroup = -1;
                 return true;
             }
+            if (options.length > PICKER_VISIBLE_ROWS && mouseX >= x + 145 && mouseX < x + 156 && mouseY >= y + 20 && mouseY < y + 156) { pickerDragging = true; return true; }
             if (mouseX >= x + 4 && mouseX < x + 146 && mouseY >= y + 20 && mouseY < y + 20 + visible * 17) {
                 int row = (int) ((mouseY - (y + 20)) / 17);
                 int index = ingredientPickerScroll + row;
@@ -270,6 +276,31 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (selectedIngredientGroup >= 0) {
+            int y = pickerY();
+            ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
+            if (pickerDragging && options.length > PICKER_VISIBLE_ROWS) {
+                int trackTop = y + 20, trackHeight = PICKER_VISIBLE_ROWS * 17;
+                int thumbHeight = Math.max(12, trackHeight * PICKER_VISIBLE_ROWS / options.length);
+                int maxScroll = options.length - PICKER_VISIBLE_ROWS;
+                double ratio = Math.max(0, Math.min(1, (mouseY - trackTop - thumbHeight / 2.0) / (trackHeight - thumbHeight)));
+                ingredientPickerScroll = (int) Math.round(ratio * maxScroll);
+            }
+            return true;
+        }
+        if (showSideConfig) return true;
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        pickerDragging = false;
+        if (selectedIngredientGroup >= 0 || showSideConfig) return true;
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (selectedIngredientGroup >= 0 && keyCode == 256) {
             selectedIngredientGroup = -1;
@@ -282,8 +313,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
-        renderSideConfig(graphics);
-        renderIngredientPicker(graphics, mouseX, mouseY);
+        if (showSideConfig) renderSideConfig(graphics);
+        if (selectedIngredientGroup >= 0) renderIngredientPicker(graphics, mouseX, mouseY);
         if (selectedIngredientGroup < 0) renderTooltip(graphics, mouseX, mouseY);
     }
 }
