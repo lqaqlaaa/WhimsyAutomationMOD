@@ -4,9 +4,11 @@ import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentConversionTableScreen extends AbstractContainerScreen<EnchantmentConversionTableMenu> {
+    private static final ResourceLocation SLOT_SPRITE = ResourceLocation.withDefaultNamespace("container/slot");
     public EnchantmentConversionTableScreen(EnchantmentConversionTableMenu menu, Inventory inventory, Component title) {
         super(menu,inventory,title); imageWidth=194; imageHeight=196; inventoryLabelY=100; titleLabelY=7;
     }
@@ -15,8 +17,8 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         g.fill(x,y,x+imageWidth,y+imageHeight,0xFF21150F);
         g.fill(x+3,y+3,x+imageWidth-3,y+imageHeight-3,0xFF392319);
         g.fill(x+5,y+5,x+imageWidth-5,y+22,0xFF604021);
-        for(int i=0;i<4;i++){int sx=x+35+i*36,sy=y+52;g.fill(sx-2,sy-2,sx+18,sy+18,0xFFB18A48);g.fill(sx-1,sy-1,sx+17,sy+17,0xFF17100C);}
-        for(int i=0;i<27;i++){int sx=x+8+(i%9)*18,sy=y+112+(i/9)*18;g.fill(sx-1,sy-1,sx+17,sy+17,0xFF17100C);}
+        for(int i=0;i<4;i++){int sx=x+35+i*36,sy=y+52;g.blitSprite(SLOT_SPRITE,sx,sy,16,16);}
+        for(int i=0;i<27;i++){int sx=x+8+(i%9)*18,sy=y+112+(i/9)*18;g.blitSprite(SLOT_SPRITE,sx,sy,16,16);}
         for(int i=0;i<9;i++){int sx=x+8+i*18,sy=y+170;g.fill(sx-1,sy-1,sx+17,sy+17,0xFF17100C);}
     }
     @Override protected void renderLabels(GuiGraphics g,int mouseX,int mouseY) {
