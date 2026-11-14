@@ -49,6 +49,18 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private final IItemHandler[] sidedHandlers = new IItemHandler[6];
 
     private final DynamicInputBuffer inputBuffer = new DynamicInputBuffer(18);
+    private final IItemHandler automationInputHandler = new IItemHandler() {
+        @Override public int getSlots() { return 1; }
+        // This is an insertion-only virtual inlet. The actual contents are shown
+        // in the paged buffer UI, not in this single automation-facing slot.
+        @Override public ItemStack getStackInSlot(int slot) { return ItemStack.EMPTY; }
+        @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            return slot == 0 ? inputBuffer.insertQueued(stack, simulate) : stack;
+        }
+        @Override public ItemStack extractItem(int slot, int amount, boolean simulate) { return ItemStack.EMPTY; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 64 : 0; }
+        @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty(); }
+    };
 
     private boolean internalInventoryUpdate;
     private boolean extractingGeneratedOutput;
@@ -177,7 +189,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
     }
 
-    private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, inputBuffer,
+    private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, automationInputHandler,
             OUTPUT_START, true, true,
             () -> getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
 
@@ -226,7 +238,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         int index = side.ordinal();
         if (sidedHandlers[index] == null) {
             int mode = sideModes[index];
-            sidedHandlers[index] = new SidedMachineItemHandler(inventory, inputBuffer, OUTPUT_START,
+            sidedHandlers[index] = new SidedMachineItemHandler(inventory, automationInputHandler, OUTPUT_START,
                     mode == 1, mode == 2,
                     () -> mode == 2 && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
         }
@@ -279,6 +291,37 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             return slot >= 0 && slot < getSlots() && !stack.isEmpty();
         }
+        private ItemStack insertQueued(ItemStack stack, boolean simulate) {
+            if (stack.isEmpty()) return ItemStack.EMPTY;
+            ItemStack remainder = stack;
+            // Prefer merging with existing compatible stacks before allocating slots.
+            for (int slot = 0; slot < getSlots() && !remainder.isEmpty(); slot++) {
+                ItemStack present = getStackInSlot(slot);
+                if (!present.isEmpty() && ItemStack.isSameItemSameComponents(present, remainder))
+                    remainder = super.insertItem(slot, remainder, simulate);
+            }
+            // Then use existing empty slots.
+            for (int slot = 0; slot < getSlots() && !remainder.isEmpty(); slot++) {
+                if (getStackInSlot(slot).isEmpty())
+                    remainder = super.insertItem(slot, remainder, simulate);
+            }
+            if (remainder.isEmpty()) return ItemStack.EMPTY;
+            int perSlot = Math.min(64, remainder.getMaxStackSize());
+            if (simulate) {
+                int possible = Math.max(1, perSlot) * 18;
+                int accepted = Math.min(remainder.getCount(), possible);
+                int left = remainder.getCount() - accepted;
+                return left <= 0 ? ItemStack.EMPTY : remainder.copyWithCount(left);
+            }
+            while (!remainder.isEmpty()) {
+                int start = getSlots();
+                resize(start + 18);
+                for (int slot = start; slot < getSlots() && !remainder.isEmpty(); slot++)
+                    remainder = super.insertItem(slot, remainder, false);
+            }
+            return ItemStack.EMPTY;
+        }
+
         @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             if (stack.isEmpty() || slot < 0 || slot >= getSlots()) return stack;
             ItemStack remainder = super.insertItem(slot, stack, simulate);
