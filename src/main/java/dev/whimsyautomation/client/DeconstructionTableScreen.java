@@ -102,8 +102,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                                   int x, int y, int color, boolean shadow) {
         UiLayoutProfile.Element e = layoutEditor.element(id, "label", x, y,
                 Math.max(1, font.width(value)), 9);
-        float sx = e.width / (float) Math.max(1, font.width(value));
-        float sy = e.height / 9.0F;
+        float sx = e.width / (float) Math.max(1, font.width(value)) * e.textScale;
+        float sy = e.height / 9.0F * e.textScale;
         graphics.pose().pushPose();
         graphics.pose().translate(e.x, e.y, 0.0F);
         graphics.pose().scale(sx, sy, 1.0F);
@@ -425,7 +425,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
-        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.drag(mouseX, mouseY);
+        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.drag(mouseX, mouseY, net.minecraft.client.gui.screens.Screen.hasShiftDown());
         double scale = uiScale();
         if (selectedIngredientGroup >= 0) {
             int y = pickerHitY();
