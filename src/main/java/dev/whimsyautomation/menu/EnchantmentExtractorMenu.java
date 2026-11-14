@@ -66,7 +66,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public int getSlots() { return PAGE_SIZE; }
 
             @Override public void setStackInSlot(int slot, ItemStack stack) {
-                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return;
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE || machine.isPersistentOutputMode()) return;
                 if (level.isClientSide) {
                     clientPageStacks[slot] = stack.copy();
                     return;
@@ -330,8 +330,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
         } else {
-            if (source.is(Items.ENCHANTED_BOOK)) {
-                // Shift-clicking an extracted book restores it to the input item;
+            if (source.is(Items.ENCHANTED_BOOK) && !machine.isPersistentOutputMode()) {
+                // Shift-clicking a manual-mode extracted book restores it to the input item;
                 // it must not be routed through the player's inventory or cloned
                 // into an unrelated output slot.
                 if (player.level().isClientSide) return ItemStack.EMPTY;
