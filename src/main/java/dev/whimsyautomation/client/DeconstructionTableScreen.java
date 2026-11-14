@@ -46,7 +46,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // paging is kept separate from the actual output-inventory paging.
         addRenderableWidget(Button.builder(Component.literal("材‹"), b -> menu.cyclePreviewPage(-1))
                 .tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 72, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 72, topPos + 1, 16, 14).build());
         addRenderableWidget(Button.builder(Component.literal("材›"), b -> menu.cyclePreviewPage(1))
                 .tooltip(Tooltip.create(Component.literal("下一页材料预览")))
                 .bounds(leftPos + 90, topPos + 5, 16, 18).build());
