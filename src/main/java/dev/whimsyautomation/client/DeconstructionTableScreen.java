@@ -195,10 +195,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         if (!showSideConfig) return;
         // renderLabels is already translated to the GUI origin.
         int x = 176, y = 54;
-        // Cover the entire right machine pane so no preview labels, input
-        // slots, or action buttons leak out below the dialog.
-        panel(graphics, x, y, 176, 76);
-        graphics.fill(x + 2, y + 2, x + 174, y + 74, 0xFFE0E0E0);
+        // The modal replaces the complete right-hand work area, including
+        // the lower action row, so no controls leak through underneath it.
+        panel(graphics, x, y, 176, 166);
+        graphics.fill(x + 2, y + 2, x + 174, y + 164, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
         graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
