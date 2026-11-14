@@ -75,11 +75,17 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
 
             @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return stack;
-                if (level.isClientSide) return stack;
-                int actual = actualSlot(slot);
-                machine.ensureOutputInventorySize(actual + 1);
-                return machine.getInventory().insertItem(actual, stack, simulate);
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE
+                        || !stack.is(Items.ENCHANTED_BOOK)
+                        || !machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack)) return stack;
+                // Output cells are a projection of the input enchantments. Putting
+                // a book back applies it to the input instead of storing a second,
+                // independent copy beside the generated projection.
+                if (simulate || level.isClientSide) return stack;
+                ItemStack remainder = stack.copy();
+                if (!machine.restoreBook(remainder)) return stack;
+                remainder.shrink(1);
+                return remainder.isEmpty() ? ItemStack.EMPTY : remainder;
             }
 
             @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
@@ -105,7 +111,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
 
             @Override public boolean isItemValid(int slot, ItemStack stack) {
-                return false;
+                return machine != null && stack.is(Items.ENCHANTED_BOOK)
+                        && machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack);
             }
         };
 
@@ -214,10 +221,18 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
         } else {
-            boolean moved = source.is(Items.ENCHANTED_BOOK)
-                    ? moveItemStackTo(source, OUTPUT_MENU_START, MACHINE_SLOT_COUNT, false)
-                    : moveItemStackTo(source, 0, 1, false);
-            if (!moved) return ItemStack.EMPTY;
+            if (source.is(Items.ENCHANTED_BOOK)) {
+                // Shift-clicking an extracted book restores it to the input item;
+                // it must not be routed through the player's inventory or cloned
+                // into an unrelated output slot.
+                if (player.level().isClientSide) return ItemStack.EMPTY;
+                ItemStack remainder = pageHandler.insertItem(0, source.copy(), false);
+                int restoredCount = source.getCount() - remainder.getCount();
+                if (restoredCount <= 0) return ItemStack.EMPTY;
+                source.shrink(restoredCount);
+            } else if (!moveItemStackTo(source, 0, 1, false)) {
+                return ItemStack.EMPTY;
+            }
         }
         if (source.isEmpty()) slot.set(ItemStack.EMPTY); else slot.setChanged();
         return copy;
