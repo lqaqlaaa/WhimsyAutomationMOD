@@ -1,51 +1,77 @@
-# Whimsy Automation
+# 奇思妙想自动化
 
-**奇思妙想自动化** — automated item recovery and recipe-driven deconstruction for Minecraft.
+面向 Minecraft 1.21.1 NeoForge 的自动化机器模组。模组以原版容器界面和物品栏交互为基础，提供物品拆解、附魔提取、附魔复制以及可扩展的自动化处理能力。
 
-## Target platform
+## 支持环境
 
-- Minecraft **1.21.1**
-- **NeoForge 21.1.x**
-- Java 21
-- JEI 19.x (optional integration target)
+- Minecraft：1.21.1
+- 加载器：NeoForge 21.1.x
+- Java：21
+- JEI：19.x（当前工程包含 JEI 集成入口；核心机器不以 JEI 为运行前提）
 
-## Machines
+## 当前已有机器
 
-### Enchantment Extractor
+### 物品拆解台
 
-- Accepts enchanted items through its input capability.
-- Converts each enchantment level into an individual level-I enchanted book.
-- Keeps the original item and removes its regular enchantments.
-- Exposes input on the top/sides and output on the bottom.
-- Stops when there is not enough output space; the input item is not consumed.
+- 从服务端配方管理器读取已注册配方，支持暴露结果物品和材料列表的配方类型。
+- 可查看匹配配方、切换候选配方并锁定配方。
+- 支持手动拆解和自动拆解。
+- 逆向处理按投入物品逐个计算，不要求投入完整配方产物批次。
+- 拆解产物进入机器内部存储，可分页查看。
+- 自动模式下，找不到可用拆解配方的物品会原样流出，避免输入槽长期堵塞。
+- 输出存储会合并相同物品，并按需扩展槽位。
+- 当前配方反向解析仍有边界：一个材料格存在多个可选物品时，尚未提供完整的玩家选择机制；JEI 浏览器数据也尚未完整接入服务端拆解执行链。
 
-### Deconstruction Table
+### 附魔提取台
 
-- Scans the server recipe manager instead of a hard-coded vanilla crafting list.
-- Supports recipe types that expose a result and ingredients, including crafting, smelting, blasting, smoking and stonecutting recipes.
-- Stores a locked recipe ID; an empty ID means automatic recipe selection.
-- Exposes input on the top/sides and output on the bottom.
-- Stops when output slots are full; the input item is not consumed.
+- 放入带有附魔的物品后，读取物品附魔并生成对应附魔书。
+- 支持合并输出、按附魔输出以及按等级拆分输出等输出模式。
+- 支持自动模式和手动刷新。
+- 输出结果分页显示，生成结果由输入物品上的附魔数据派生。
+- 取出生成的附魔书时，会同步扣除输入物品中对应的附魔等级。
+- 输入物品和生成结果采用不同的存储逻辑，拆除机器时不会把同一份附魔重复掉落。
 
-## Current development status
+### 附魔复制台
 
-This is an early implementation, not a release-ready build yet.
+- 使用书籍、支付材料和附魔模板生成附魔书。
+- 支持模板附魔校验和结果预览。
+- 当前复制规则仍沿用现有模板与支付逻辑，尚未改造成全局附魔数据库。
 
-- [x] NeoForge 1.21.1 project setup
-- [x] Machine block and block-entity registration
-- [x] Hopper item-handler capabilities
-- [x] First-pass enchantment extraction logic
-- [x] First-pass reverse recipe processing
-- [x] Persistent recipe lock field
-- [x] Basic block/item models and English/Chinese names
-- [ ] Player GUI and recipe selection controls
-- [ ] JEI recipe-browser integration
-- [ ] More robust recipe-specific reverse rules and edge-case handling
-- [ ] In-game testing and automated tests
+## 当前已有的通用能力
 
-## Design guarantees
+- 三种机器均已注册方块、方块实体、菜单及对应界面。
+- 机器界面使用 Minecraft 原版容器背景与原版物品槽，不应改动玩家背包自身的物品内容或布局。
+- 拆解台与附魔提取台具有分页输出库存。
+- 输出库存支持按需扩展；同类输出会尽量合并，避免每批处理都创建大量独立槽位。
+- 机器处理逻辑以服务端为权威，避免仅靠客户端界面预测改变机器真实库存。
+- 拆解台与附魔提取台提供 Shift+左键整组快速转移、Shift+右键单个快速转移的交互。
+- 现有机器具备物品能力接口，可供漏斗和其他物品管道类模组访问。
 
-- Processing runs on the logical server.
-- Outputs are checked before inputs are consumed.
-- Recipe selection is persisted with the block entity.
-- JEI is intended to be optional; core automation must not require the JEI mod to be installed.
+## 正在推进的整体升级
+
+以下内容属于下一阶段完整升级目标，**尚不能视为当前版本已经实现**：
+
+- **六面独立输入输出配置**：上、下、北、南、东、西六个方向分别设置禁用、输入、输出或双向，并在界面和方块外观上清晰显示。
+- **附魔图书馆**：新增机器，允许通过物品管道接收附魔书；把附魔注册标识和等级写入世界级持久化数据库，而不是绑定在某一个方块实体中。
+- **跨图书馆共享**：同一世界内所有图书馆读取同一份数据；拆除图书馆只掉落机器输入栏物品，不删除全局附魔记录。
+- **按等级提取/应用附魔**：玩家放入书籍或武器，选择数据库中已有附魔并指定等级；提取等级不能超过已保存等级，并允许绕过原版附魔冲突和原版等级上限。
+- **模组附魔卸载兼容**：保存未知或暂时未注册的附魔标识；模组缺失时保留记录，模组重新安装且附魔重新注册后恢复识别。
+- **统一自动流出**：机器无法处理的物品不应永久卡在输入端；自动流出不得复制或丢失物品。
+- **机器模型与材质重做**：拆解台、附魔提取台、附魔复制台和附魔图书馆采用可区分的外观；正面与各个侧面具有明确方向提示。
+
+## 开发与验证状态
+
+- 已有基础工程、机器注册、方块实体、菜单、原版容器界面和物品能力接口。
+- 已有拆解、附魔提取和附魔复制的第一版处理逻辑。
+- 已有分页输出、自动处理、配方锁定及快速转移等功能。
+- 自动构建曾成功完成，但构建通过不等于游戏内所有交互已经验证。
+- 六面独立配置、附魔图书馆及世界级附魔数据库、统一材质重做仍需实现和验证。
+- 需要继续进行游戏内测试，重点检查分页往返、Shift 快捷拿取、自动化输入输出、物品返还、超大堆叠保存与重载，以及模组附魔缺失/恢复场景。
+
+## 项目原则
+
+- 不按物品所属模组人为限制拆解对象；优先读取实际注册配方和物品数据。
+- 机器界面遵循 Minecraft 原版容器交互，不覆盖或篡改玩家背包。
+- 物品传输和库存扣除由服务端负责，避免客户端预测造成重复显示或物品复制。
+- 世界级数据与机器局部库存分离，机器拆除不应误删世界数据。
+- 功能状态如实记录：未实现、未构建、未经过游戏内验证的内容不会标记为完成。
