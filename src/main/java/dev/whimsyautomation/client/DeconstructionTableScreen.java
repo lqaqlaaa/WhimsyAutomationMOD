@@ -84,10 +84,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 186, topPos + 146, 14, 14).build());
+                .bounds(leftPos + 187, topPos + 164, 12, 12).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 206, topPos + 146, 14, 14).build());
+                .bounds(leftPos + 207, topPos + 164, 12, 12).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
                 .bounds(leftPos + 224, topPos + 144, 44, 18).build();
         addRenderableWidget(lockButton);
