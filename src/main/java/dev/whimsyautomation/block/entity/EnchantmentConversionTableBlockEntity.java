@@ -44,10 +44,13 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     public ItemStackHandler getInventory() { return inventory; }
     public static boolean isValidTemplate(ItemStack stack) {
         if (!stack.is(Items.ENCHANTED_BOOK)) return false;
-        ItemEnchantments ench = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-        if (ench.entrySet().size() != 1) return false;
-        var entry = ench.entrySet().iterator().next();
-        return entry.getIntValue() > 0 && entry.getIntValue() <= entry.getKey().value().getMaxLevel();
+        ItemEnchantments enchantments = stack.getOrDefault(
+                DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+        // A template is the complete enchanted book, not a single vanilla-only
+        // enchantment. Preserve every registered mod enchantment and its stored
+        // level, including levels above the enchantment's declared vanilla cap.
+        return !enchantments.isEmpty() && enchantments.entrySet().stream()
+                .allMatch(entry -> entry.getIntValue() > 0);
     }
     public boolean hasPayment() {
         ItemStack books = inventory.getStackInSlot(BOOK_SLOT), payment = inventory.getStackInSlot(PAYMENT_SLOT);
