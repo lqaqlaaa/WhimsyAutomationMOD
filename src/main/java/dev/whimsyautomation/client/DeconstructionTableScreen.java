@@ -166,7 +166,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // Background art must use screen coordinates; menu slots remain local.
         // One continuous vanilla-style container surface: no artificial
         // divider between the machine inventory and the player inventory.
-        panel(graphics, leftPos, topPos + 54, imageWidth, imageHeight - 56);
+        panel(graphics, leftPos, topPos + 36, imageWidth, imageHeight - 38);
 
         // Exactly 27 real machine output slots.
         for (int i = 0; i < 27; i++)
