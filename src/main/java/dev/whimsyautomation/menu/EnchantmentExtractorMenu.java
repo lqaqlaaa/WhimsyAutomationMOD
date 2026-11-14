@@ -320,11 +320,15 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
             int movedCount = Math.min(requested, source.getCount()) - moving.getCount();
             if (movedCount <= 0) return ItemStack.EMPTY;
-            if (!player.level().isClientSide && !machine.isPersistentOutputMode()
-                    && !machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount))) {
-                // The server-side validation above should make this unreachable;
-                // refuse to report a successful transfer if the source changed.
-                return ItemStack.EMPTY;
+            if (!player.level().isClientSide) {
+                if (machine.isPersistentOutputMode()) {
+                    // moveItemStackTo operates on a copy; remove the transferred
+                    // amount from the durable machine output inventory explicitly.
+                    ItemStack extracted = machine.getInventory().extractItem(actualOutputSlot, movedCount, false);
+                    if (extracted.getCount() != movedCount) return ItemStack.EMPTY;
+                } else if (!machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount))) {
+                    return ItemStack.EMPTY;
+                }
             }
             if (player.level().isClientSide) {
                 // Predict the source-slot shrink on the client as well. Without
