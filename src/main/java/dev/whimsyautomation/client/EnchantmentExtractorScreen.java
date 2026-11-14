@@ -147,6 +147,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             send(6); bufferPageField.setValue(Integer.toString(Math.min(menu.getBufferPageCount(), menu.getBufferPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页缓冲物品")))
                 .bounds(leftPos + 318, topPos + 155, 14, 14).build());
+        layoutEditor.bindWidgets(children(), leftPos, topPos);
     }
 
     @Override
