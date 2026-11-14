@@ -54,8 +54,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     private Component autoLabel() {
         return Component.translatable(menu.isAutoMode()
-                ? "screen.whimsy_automation.auto_on_short"
-                : "screen.whimsy_automation.auto_off_short");
+                ? "screen.whimsy_automation.auto"
+                : "screen.whimsy_automation.auto");
     }
 
     private void slot(GuiGraphics g, int x, int y) {
