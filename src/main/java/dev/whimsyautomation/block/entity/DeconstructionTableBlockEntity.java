@@ -171,6 +171,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
+        normalizeOutputInventory();
         if (side == null) return unsidedHandler;
         int index = side.ordinal();
         if (sidedHandlers[index] == null) {
@@ -181,7 +182,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, DeconstructionTableBlockEntity machine) {
-        if (level.isClientSide || !machine.autoMode) return;
+        if (level.isClientSide) return;
+        machine.normalizeOutputInventory();
+        if (!machine.autoMode) return;
         // Batch processing makes a full hopper-fed stack progress in one tick
         // instead of requiring one ten-tick cycle per item.
         machine.processOneItem(true);
@@ -313,6 +316,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
+        normalizeOutputPlan(outputPlan);
 
         // Scale the per-craft recovery list once, then insert each aggregated
         // result. This avoids cloning the entire output inventory for every batch.
@@ -322,12 +326,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             // overflow and crash the server tick; split the long total into
             // representable chunks and let the output planner merge each chunk.
             long remaining = (long) result.getCount() * processedItems;
-            while (remaining > 0) {
-                int chunk = (int) Math.min(Integer.MAX_VALUE, remaining);
-                ItemStack total = result.copyWithCount(chunk);
-                insertIntoOutputPlan(outputPlan, total);
-                remaining -= chunk;
-            }
+            insertCountIntoOutputPlan(outputPlan, result, remaining);
         }
 
         inventory.resize(OUTPUT_START + outputPlan.size());
@@ -347,6 +346,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
+        normalizeOutputPlan(outputPlan);
 
         // insertIntoOutputPlan merges identical stacks and expands the output
         // inventory when necessary, so an unprocessable item is never trapped
@@ -366,34 +366,102 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         setChanged();
     }
 
-    private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
-        if (incoming.isEmpty()) return true;
-        incoming.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, Integer.MAX_VALUE);
-        for (ItemStack existing : plan) {
-            if (!existing.isEmpty()) existing.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, Integer.MAX_VALUE);
-            if (incoming.isEmpty()) return true;
-            if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, incoming)) continue;
-            int limit = Integer.MAX_VALUE;
-            int moved = Math.min(incoming.getCount(), Math.max(0, limit - existing.getCount()));
-            if (moved > 0) {
-                existing.grow(moved);
-                incoming.shrink(moved);
+    /**
+     * Repairs output stacks created by older builds and splits oversized stacks
+     * before any automation capability can expose them to another mod.
+     */
+    private void normalizeOutputInventory() {
+        List<ItemStack> outputPlan = new ArrayList<>();
+        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
+            outputPlan.add(inventory.getStackInSlot(slot).copy());
+        }
+        normalizeOutputPlan(outputPlan);
+        inventory.resize(OUTPUT_START + outputPlan.size());
+        for (int i = 0; i < outputPlan.size(); i++) {
+            ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
+            ItemStack after = outputPlan.get(i);
+            if (!ItemStack.matches(before, after)) {
+                inventory.setStackInSlot(OUTPUT_START + i, after);
             }
         }
-        for (int i = 0; i < plan.size() && !incoming.isEmpty(); i++) {
-            if (!plan.get(i).isEmpty()) continue;
-            int moved = incoming.getCount();
-            plan.set(i, incoming.copyWithCount(moved));
-            incoming.shrink(moved);
+    }
+
+    private void normalizeOutputPlan(List<ItemStack> plan) {
+        for (int i = 0; i < plan.size(); i++) {
+            ItemStack stack = plan.get(i);
+            if (stack.isEmpty()) continue;
+            normalizeStackLimit(stack);
+            int limit = Math.max(1, Math.min(99, stack.getMaxStackSize()));
+            if (stack.getCount() <= limit) continue;
+
+            long overflow = (long) stack.getCount() - limit;
+            ItemStack template = stack.copyWithCount(1);
+            stack.setCount(limit);
+            insertCountIntoOutputPlan(plan, template, overflow);
         }
-        // The output inventory grows to fit large machine recipes instead of
-        // rejecting an otherwise valid dismantle when all existing slots fill.
-        while (!incoming.isEmpty()) {
-            int moved = Math.min(incoming.getCount(), Math.min(incoming.getMaxStackSize(), inventory.getSlotLimit(OUTPUT_START)));
-            plan.add(incoming.copyWithCount(moved));
-            incoming.shrink(moved);
-        }
+    }
+
+    private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
+        if (incoming.isEmpty()) return true;
+        insertCountIntoOutputPlan(plan, incoming, incoming.getCount());
         return true;
+    }
+
+    /**
+     * Inserts an aggregate amount without ever creating an invalid ItemStack.
+     * MAX_STACK_SIZE is a data component constrained by vanilla to [1, 99];
+     * machine output capacity must be represented by additional slots, not by
+     * writing Integer.MAX_VALUE into the component or stack count.
+     */
+    private void insertCountIntoOutputPlan(List<ItemStack> plan, ItemStack template, long amount) {
+        if (template.isEmpty() || amount <= 0) return;
+
+        ItemStack normalizedTemplate = template.copyWithCount(1);
+        normalizeStackLimit(normalizedTemplate);
+        int stackLimit = Math.max(1, Math.min(99, normalizedTemplate.getMaxStackSize()));
+        int slotLimit = Math.max(1, inventory.getSlotLimit(OUTPUT_START));
+        stackLimit = Math.min(stackLimit, slotLimit);
+        long remaining = amount;
+
+        // Merge into compatible stacks, respecting each stack's legal limit.
+        for (ItemStack existing : plan) {
+            if (remaining <= 0) return;
+            if (existing.isEmpty()) continue;
+            normalizeStackLimit(existing);
+            if (!ItemStack.isSameItemSameComponents(existing, normalizedTemplate)) continue;
+
+            int existingLimit = Math.max(1, Math.min(99, existing.getMaxStackSize()));
+            existingLimit = Math.min(existingLimit, slotLimit);
+            int space = Math.max(0, existingLimit - existing.getCount());
+            int moved = (int) Math.min(remaining, (long) space);
+            if (moved > 0) {
+                existing.grow(moved);
+                remaining -= moved;
+            }
+        }
+
+        // Reuse empty slots before expanding the machine's output inventory.
+        for (int i = 0; i < plan.size() && remaining > 0; i++) {
+            if (!plan.get(i).isEmpty()) continue;
+            int moved = (int) Math.min(remaining, (long) stackLimit);
+            plan.set(i, normalizedTemplate.copyWithCount(moved));
+            remaining -= moved;
+        }
+
+        // Large recipe yields are spread across ordinary legal stacks.
+        while (remaining > 0) {
+            int moved = (int) Math.min(remaining, (long) stackLimit);
+            plan.add(normalizedTemplate.copyWithCount(moved));
+            remaining -= moved;
+        }
+    }
+
+    private static void normalizeStackLimit(ItemStack stack) {
+        if (stack.isEmpty()) return;
+        Integer declaredLimit = stack.get(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE);
+        if (declaredLimit != null && (declaredLimit < 1 || declaredLimit > 99)) {
+            stack.remove(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE);
+        }
     }
 
     @Override

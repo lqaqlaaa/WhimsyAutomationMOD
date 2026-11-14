@@ -57,9 +57,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private void drawPlayerSlots(GuiGraphics g) {
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                drawSlot(g, 8 + col * 18, 138 + row * 18);
+                drawSlot(g, leftPos + 8 + col * 18, topPos + 138 + row * 18);
         for (int col = 0; col < 9; col++)
-            drawSlot(g, 8 + col * 18, 196);
+            drawSlot(g, leftPos + 8 + col * 18, topPos + 196);
     }
 
     @Override
@@ -87,16 +87,16 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        // AbstractContainerScreen translates renderBg into GUI-local space.
-        // These coordinates must match the real menu Slot coordinates.
-        panel(graphics, 0, 54, 176, 166);
-        panel(graphics, 176, 54, 176, 166);
+        // renderBg uses screen coordinates; the menu owns its independent
+        // GUI-local slot positions. Do not mix the two coordinate spaces.
+        panel(graphics, leftPos, topPos + 54, 176, 166);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 166);
 
         // Exactly 27 stored-output slots, one machine input slot, and the
         // player's single native 36-slot inventory. No decorative fake slots.
         for (int i = 0; i < 27; i++)
-            drawSlot(graphics, 8 + (i % 9) * 18, 71 + (i / 9) * 18);
-        drawSlot(graphics, 184, 71);
+            drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
+        drawSlot(graphics, leftPos + 184, topPos + 71);
         drawPlayerSlots(graphics);
     }
 
@@ -113,9 +113,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (outputModeButton != null) outputModeButton.setMessage(outputModeLabel());
 
-        // renderLabels runs in the container's GUI-local pose after its normal
-        // contents/widgets, so the dialog covers the original right pane.
-        if (showSideConfig) renderSideConfig(graphics);
     }
 
     private void renderSideConfig(GuiGraphics graphics) {
@@ -197,6 +194,16 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             // real slot contents, and widgets exactly once. A second explicit
             // renderBackground call was darkening the world a second time.
             super.render(graphics, -10000, -10000, partialTick);
+            // Flush the container's item/widget buffers before the modal pass.
+            // Vanilla item rendering applies its own positive GUI Z offset;
+            // the modal must be placed in front of that layer, not merely
+            // drawn later at Z=0.
+            graphics.flush();
+            graphics.pose().pushPose();
+            graphics.pose().translate(leftPos, topPos, 500.0F);
+            renderSideConfig(graphics);
+            graphics.flush();
+            graphics.pose().popPose();
             return;
         }
         super.render(graphics, mouseX, mouseY, partialTick);
