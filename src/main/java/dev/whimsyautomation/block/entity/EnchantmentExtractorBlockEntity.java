@@ -38,6 +38,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     public static final int OUTPUT_START = 1;
     private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_STACK_LIMIT = Integer.MAX_VALUE;
+    private static final int BOOK_STACK_COMPONENT_LIMIT = 99;
     private int workTicks;
     private boolean autoMode = false;
     private boolean splitLevels = false;
