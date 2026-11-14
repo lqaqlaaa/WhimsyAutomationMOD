@@ -26,6 +26,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private boolean showSideConfig;
     private UiLayoutEditor layoutEditor;
     private Button layoutDebugButton;
+    private Button layoutExportButton;
+    private Button layoutResetButton;
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -112,6 +114,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
                 .bounds(leftPos + 312, topPos + 38, 32, 14).build();
         addRenderableWidget(layoutDebugButton);
+        layoutExportButton = Button.builder(Component.literal("导出"), b -> {
+            try { layoutEditor.export(); } catch (java.io.IOException ignored) { }
+        }).bounds(leftPos + 250, topPos + 38, 28, 14).build();
+        layoutResetButton = Button.builder(Component.literal("复位"), b -> layoutEditor.reset())
+                .bounds(leftPos + 280, topPos + 38, 28, 14).build();
+        addRenderableWidget(layoutExportButton);
+        addRenderableWidget(layoutResetButton);
         outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
@@ -318,6 +327,16 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
+        if (layoutDebugButton != null && layoutDebugButton.isMouseOver(mouseX, mouseY)) {
+            layoutEditor.toggle();
+            return true;
+        }
+        if (layoutEditor != null && layoutEditor.enabled()) {
+            if ((layoutExportButton != null && layoutExportButton.isMouseOver(mouseX, mouseY))
+                    || (layoutResetButton != null && layoutResetButton.isMouseOver(mouseX, mouseY)))
+                return super.mouseClicked(mouseX, mouseY, button);
+            return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
+        }
         if (selectedIngredientGroup >= 0) {
             int x = pickerHitX(), y = pickerHitY();
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
@@ -445,6 +464,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             graphics.pose().popPose();
             return;
         }
+        if (layoutExportButton != null) layoutExportButton.visible = layoutEditor != null && layoutEditor.enabled();
+        if (layoutResetButton != null) layoutResetButton.visible = layoutEditor != null && layoutEditor.enabled();
         super.render(graphics, (int) virtualX, (int) virtualY, partialTick);
         if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, (int) virtualX, (int) virtualY);
