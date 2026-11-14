@@ -403,6 +403,10 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             stack.setCount(limit);
             insertCountIntoOutputPlan(plan, template, overflow);
         }
+        // Trailing empty slots are reserved capacity, not content. Release
+        // complete unused pages after an output has been extracted.
+        while (!plan.isEmpty() && plan.get(plan.size() - 1).isEmpty())
+            plan.remove(plan.size() - 1);
     }
 
     private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
