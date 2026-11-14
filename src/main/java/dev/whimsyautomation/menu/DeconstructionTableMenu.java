@@ -102,7 +102,12 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         });
         addDataSlot(new DataSlot() {
             @Override public int get() { return syncedPage; }
-            @Override public void set(int value) { syncedPage = Math.max(0, Math.min(getPageCount() - 1, value)); }
+            @Override public void set(int value) {
+                // DataSlots are synchronized in declaration order. The page can
+                // arrive before the output-size DataSlot, so do not clamp it
+                // against a stale client page count here.
+                syncedPage = Math.max(0, value);
+            }
         });
         addDataSlot(new DataSlot() {
             @Override public int get() { return machine == null ? 1 + PAGE_SIZE * MIN_OUTPUT_PAGES : Math.min(32767, machine.getInventory().getSlots()); }
