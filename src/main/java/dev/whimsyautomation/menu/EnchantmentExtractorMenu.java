@@ -98,7 +98,12 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
         addDataSlot(new DataSlot() {
             @Override public int get() { return syncedPage; }
-            @Override public void set(int value) { syncedPage = Math.max(0, Math.min(getPageCount() - 1, value)); }
+            @Override public void set(int value) {
+                // The page DataSlot is sent before the output-size DataSlot.
+                // Clamping here can discard page 2 using the previous page count,
+                // making the old page appear empty until another page update.
+                syncedPage = Math.max(0, value);
+            }
         });
         addDataSlot(new DataSlot() {
             @Override public int get() { return machine == null ? OUTPUT_START + 1 : Math.min(32767, machine.getInventory().getSlots()); }
