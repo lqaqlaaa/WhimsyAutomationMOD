@@ -126,22 +126,10 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             @Override public int get() { return getServerRecipeIndex(); }
             @Override public void set(int value) { syncedRecipeIndex = value; }
         });
-        addDataSlot(new DataSlot() {
-            @Override public int get() { return syncedPage; }
-            @Override public void set(int value) {
-                // DataSlots are synchronized in declaration order. The page can
-                // arrive before the output-size DataSlot, so do not clamp it
-                // against a stale client page count here.
-                syncedPage = Math.max(0, value);
-            }
-        });
-        addDataSlot(new DataSlot() {
-            @Override public int get() { return machine == null ? 1 + PAGE_SIZE * MIN_OUTPUT_PAGES : Math.min(32767, machine.getInventory().getSlots()); }
-            @Override public void set(int value) {
-                syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES, value);
-                if (machine != null) machine.ensureOutputInventorySize(syncedOutputSlotCount);
-            }
-        });
+        addIntDataSlots(() -> syncedPage, value -> syncedPage = Math.max(0, value));
+        addIntDataSlots(
+                () -> machine == null ? OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES : machine.getInventory().getSlots(),
+                value -> syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES, value));
         addDataSlot(new DataSlot() {
             @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
             @Override public void set(int value) { syncedAutoMode = value != 0; }
@@ -172,6 +160,29 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 @Override public void set(int value) { syncedSideModes[sideIndex] = Math.max(0, Math.min(2, value)); }
             });
         }
+    }
+
+    /**
+     * DataSlot carries a signed short. Pairing two slots preserves a complete
+     * 32-bit page/capacity value instead of truncating storage at 32767 slots.
+     */
+    private void addIntDataSlots(java.util.function.IntSupplier getter,
+                                 java.util.function.IntConsumer setter) {
+        final int[] parts = new int[2];
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return (getter.getAsInt() >>> 16) & 0xFFFF; }
+            @Override public void set(int value) {
+                parts[0] = value & 0xFFFF;
+                setter.accept((parts[0] << 16) | parts[1]);
+            }
+        });
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return getter.getAsInt() & 0xFFFF; }
+            @Override public void set(int value) {
+                parts[1] = value & 0xFFFF;
+                setter.accept((parts[0] << 16) | parts[1]);
+            }
+        });
     }
 
     private void addPagedOutputSlot(int outputIndex) {
@@ -433,7 +444,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     public int getPage() { return Math.min(syncedPage, getPageCount() - 1); }
     public int getPageCount() {
         int slotsCount = machine == null ? syncedOutputSlotCount : machine.getInventory().getSlots();
-        return Math.max(1, (Math.max(PAGE_SIZE, slotsCount - OUTPUT_START) + PAGE_SIZE - 1) / PAGE_SIZE);
+        return Math.max(1, (int) (((long) Math.max(PAGE_SIZE, slotsCount - OUTPUT_START) + PAGE_SIZE - 1L) / PAGE_SIZE));
     }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isLocked() { return syncedLocked; }
