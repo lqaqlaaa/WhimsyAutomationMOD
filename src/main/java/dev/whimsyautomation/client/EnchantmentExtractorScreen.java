@@ -100,8 +100,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                                   int x, int y, int color, boolean shadow) {
         UiLayoutProfile.Element e = layoutEditor.element(id, "label", x, y,
                 Math.max(1, font.width(value)), 9);
-        float sx = e.width / (float) Math.max(1, font.width(value));
-        float sy = e.height / 9.0F;
+        float sx = e.width / (float) Math.max(1, font.width(value)) * e.textScale;
+        float sy = e.height / 9.0F * e.textScale;
         graphics.pose().pushPose();
         graphics.pose().translate(e.x, e.y, 0.0F);
         graphics.pose().scale(sx, sy, 1.0F);
@@ -299,7 +299,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
-        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.drag(x, y);
+        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.drag(x, y, net.minecraft.client.gui.screens.Screen.hasShiftDown());
         if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 162)
             return true;
         double scale = uiScale();
