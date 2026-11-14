@@ -109,32 +109,32 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         outputPageField = pageField(90, 57, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 114, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 114, topPos + 57, 18, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 128, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 134, topPos + 57, 12, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(5); outputPageField.setValue(Integer.toString(Math.min(menu.getPageCount(), menu.getPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 142, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 148, topPos + 57, 12, 14).build());
 
         previewPageField = pageField(250, 57, menu.getPreviewPage() + 1);
         addRenderableWidget(previewPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(previewPageField, menu.getPreviewPageCount(), 1))
-                .bounds(leftPos + 274, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 274, topPos + 57, 18, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             int page = Math.max(0, menu.getPreviewPage() - 1);
             send(-((page * 2 + 1) + 1));
             previewPageField.setValue(Integer.toString(page + 1));
         }).tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 288, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 294, topPos + 57, 12, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             int page = Math.min(menu.getPreviewPageCount() - 1, menu.getPreviewPage() + 1);
             send(-((page * 2 + 1) + 1));
             previewPageField.setValue(Integer.toString(page + 1));
         }).tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 302, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 308, topPos + 57, 12, 14).build());
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
