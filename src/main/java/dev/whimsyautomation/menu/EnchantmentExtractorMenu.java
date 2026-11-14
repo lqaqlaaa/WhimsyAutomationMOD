@@ -196,10 +196,19 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             int actualOutputSlot = getActualOutputSlot(index);
             int requested = quickMoveSingle ? 1 : source.getCount();
             ItemStack moving = source.copyWithCount(Math.min(requested, source.getCount()));
+            if (!player.level().isClientSide
+                    && !machine.canConsumeGeneratedBook(actualOutputSlot, moving)) {
+                return ItemStack.EMPTY;
+            }
             if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
             int movedCount = Math.min(requested, source.getCount()) - moving.getCount();
             if (movedCount <= 0) return ItemStack.EMPTY;
-            if (!player.level().isClientSide) machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount));
+            if (!player.level().isClientSide
+                    && !machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount))) {
+                // The server-side validation above should make this unreachable;
+                // refuse to report a successful transfer if the source changed.
+                return ItemStack.EMPTY;
+            }
             return copy.copyWithCount(movedCount);
         }
         if (index < MACHINE_SLOT_COUNT) {
