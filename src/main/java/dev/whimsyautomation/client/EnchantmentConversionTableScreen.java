@@ -36,17 +36,17 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         // Do not paint the complete vanilla smithing screen over this machine:
         // it contains a decorative hammer/template glyph that covers our real
         // slot. Build only the panel and the four slots this menu actually owns.
-        panel(graphics, leftPos, topPos, imageWidth, imageHeight);
-        drawSlot(graphics, leftPos + 8, topPos + 48);
-        drawSlot(graphics, leftPos + 26, topPos + 48);
-        drawSlot(graphics, leftPos + 44, topPos + 48);
-        drawSlot(graphics, leftPos + 134, topPos + 48);
+        panel(graphics, 0, 0, imageWidth, imageHeight);
+        drawSlot(graphics, 8, 48);
+        drawSlot(graphics, 26, 48);
+        drawSlot(graphics, 44, 48);
+        drawSlot(graphics, 134, 48);
 
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                drawSlot(graphics, leftPos + 8 + col * 18, topPos + 84 + row * 18);
+                drawSlot(graphics, 8 + col * 18, 84 + row * 18);
         for (int col = 0; col < 9; col++)
-            drawSlot(graphics, leftPos + 8 + col * 18, topPos + 142);
+            drawSlot(graphics, 8 + col * 18, 142);
     }
 
     @Override
