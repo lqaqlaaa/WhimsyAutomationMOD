@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -34,6 +35,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private int syncedPage;
     private int syncedOutputSlotCount = OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES;
     private boolean syncedAutoMode;
+    private boolean quickMoveSingle;
     private int syncedOutputMode = 1;
 
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
@@ -177,23 +179,29 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         return true;
     }
 
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        quickMoveSingle = clickType == ClickType.QUICK_MOVE && button == 1;
+        try { super.clicked(slotId, button, clickType, player); }
+        finally { quickMoveSingle = false; }
+    }
+
     @Override public ItemStack quickMoveStack(Player player, int index) {
         if (index < 0 || index >= slots.size()) return ItemStack.EMPTY;
         Slot slot = slots.get(index);
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack source = slot.getItem();
         ItemStack copy = source.copy();
-
         if (index >= OUTPUT_MENU_START && index < MACHINE_SLOT_COUNT) {
             int actualOutputSlot = getActualOutputSlot(index);
-            ItemStack moving = source.copy();
+            int requested = quickMoveSingle ? 1 : source.getCount();
+            ItemStack moving = source.copyWithCount(Math.min(requested, source.getCount()));
             if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
-            int movedCount = copy.getCount() - moving.getCount();
+            int movedCount = Math.min(requested, source.getCount()) - moving.getCount();
             if (movedCount <= 0) return ItemStack.EMPTY;
-            machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount));
+            if (!player.level().isClientSide) machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount));
             return copy.copyWithCount(movedCount);
         }
-
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
         } else {
