@@ -195,28 +195,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
-        if (recipeResult.isEmpty() || input.isEmpty()
-                || !ItemStack.isSameItem(recipeResult, input)) return false;
-
-        // Treat the recipe result as the identity template. Every component
-        // explicitly supplied by the recipe (including TACZ variant IDs and
-        // other modded item data) must match, but extra state on the player's
-        // stack must not hide an otherwise valid recipe.
-        java.util.Set<net.minecraft.core.component.DataComponentType<?>> ignored = java.util.Set.of(
-                net.minecraft.core.component.DataComponents.DAMAGE,
-                net.minecraft.core.component.DataComponents.CUSTOM_NAME,
-                net.minecraft.core.component.DataComponents.ITEM_NAME,
-                net.minecraft.core.component.DataComponents.REPAIR_COST,
-                net.minecraft.core.component.DataComponents.ENCHANTMENTS,
-                net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
-        final boolean[] matches = {true};
-        recipeResult.getComponents().keySet().forEach(component -> {
-            if (ignored.contains(component)) return;
-            if (!java.util.Objects.equals(recipeResult.get(component), input.get(component))) {
-                matches[0] = false;
-            }
-        });
-        return matches[0];
+        return dev.whimsyautomation.util.RecipeOutputMatcher.matches(recipeResult, input);
     }
 
     private boolean matchesRecipeIdOutput(String recipeId, ItemStack input) {
