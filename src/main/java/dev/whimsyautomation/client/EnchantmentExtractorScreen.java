@@ -49,7 +49,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     private EditBox pageField(int x, int y, int initialPage) {
-        EditBox field = new EditBox(font, leftPos + x, topPos + y, 28, 14, Component.literal("页码"));
+        EditBox field = new EditBox(font, leftPos + x, topPos + y, 28, 18, Component.literal("页码"));
         field.setMaxLength(10);
         field.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         field.setValue(Integer.toString(initialPage));
@@ -103,43 +103,44 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     protected void init() {
         super.init();
+        topPos -= 27;
         outputPageField = pageField(90, 55, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 120, topPos + 55, 18, 14).build());
+                .bounds(leftPos + 120, topPos + 55, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(3); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
-                .bounds(leftPos + 140, topPos + 55, 14, 14).build());
+                .bounds(leftPos + 140, topPos + 55, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.min(menu.getPageCount(), menu.getPage() + 2)));
         }).tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.next")))
-                .bounds(leftPos + 156, topPos + 55, 14, 14).build());
+                .bounds(leftPos + 158, topPos + 55, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .bounds(leftPos + 204, topPos + 89, 140, 22).build();
+                .bounds(leftPos + 184, topPos + 89, 78, 18).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 204, topPos + 113, 68, 18).build();
+                .bounds(leftPos + 184, topPos + 107, 78, 18).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 274, topPos + 113, 70, 18).build();
+                .bounds(leftPos + 264, topPos + 107, 80, 18).build();
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
-                .bounds(leftPos + 184, topPos + 113, 18, 18).build());
+                .bounds(leftPos + 264, topPos + 89, 80, 18).build());
 
-        bufferPageField = pageField(262, 130, menu.getBufferPage() + 1);
+        bufferPageField = pageField(224, 151, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(bufferPageField, menu.getBufferPageCount(), 1))
-                .bounds(leftPos + 292, topPos + 130, 18, 14).build());
+                .bounds(leftPos + 254, topPos + 151, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(5); bufferPageField.setValue(Integer.toString(Math.max(1, menu.getBufferPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页缓冲物品")))
-                .bounds(leftPos + 312, topPos + 130, 14, 14).build());
+                .bounds(leftPos + 274, topPos + 151, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(6); bufferPageField.setValue(Integer.toString(Math.min(menu.getBufferPageCount(), menu.getBufferPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页缓冲物品")))
-                .bounds(leftPos + 328, topPos + 130, 14, 14).build());
+                .bounds(leftPos + 294, topPos + 151, 18, 18).build());
     }
 
     @Override
@@ -158,7 +159,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         // Eighteen real queue slots: two rows of nine, entirely inside the
         // right machine pane and clear of the player's inventory.
         for (int i = 0; i < 18; i++)
-            drawSlot(graphics, leftPos + 184 + (i % 9) * 18, topPos + 151 + (i / 9) * 18);
+            drawSlot(graphics, leftPos + 184 + (i % 9) * 18, topPos + 179 + (i / 9) * 18);
         drawPlayerSlots(graphics);
     }
 
@@ -166,14 +167,15 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.extractor"),
                 8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("产物 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 42, 0x404040, false);
+        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 42, 0x404040, false);
         if (outputPageField != null && !outputPageField.isFocused())
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.book_input"),
                 202, 75, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("缓冲区"), 184, 130, 0x404040, false);
+        graphics.drawString(font, Component.literal("缓冲区"), 184, 156, 0x404040, false);
+        graphics.drawString(font, Component.literal("/ " + menu.getBufferPageCount() + "页"), 314, 156, 0x404040, false);
         if (bufferPageField != null && !bufferPageField.isFocused())
             bufferPageField.setValue(Integer.toString(menu.getBufferPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
@@ -252,7 +254,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
         boolean overBuffer = mouseX >= leftPos + 180 && mouseX < leftPos + 352
-                && mouseY >= topPos + 151 && mouseY < topPos + 187;
+                && mouseY >= topPos + 179 && mouseY < topPos + 215;
         if (overBuffer && menu.getBufferPageCount() > 1) {
             send(deltaY < 0 ? 6 : 5);
             return true;
