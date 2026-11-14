@@ -36,6 +36,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Reverse-processes supported registered recipes. Recipe preview, recipe lock and
@@ -49,6 +51,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private String lockedRecipe = "";
     private int workTicks;
     private boolean autoMode = false;
+    private final Map<String, List<Integer>> ingredientVariants = new HashMap<>();
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
         @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : Integer.MAX_VALUE; }
@@ -108,6 +111,21 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
     public String getSelectedRecipe() { return selectedRecipe; }
     public String getLockedRecipe() { return lockedRecipe; }
+
+    public int getIngredientVariant(String recipeId, int group) {
+        List<Integer> values = ingredientVariants.get(recipeId);
+        return values == null || group < 0 || group >= values.size() ? 0 : values.get(group);
+    }
+
+    public void setIngredientVariant(String recipeId, int group, int variant) {
+        if (recipeId == null || recipeId.isEmpty() || group < 0 || group >= 64 || variant < 0) return;
+        List<Integer> values = new ArrayList<>(ingredientVariants.getOrDefault(recipeId, List.of()));
+        while (values.size() <= group) values.add(0);
+        values.set(group, variant);
+        ingredientVariants.put(recipeId, List.copyOf(values));
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
 
     public void setSelectedRecipe(@Nullable ResourceLocation recipeId) {
         selectedRecipe = recipeId == null ? "" : recipeId.toString();
@@ -255,11 +273,16 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (processedItems <= 0) return;
 
         List<ItemStack> recoveredPerBatch = new ArrayList<>();
-        for (Ingredient ingredient : dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe)) {
-            if (ingredient.isEmpty()) continue;
-            ItemStack[] options = ingredient.getItems();
+        List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
+                dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(recipe);
+        for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+            var group = groups.get(groupIndex);
+            ItemStack[] options = group.ingredient().getItems();
             if (options.length == 0) return;
-            recoveredPerBatch.add(options[0].copy());
+            int variant = Math.min(getIngredientVariant(selected.id().toString(), groupIndex), options.length - 1);
+            ItemStack recovered = options[variant].copy();
+            recovered.setCount(group.count());
+            recoveredPerBatch.add(recovered);
         }
 
         // Enchantments travel with each dismantled item and are returned as books.
@@ -370,6 +393,12 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         tag.putString("LockedRecipe", lockedRecipe);
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
+        CompoundTag variants = new CompoundTag();
+        for (var entry : ingredientVariants.entrySet()) {
+            int[] values = entry.getValue().stream().mapToInt(Integer::intValue).toArray();
+            variants.putIntArray(entry.getKey(), values);
+        }
+        tag.put("IngredientVariants", variants);
     }
 
     @Override
@@ -388,5 +417,15 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         lockedRecipe = tag.getString("LockedRecipe");
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
+        ingredientVariants.clear();
+        if (tag.contains("IngredientVariants")) {
+            CompoundTag variants = tag.getCompound("IngredientVariants");
+            for (String key : variants.getAllKeys()) {
+                int[] values = variants.getIntArray(key);
+                List<Integer> stored = new ArrayList<>(values.length);
+                for (int value : values) stored.add(Math.max(0, value));
+                ingredientVariants.put(key, List.copyOf(stored));
+            }
+        }
     }
 }
