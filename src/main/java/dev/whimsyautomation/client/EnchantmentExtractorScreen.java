@@ -114,34 +114,34 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     private void renderSideConfig(GuiGraphics graphics) {
         if (!showSideConfig) return;
-        int x = (width - 220) / 2, y = (height - 116) / 2;
-        panel(graphics, x, y, 220, 116);
-        graphics.fill(x + 2, y + 2, x + 218, y + 114, 0xFFE0E0E0);
-        graphics.drawString(font, Component.literal("六向设置"), x + 9, y + 8, 0xFF202020, false);
-        graphics.drawString(font, Component.literal("×"), x + 204, y + 7, 0xFF202020, false);
+        int x = leftPos + 176, y = topPos + 54;
+        panel(graphics, x, y, 176, 116);
+        graphics.fill(x + 2, y + 2, x + 174, y + 114, 0xFFE0E0E0);
+        graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
+        graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
         String[] modes = {"关", "入", "出"};
         int[] colors = {0xFFE74C3C, 0xFF2ECC71, 0xFF3498DB, 0xFFF1C40F, 0xFF9B59B6, 0xFF1ABC9C};
         for (int i = 0; i < 6; i++) {
             int col = i % 3, row = i / 3;
-            int cellX = x + 12 + col * 68, cellY = y + 34 + row * 25;
+            int cellX = x + 8 + col * 55, cellY = y + 34 + row * 25;
             graphics.fill(cellX, cellY + 1, cellX + 8, cellY + 9, colors[i]);
             graphics.drawString(font, Component.literal(names[i] + "：" + modes[Math.min(2, menu.getSideMode(i))]),
-                    cellX + 13, cellY, 0xFF303030, false);
+                    cellX + 12, cellY, 0xFF303030, false);
         }
-        graphics.drawString(font, Component.literal("点击方向切换：关闭 / 输入 / 输出"), x + 9, y + 91, 0xFF606060, false);
+        graphics.drawString(font, Component.literal("点击方向切换输入/输出/关闭"), x + 8, y + 91, 0xFF606060, false);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (showSideConfig) {
-            int x = (width - 220) / 2, y = (height - 116) / 2;
-            if (mouseX >= x + 194 && mouseX < x + 220 && mouseY >= y && mouseY < y + 24) {
+            int x = leftPos + 176, y = topPos + 54;
+            if (mouseX >= x + 150 && mouseX < x + 176 && mouseY >= y && mouseY < y + 24) {
                 showSideConfig = false;
                 return true;
             }
-            if (mouseX >= x + 8 && mouseX < x + 212 && mouseY >= y + 28 && mouseY < y + 82) {
-                int col = Math.min(2, Math.max(0, (int) ((mouseX - (x + 12)) / 68)));
+            if (mouseX >= x + 5 && mouseX < x + 171 && mouseY >= y + 28 && mouseY < y + 82) {
+                int col = Math.min(2, Math.max(0, (int) ((mouseX - (x + 8)) / 55)));
                 int row = mouseY < y + 59 ? 0 : 1;
                 send(10 + row * 3 + col);
                 return true;
@@ -182,10 +182,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (showSideConfig) {
-            // Render only the modal. The machine container, player inventory,
-            // buttons, slot contents and their tooltips are not drawn beneath it.
-            renderBackground(graphics, mouseX, mouseY, partialTick);
-            graphics.fill(0, 0, width, height, 0x70000000);
+            // Keep the left output storage and player inventory visible. The
+            // opaque dialog replaces only the right-hand machine controls.
+            renderBackground(graphics, -10000, -10000, partialTick);
+            super.render(graphics, -10000, -10000, partialTick);
             renderSideConfig(graphics);
             return;
         }
