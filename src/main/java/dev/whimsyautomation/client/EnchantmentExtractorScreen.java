@@ -236,12 +236,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 return super.mouseClicked(mouseX, mouseY, button);
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         }
-        if (layoutDebugButton != null && layoutDebugButton.isMouseOver(mouseX, mouseY)) {
-            layoutEditor.toggle();
-            return true;
-        }
-        if (layoutEditor != null && layoutEditor.enabled())
-            return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         if (showSideConfig) {
             int x = leftPos + 176, y = topPos + 54;
             if (mouseX >= x + 150 && mouseX < x + 176 && mouseY >= y && mouseY < y + 24) {
@@ -287,6 +281,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
+        if (layoutEditor != null && layoutEditor.enabled()) return true;
         boolean overBuffer = mouseX >= leftPos + 180 && mouseX < leftPos + 352
                 && mouseY >= topPos + 175 && mouseY < topPos + 213;
         if (overBuffer && menu.getBufferPageCount() > 1) {
