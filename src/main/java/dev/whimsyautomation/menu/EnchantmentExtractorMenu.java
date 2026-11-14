@@ -37,7 +37,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private boolean syncedAutoMode;
     private boolean quickMoveSingle;
     private int syncedOutputMode = 1;
-    private final int[] syncedSideModes = new int[] {2, 1, 1, 1, 1, 1};
+    private final int[] syncedSideModes = new int[] {0, 0, 0, 0, 0, 0};
 
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos());
