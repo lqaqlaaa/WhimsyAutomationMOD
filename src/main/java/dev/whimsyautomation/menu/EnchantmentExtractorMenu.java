@@ -237,7 +237,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 // right-click would overwrite a generated slot instead of
                 // restoring the book to the input. Route ordinary clicks through
                 // the same transactional path used by the item handler/shift-click.
-                if (stack.isEmpty() || increment <= 0 || machine == null || machine.isPersistentOutputMode()
+                if (stack.isEmpty() || increment <= 0 || machine == null || isPersistentOutputMode()
                         || !stack.is(Items.ENCHANTED_BOOK)
                         || !machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack)) {
                     return stack;
