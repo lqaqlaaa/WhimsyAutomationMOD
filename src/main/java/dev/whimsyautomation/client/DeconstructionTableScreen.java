@@ -159,6 +159,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.fill(leftPos, topPos + 54, leftPos + imageWidth, topPos + imageHeight, 0xFF303030);
         panel(graphics, x, y, 160, 66);
         graphics.fill(x + 2, y + 2, x + 158, y + 64, 0xFFE0E0E0);
+        graphics.drawString(font, Component.literal("六向设置"), x + 7, y + 4, 0xFF202020, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
         String[] modes = {"关", "入", "出"};
         int[] colors = {0xFFE74C3C, 0xFF2ECC71, 0xFF3498DB, 0xFFF1C40F, 0xFF9B59B6, 0xFF1ABC9C};
