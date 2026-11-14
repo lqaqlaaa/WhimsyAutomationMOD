@@ -87,14 +87,16 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        panel(graphics, leftPos, topPos + 54, 176, 166);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 166);
+        // AbstractContainerScreen translates renderBg into GUI-local space.
+        // These coordinates must match the real menu Slot coordinates.
+        panel(graphics, 0, 54, 176, 166);
+        panel(graphics, 176, 54, 176, 166);
 
         // Exactly 27 stored-output slots, one machine input slot, and the
         // player's single native 36-slot inventory. No decorative fake slots.
         for (int i = 0; i < 27; i++)
-            drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
-        drawSlot(graphics, leftPos + 184, topPos + 71);
+            drawSlot(graphics, 8 + (i % 9) * 18, 71 + (i / 9) * 18);
+        drawSlot(graphics, 184, 71);
         drawPlayerSlots(graphics);
     }
 
@@ -115,7 +117,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private void renderSideConfig(GuiGraphics graphics) {
         if (!showSideConfig) return;
         int x = leftPos + 176, y = topPos + 54;
-        panel(graphics, x, y, 176, 116);
+        // Replace the complete right machine pane, not just the top 116 px.
+        // This prevents controls and labels underneath the dialog from showing.
+        panel(graphics, x, y, 176, 166);
         graphics.fill(x + 2, y + 2, x + 174, y + 114, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
         graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
@@ -184,12 +188,13 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         if (showSideConfig) {
             // Keep the left output storage and player inventory visible. The
             // opaque dialog replaces only the right-hand machine controls.
-            renderBackground(graphics, -10000, -10000, partialTick);
+            // AbstractContainerScreen renders the background, machine GUI,
+            // real slot contents, and widgets exactly once. A second explicit
+            // renderBackground call was darkening the world a second time.
             super.render(graphics, -10000, -10000, partialTick);
             renderSideConfig(graphics);
             return;
         }
-        renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
     }
