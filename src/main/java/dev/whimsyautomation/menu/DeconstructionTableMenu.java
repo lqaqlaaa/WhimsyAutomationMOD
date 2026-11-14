@@ -4,6 +4,7 @@ import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -53,6 +54,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private List<ItemStack> cachedPreviewStacks = List.of();
     private boolean quickMoveSingle;
     private final int[] syncedIngredientVariants = new int[32];
+    private final int[] syncedSideModes = new int[] {2, 1, 1, 1, 1, 1};
 
     public DeconstructionTableMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos());
@@ -161,6 +163,13 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                             : machine.getIngredientVariant(recipe.id().toString(), groupIndex);
                 }
                 @Override public void set(int value) { syncedIngredientVariants[groupIndex] = Math.max(0, value); }
+            });
+        }
+        for (int side = 0; side < 6; side++) {
+            final int sideIndex = side;
+            addDataSlot(new DataSlot() {
+                @Override public int get() { return machine == null ? 0 : machine.getSideMode(Direction.values()[sideIndex]); }
+                @Override public void set(int value) { syncedSideModes[sideIndex] = Math.max(0, Math.min(2, value)); }
             });
         }
     }
@@ -434,10 +443,12 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isLocked() { return syncedLocked; }
+    public int getSideMode(int side) { return side < 0 || side >= 6 ? 0 : syncedSideModes[side]; }
     
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
+        if (buttonId >= 10 && buttonId <= 15) { machine.cycleSideMode(Direction.values()[buttonId - 10]); return true; }
         if (buttonId >= 1000) {
             int encoded = buttonId - 1000;
             int group = encoded / 32768;
