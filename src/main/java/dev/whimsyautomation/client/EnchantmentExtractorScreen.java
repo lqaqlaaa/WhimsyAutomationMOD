@@ -117,7 +117,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 .bounds(leftPos + 156, topPos + 55, 14, 14).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .bounds(leftPos + 184, topPos + 107, 160, 14).build();
+                .bounds(leftPos + 204, topPos + 107, 140, 14).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
                 .bounds(leftPos + 204, topPos + 124, 68, 14).build();
