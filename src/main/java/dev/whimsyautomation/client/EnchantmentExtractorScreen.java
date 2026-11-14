@@ -121,10 +121,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 .bounds(leftPos + 184, topPos + 89, 78, 18).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 184, topPos + 107, 78, 18).build();
+                .bounds(leftPos + 184, topPos + 109, 78, 18).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 264, topPos + 107, 80, 18).build();
+                .bounds(leftPos + 264, topPos + 109, 80, 18).build();
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
                 .bounds(leftPos + 264, topPos + 89, 80, 18).build());
@@ -167,7 +167,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.extractor"),
                 8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 60, 0x404040, false);
+        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 54, 0x404040, false);
         if (outputPageField != null && !outputPageField.isFocused())
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.book_input"),
