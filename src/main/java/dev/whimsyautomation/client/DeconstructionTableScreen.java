@@ -28,8 +28,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 352;
-        imageHeight = 260;
-        inventoryLabelY = 170;
+        imageHeight = 222;
+        inventoryLabelY = 130;
         titleLabelY = 60;
     }
 
@@ -81,9 +81,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private void drawPlayerSlots(GuiGraphics g) {
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                drawSlot(g, leftPos + 8 + col * 18, topPos + 182 + row * 18);
+                drawSlot(g, leftPos + 8 + col * 18, topPos + 139 + row * 18);
         for (int col = 0; col < 9; col++)
-            drawSlot(g, leftPos + 8 + col * 18, topPos + 240);
+            drawSlot(g, leftPos + 8 + col * 18, topPos + 197);
     }
 
     @Override
@@ -121,33 +121,33 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 138, 98, 14).build();
+                .bounds(leftPos + 184, topPos + 121, 68, 14).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
-                .bounds(leftPos + 286, topPos + 138, 58, 14).build());
+                .bounds(leftPos + 254, topPos + 121, 90, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 156, 18, 18).build());
+                .bounds(leftPos + 184, topPos + 121, 18, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 204, topPos + 156, 18, 18).build());
+                .bounds(leftPos + 204, topPos + 121, 18, 14).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 224, topPos + 156, 44, 18).build();
+                .bounds(leftPos + 224, topPos + 121, 44, 14).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 272, topPos + 156, 72, 18).build());
+                .bounds(leftPos + 272, topPos + 121, 72, 14).build());
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         // renderBg is not translated to GUI-local coordinates in 1.21.1.
         // Background art must use screen coordinates; menu slots remain local.
-        panel(graphics, leftPos, topPos + 54, 176, 122);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 122);
+        panel(graphics, leftPos, topPos + 54, 176, 76);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 76);
 
         // Exactly 27 real machine output slots.
         for (int i = 0; i < 27; i++)
@@ -199,8 +199,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         int x = 176, y = 54;
         // Cover the entire right machine pane so no preview labels, input
         // slots, or action buttons leak out below the dialog.
-        panel(graphics, x, y, 176, 122);
-        graphics.fill(x + 2, y + 2, x + 174, y + 114, 0xFFE0E0E0);
+        panel(graphics, x, y, 76 > 0 ? 76 : 76);
+        graphics.fill(x + 2, y + 2, x + 174, y + 74, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
         graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
@@ -223,7 +223,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             showSideConfig = false;
             return true;
         }
-        if (mouseX >= x + 5 && mouseX < x + 171 && mouseY >= y + 28 && mouseY < y + 82) {
+        if (mouseX >= x + 5 && mouseX < x + 171 && mouseY >= y + 28 && mouseY < y + 66) {
             int col = Math.min(2, Math.max(0, (int) ((mouseX - (x + 8)) / 55)));
             int row = mouseY < y + 59 ? 0 : 1;
             send(10 + row * 3 + col);
