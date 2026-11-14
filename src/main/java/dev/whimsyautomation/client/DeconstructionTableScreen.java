@@ -18,6 +18,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private Button lockButton;
     private int selectedIngredientGroup = -1;
     private int ingredientPickerScroll;
+    private static final int PICKER_VISIBLE_ROWS = 8;
     private boolean showSideConfig;
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
@@ -125,7 +126,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 graphics.renderItem(stack, x, y);
                 graphics.renderItemDecorations(font, stack, x, y);
                 int group = menu.getPreviewPage() * 18 + i;
-                if (menu.getIngredientOptions(group).length > 1) graphics.drawString(font, "+", x + 11, y - 2, 0xFF2A7FFF, true);
+                if (menu.getIngredientOptions(group).length > 1) graphics.drawString(font, "▾", x + 10, y + 1, 0xFF245B9A, true);
             }
         }
         drawPlayerSlots(graphics);
@@ -179,59 +180,107 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         return false;
     }
 
+    private int pickerX() { return leftPos + 190; }
+    private int pickerY() { return topPos + 48; }
+    private int pickerHeight() { return 168; }
+
     private void renderIngredientPicker(GuiGraphics graphics, int mouseX, int mouseY) {
         if (selectedIngredientGroup < 0) return;
         ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
         if (options.length <= 1) { selectedIngredientGroup = -1; return; }
-        int x = leftPos + 190, y = topPos + 74;
-        int visible = Math.min(8, options.length);
-        panel(graphics, x, y, 158, visible * 18 + 4);
-        graphics.drawString(font, Component.literal("选择材料"), x + 5, y + 4, 0x404040, false);
+        int x = pickerX(), y = pickerY(), visible = Math.min(PICKER_VISIBLE_ROWS, options.length);
+        graphics.fill(0, 0, width, height, 0x99000000);
+        panel(graphics, x, y, 158, pickerHeight());
+        graphics.fill(x + 3, y + 3, x + 155, y + 17, 0xFF8B8B8B);
+        graphics.drawString(font, Component.literal("选择材料"), x + 7, y + 6, 0xFFFFFFFF, false);
+        graphics.drawString(font, Component.literal("×"), x + 143, y + 5, 0xFFFFFFFF, false);
         int start = Math.min(ingredientPickerScroll, Math.max(0, options.length - visible));
+        int selected = menu.getSelectedIngredientVariant(selectedIngredientGroup);
         for (int row = 0; row < visible; row++) {
-            int index = start + row; ItemStack option = options[index]; int rowY = y + 16 + row * 18;
-            graphics.renderItem(option, x + 4, rowY);
-            graphics.drawString(font, option.getHoverName(), x + 24, rowY + 4, 0x404040, false);
+            int index = start + row, rowY = y + 20 + row * 17;
+            if (index == selected) graphics.fill(x + 4, rowY, x + 145, rowY + 17, 0xFF8AA9C8);
+            graphics.renderItem(options[index], x + 6, rowY);
+            graphics.drawString(font, options[index].getHoverName(), x + 26, rowY + 5, 0xFF202020, false);
+            if (index == selected) graphics.drawString(font, "✓", x + 135, rowY + 5, 0xFF174A17, false);
         }
-        if (options.length > visible) graphics.drawString(font, Component.literal((start + 1) + "-" + (start + visible) + "/" + options.length), x + 112, y + 4, 0x606060, false);
+        if (options.length > PICKER_VISIBLE_ROWS) {
+            int trackTop = y + 20, trackHeight = PICKER_VISIBLE_ROWS * 17;
+            graphics.fill(x + 148, trackTop, x + 151, trackTop + trackHeight, 0xFF777777);
+            int thumbHeight = Math.max(12, trackHeight * PICKER_VISIBLE_ROWS / options.length);
+            int maxScroll = options.length - PICKER_VISIBLE_ROWS;
+            int thumbY = trackTop + (trackHeight - thumbHeight) * ingredientPickerScroll / maxScroll;
+            graphics.fill(x + 148, thumbY, x + 151, thumbY + thumbHeight, 0xFF303030);
+        }
+        graphics.drawString(font, Component.literal((start + 1) + "/" + options.length), x + 6, y + 158, 0xFF404040, false);
     }
 
-    @Override public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         if (selectedIngredientGroup >= 0) {
+            int x = pickerX(), y = pickerY();
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
-            int max = Math.max(0, options.length - 8);
-            ingredientPickerScroll = Math.max(0, Math.min(max, ingredientPickerScroll + (deltaY < 0 ? 1 : -1)));
+            if (mouseX >= x && mouseX < x + 158 && mouseY >= y + 20 && mouseY < y + 156) {
+                int max = Math.max(0, options.length - PICKER_VISIBLE_ROWS);
+                ingredientPickerScroll = Math.max(0, Math.min(max,
+                        ingredientPickerScroll + (deltaY < 0 ? 1 : -1)));
+            }
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
     }
-    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (clickSideConfig(mouseX, mouseY)) return true;
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (selectedIngredientGroup >= 0) {
-            ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup); int x = leftPos + 190, y = topPos + 74;
-            int visible = Math.min(8, options.length);
-            if (mouseX >= x && mouseX < x + 158 && mouseY >= y + 16 && mouseY < y + 16 + visible * 18) {
-                int row = (int) ((mouseY - (y + 16)) / 18); int index = ingredientPickerScroll + row;
-                if (index >= 0 && index < options.length) { send(1000 + selectedIngredientGroup * 32768 + index); selectedIngredientGroup = -1; return true; }
+            int x = pickerX(), y = pickerY();
+            ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
+            int visible = Math.min(PICKER_VISIBLE_ROWS, options.length);
+            if (mouseX >= x + 136 && mouseX < x + 156 && mouseY >= y + 2 && mouseY < y + 19) {
+                selectedIngredientGroup = -1;
+                return true;
             }
-            if (mouseX < x || mouseX >= x + 158 || mouseY < y || mouseY >= y + 16 + visible * 18) selectedIngredientGroup = -1;
+            if (mouseX >= x + 4 && mouseX < x + 146 && mouseY >= y + 20 && mouseY < y + 20 + visible * 17) {
+                int row = (int) ((mouseY - (y + 20)) / 17);
+                int index = ingredientPickerScroll + row;
+                if (index >= 0 && index < options.length) {
+                    send(1000 + selectedIngredientGroup * 32768 + index);
+                    selectedIngredientGroup = -1;
+                }
+                return true;
+            }
+            selectedIngredientGroup = -1;
             return true;
         }
+        if (clickSideConfig(mouseX, mouseY)) return true;
         int gridX = leftPos + 202, gridY = topPos + 71;
         if (mouseX >= gridX && mouseX < gridX + 108 && mouseY >= gridY && mouseY < gridY + 54) {
             int col = (int) ((mouseX - gridX) / 18), row = (int) ((mouseY - gridY) / 18);
             int group = menu.getPreviewPage() * 18 + row * 6 + col;
-            if (menu.getIngredientOptions(group).length > 1) { selectedIngredientGroup = group; ingredientPickerScroll = 0; return true; }
+            if (menu.getIngredientOptions(group).length > 1) {
+                selectedIngredientGroup = group;
+                ingredientPickerScroll = 0;
+                showSideConfig = false;
+                return true;
+            }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (selectedIngredientGroup >= 0 && keyCode == 256) {
+            selectedIngredientGroup = -1;
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
-        renderIngredientPicker(graphics, mouseX, mouseY);
         renderSideConfig(graphics);
-        renderTooltip(graphics, mouseX, mouseY);
+        renderIngredientPicker(graphics, mouseX, mouseY);
+        if (selectedIngredientGroup < 0) renderTooltip(graphics, mouseX, mouseY);
     }
 }
