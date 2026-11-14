@@ -18,6 +18,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private EditBox outputPageField;
     private EditBox bufferPageField;
     private boolean showSideConfig;
+    private UiLayoutEditor layoutEditor;
+    private Button layoutDebugButton;
 
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -104,6 +106,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void init() {
         super.init();
         topPos -= 27;
+        layoutEditor = new UiLayoutEditor("enchantment_extractor");
+        layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
+                .bounds(leftPos + 312, topPos + 38, 32, 14).build();
+        addRenderableWidget(layoutDebugButton);
         outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
@@ -210,6 +216,12 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
+        if (layoutDebugButton != null && layoutDebugButton.isMouseOver(mouseX, mouseY)) {
+            layoutEditor.toggle();
+            return true;
+        }
+        if (layoutEditor != null && layoutEditor.enabled())
+            return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         if (showSideConfig) {
             int x = leftPos + 176, y = topPos + 54;
             if (mouseX >= x + 150 && mouseX < x + 176 && mouseY >= y && mouseY < y + 24) {
@@ -235,6 +247,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
+        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.drag(x, y);
         if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 162)
             return true;
         double scale = uiScale();
@@ -283,6 +296,18 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (layoutEditor != null && layoutEditor.enabled()) {
+            if (keyCode == 69) {
+                try { layoutEditor.export(); } catch (java.io.IOException ignored) { }
+                return true;
+            }
+            if (keyCode == 82) { layoutEditor.reset(); return true; }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         double scale = uiScale();
         double virtualX = virtualMouseX(mouseX), virtualY = virtualMouseY(mouseY);
@@ -304,6 +329,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             return;
         }
         super.render(graphics, (int) virtualX, (int) virtualY, partialTick);
+        if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, (int) virtualX, (int) virtualY);
         graphics.pose().popPose();
     }
