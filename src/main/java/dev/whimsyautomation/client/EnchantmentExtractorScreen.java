@@ -184,7 +184,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             }
             // Leave the buffer slots and their page controls usable while the
             // six-direction editor is open.
-            if (mouseY >= topPos + 160 && mouseX >= leftPos + 176)
+            if (mouseX < leftPos + 176 || mouseY >= topPos + 162)
                 return super.mouseClicked(mouseX, mouseY, button);
             showSideConfig = false;
             return true;
@@ -195,7 +195,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
-        if (showSideConfig && !(x >= leftPos + 176 && y >= topPos + 160))
+        if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 162)
             return true;
         double scale = uiScale();
         return super.mouseDragged(x, y, button, dragX / scale, dragY / scale);
@@ -204,7 +204,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
-        if (showSideConfig && !(x >= leftPos + 176 && y >= topPos + 160))
+        if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 162)
             return true;
         return super.mouseReleased(x, y, button);
     }
