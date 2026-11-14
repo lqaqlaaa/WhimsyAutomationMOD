@@ -30,7 +30,7 @@ public final class UiLayoutEditor {
     private final Map<String, AbstractWidget> widgets = new LinkedHashMap<>();
     private final Map<String, UiLayoutProfile.Element> defaults = new LinkedHashMap<>();
     private final List<AbstractWidget> controls = new ArrayList<>();
-    private EditBox xField, yField, widthField, heightField;
+    private EditBox xField, yField, widthField, heightField, textScaleField;
 
     public UiLayoutEditor(String screenId) {
         profile = UiLayoutProfile.load(screenId);
@@ -71,13 +71,19 @@ public final class UiLayoutEditor {
         yField = numberField(font, originX + 44, originY + 10, "Y");
         widthField = numberField(font, originX + 84, originY + 10, "宽");
         heightField = numberField(font, originX + 124, originY + 10, "高");
+        textScaleField = new EditBox(font, originX + 164, originY + 10, 38, 14, Component.literal("字"));
+        textScaleField.setMaxLength(6);
+        textScaleField.setFilter(value -> value.isEmpty() || value.matches("[0-9]{0,2}(\\.[0-9]{0,2})?"));
+        textScaleField.setHint(Component.literal("字"));
+        textScaleField.setTooltip(Tooltip.create(Component.literal("文字缩放（0.1–5.0）")));
         Button applyButton = Button.builder(Component.literal("应用"), b -> applyNumeric())
-                .bounds(originX + 164, originY + 10, 34, 14)
+                .bounds(originX + 204, originY + 10, 34, 14)
                 .tooltip(Tooltip.create(Component.literal("应用 X、Y、宽度和高度数值"))).build();
         controls.add(xField);
         controls.add(yField);
         controls.add(widthField);
         controls.add(heightField);
+        controls.add(textScaleField);
         controls.add(applyButton);
         setControlsVisible(false);
         return List.copyOf(controls);
@@ -106,7 +112,8 @@ public final class UiLayoutEditor {
         return (xField != null && xField.isFocused())
                 || (yField != null && yField.isFocused())
                 || (widthField != null && widthField.isFocused())
-                || (heightField != null && heightField.isFocused());
+                || (heightField != null && heightField.isFocused())
+                || (textScaleField != null && textScaleField.isFocused());
     }
 
     private void syncFields() {
@@ -116,6 +123,7 @@ public final class UiLayoutEditor {
         yField.setValue(Integer.toString(e.y));
         widthField.setValue(Integer.toString(e.width));
         heightField.setValue(Integer.toString(e.height));
+        textScaleField.setValue(String.format(java.util.Locale.ROOT, "%.2f", e.textScale));
     }
 
     private int parse(EditBox field, int fallback) {
@@ -131,6 +139,10 @@ public final class UiLayoutEditor {
         e.y = parse(yField, e.y);
         e.width = Math.max(1, parse(widthField, e.width));
         e.height = Math.max(1, parse(heightField, e.height));
+        try {
+            float scale = Float.parseFloat(textScaleField.getValue());
+            if (Float.isFinite(scale)) e.textScale = Math.max(0.1F, Math.min(5.0F, scale));
+        } catch (NumberFormatException ignored) { }
         AbstractWidget widget = widgets.get(selected);
         if (widget != null) apply(widget, e);
         profile.save();
@@ -235,7 +247,7 @@ public final class UiLayoutEditor {
         return best;
     }
 
-    public boolean drag(double mouseX, double mouseY) {
+    public boolean drag(double mouseX, double mouseY, boolean snapEnabled) {
         if (!enabled || selected == null || (!dragging && !resizing)) return false;
         UiLayoutProfile.Element e = profile.elements().get(selected);
         int dx = (int) Math.round(mouseX - lastX);
@@ -247,8 +259,12 @@ public final class UiLayoutEditor {
         } else {
             e.x += dx;
             e.y += dy;
-            e.x = snapX(e);
-            e.y = snapY(e);
+            if (snapEnabled) {
+                e.x = snapX(e);
+                e.y = snapY(e);
+            } else {
+                snapGuideX = snapGuideY = Integer.MIN_VALUE;
+            }
         }
         lastX = mouseX;
         lastY = mouseY;
@@ -293,9 +309,10 @@ public final class UiLayoutEditor {
         graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, Component.literal("Y"), originX + 44, originY + 1, 0xFFFFFFFF, false);
         graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, Component.literal("宽"), originX + 84, originY + 1, 0xFFFFFFFF, false);
         graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, Component.literal("高"), originX + 124, originY + 1, 0xFFFFFFFF, false);
+        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, Component.literal("字"), originX + 164, originY + 1, 0xFFFFFFFF, false);
         graphics.fill(originX, originY + 27, originX + 350, originY + 41, 0xCC202020);
         graphics.drawString(net.minecraft.client.Minecraft.getInstance().font,
-                Component.literal("拖动移动 · 右下角缩放 · 数值栏可精确编辑 · 方向键微调 · Shift+方向键步进10px"),
+                Component.literal("拖动移动 · Shift+拖动吸附 · 右下角缩放 · 数值栏编辑 · 方向键微调"),
                 originX + 3, originY + 30, 0xFFFFFFFF, false);
 
         if (snapGuideX != Integer.MIN_VALUE)
