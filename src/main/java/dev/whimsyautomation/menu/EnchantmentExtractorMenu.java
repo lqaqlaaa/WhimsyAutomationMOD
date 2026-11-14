@@ -20,6 +20,8 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.SlotItemHandler;
 import java.util.Arrays;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
 
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
@@ -170,22 +172,10 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         }
         addPlayerInventory(playerInventory, 8, 138);
 
-        addDataSlot(new DataSlot() {
-            @Override public int get() { return syncedPage; }
-            @Override public void set(int value) {
-                // The page DataSlot is sent before the output-size DataSlot.
-                // Clamping here can discard page 2 using the previous page count,
-                // making the old page appear empty until another page update.
-                syncedPage = Math.max(0, value);
-            }
-        });
-        addDataSlot(new DataSlot() {
-            @Override public int get() { return machine == null ? OUTPUT_START + 1 : Math.min(32767, machine.getInventory().getSlots()); }
-            @Override public void set(int value) {
-                syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES, value);
-                if (machine != null) machine.ensureOutputInventorySize(syncedOutputSlotCount);
-            }
-        });
+        addIntDataSlots(() -> syncedPage, value -> syncedPage = Math.max(0, value));
+        addIntDataSlots(
+                () -> machine == null ? OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES : machine.getInventory().getSlots(),
+                value -> syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES, value));
         addDataSlot(new DataSlot() {
             @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
             @Override public void set(int value) { syncedAutoMode = value != 0; }
@@ -201,16 +191,32 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 @Override public void set(int value) { syncedSideModes[sideIndex] = Math.max(0, Math.min(2, value)); }
             });
         }
+        addIntDataSlots(
+                () -> machine == null ? BUFFER_PAGE_SIZE : machine.getInputBuffer().getSlots(),
+                value -> syncedBufferSlotCount = Math.max(BUFFER_PAGE_SIZE, value));
+        addIntDataSlots(() -> syncedBufferPage,
+                value -> syncedBufferPage = Math.max(0, value));
+    }
+
+    /**
+     * DataSlot transports a signed 16-bit value. Two slots preserve a full
+     * 32-bit non-negative capacity/page value without the old 32767 ceiling.
+     */
+    private void addIntDataSlots(IntSupplier getter, IntConsumer setter) {
+        final int[] parts = new int[2];
         addDataSlot(new DataSlot() {
-            @Override public int get() { return machine == null ? BUFFER_PAGE_SIZE : Math.min(32767, machine.getInputBuffer().getSlots()); }
+            @Override public int get() { return (getter.getAsInt() >>> 16) & 0xFFFF; }
             @Override public void set(int value) {
-                syncedBufferSlotCount = Math.max(BUFFER_PAGE_SIZE, value);
-                syncedBufferPage = Math.min(syncedBufferPage, getBufferPageCount() - 1);
+                parts[0] = value & 0xFFFF;
+                setter.accept((parts[0] << 16) | parts[1]);
             }
         });
         addDataSlot(new DataSlot() {
-            @Override public int get() { return syncedBufferPage; }
-            @Override public void set(int value) { syncedBufferPage = Math.max(0, Math.min(value, getBufferPageCount() - 1)); }
+            @Override public int get() { return getter.getAsInt() & 0xFFFF; }
+            @Override public void set(int value) {
+                parts[1] = value & 0xFFFF;
+                setter.accept((parts[0] << 16) | parts[1]);
+            }
         });
     }
 
@@ -254,7 +260,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     public int getBufferPageCount() {
         int count = machine == null || (machine.getLevel() != null && machine.getLevel().isClientSide)
                 ? syncedBufferSlotCount : machine.getInputBuffer().getSlots();
-        return Math.max(1, (count + BUFFER_PAGE_SIZE - 1) / BUFFER_PAGE_SIZE);
+        return Math.max(1, (int) (((long) count + BUFFER_PAGE_SIZE - 1L) / BUFFER_PAGE_SIZE));
     }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isSplitLevels() { return syncedOutputMode == 2; }
@@ -264,7 +270,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         int outputSlots = machine == null || (machine.getLevel() != null && machine.getLevel().isClientSide)
                 ? syncedOutputSlotCount - OUTPUT_START
                 : machine.getGeneratedOutputCount();
-        return Math.max(1, (outputSlots + PAGE_SIZE - 1) / PAGE_SIZE);
+        return Math.max(1, (int) (((long) outputSlots + PAGE_SIZE - 1L) / PAGE_SIZE));
     }
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
