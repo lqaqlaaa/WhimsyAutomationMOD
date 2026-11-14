@@ -240,6 +240,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 extractingGeneratedOutput = false;
             }
             if (!extracted.isEmpty() && !persistentOutputMode) removeGeneratedBook(slot, extracted, true);
+            if (persistentOutputMode) compactOutputInventory();
             if (persistentOutputMode && !autoMode && !hasStoredOutputs()) {
                 persistentOutputMode = false;
                 refreshGeneratedSlots();
@@ -306,6 +307,22 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         return Math.max(0, inventory.getSlots() - OUTPUT_START);
     }
 
+    /** Release trailing unused pages while retaining the original ten-page base allocation. */
+    private void compactOutputInventory() {
+        int lastUsed = OUTPUT_START;
+        for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
+            if (!inventory.getStackInSlot(slot).isEmpty()) { lastUsed = slot + 1; break; }
+        }
+        int used = Math.max(PAGE_SIZE * 10, lastUsed - OUTPUT_START);
+        int target = OUTPUT_START + ((used + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+        if (target < inventory.getSlots()) {
+            inventory.resize(target);
+            setChanged();
+        }
+    }
+
+    public void compactInputBuffer() { inputBuffer.compact(); }
+
     @Override
     public Component getDisplayName() {
         return Component.translatable("container.whimsy_automation.enchantment_extractor");
@@ -360,6 +377,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             }
             inputBuffer.setStackInSlot(inputBuffer.getSlots() - 1, ItemStack.EMPTY);
         }
+        inputBuffer.compact();
         return next;
     }
 
@@ -420,10 +438,19 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             return remainder;
         }
         private void resize(int size) {
-            if (size <= stacks.size()) return;
+            if (size == stacks.size()) return;
             NonNullList<ItemStack> resized = NonNullList.withSize(size, ItemStack.EMPTY);
-            for (int i = 0; i < stacks.size(); i++) resized.set(i, stacks.get(i));
+            for (int i = 0; i < Math.min(stacks.size(), size); i++) resized.set(i, stacks.get(i));
             stacks = resized;
+        }
+
+        private void compact() {
+            int lastUsed = 0;
+            for (int slot = stacks.size() - 1; slot >= 0; slot--) {
+                if (!stacks.get(slot).isEmpty()) { lastUsed = slot + 1; break; }
+            }
+            int target = Math.max(18, ((lastUsed + 17) / 18) * 18);
+            if (target < stacks.size()) resize(target);
         }
     }
 
