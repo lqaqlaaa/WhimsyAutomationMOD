@@ -234,10 +234,12 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             graphics.blitSprite(SLOT, x, y, previewSlot.width, previewSlot.height);
             if (i < preview.size()) {
                 ItemStack stack = preview.get(i);
-                graphics.renderItem(stack, x, y);
-                graphics.renderItemDecorations(font, stack, x, y);
+                int itemX = x + (previewSlot.width - 16) / 2;
+                int itemY = y + (previewSlot.height - 16) / 2;
+                graphics.renderItem(stack, itemX, itemY);
+                graphics.renderItemDecorations(font, stack, itemX, itemY);
                 int group = menu.getPreviewPage() * 27 + i;
-                if (menu.getIngredientOptions(group).length > 1) graphics.drawString(font, "▾", x + 10, y + 1, 0xFF245B9A, true);
+                if (menu.getIngredientOptions(group).length > 1) graphics.drawString(font, "▾", x + previewSlot.width - 6, y + 1, 0xFF245B9A, true);
             }
         }
         drawPlayerSlots(graphics);
@@ -402,15 +404,19 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             return true;
         }
         if (clickSideConfig(mouseX, mouseY)) return true;
-        int gridX = leftPos + 184, gridY = topPos + 71;
-        if (mouseX >= gridX && mouseX < gridX + 162 && mouseY >= gridY && mouseY < gridY + 54) {
-            int col = (int) ((mouseX - gridX) / 18), row = (int) ((mouseY - gridY) / 18);
-            int group = menu.getPreviewPage() * 27 + row * 9 + col;
-            if (menu.getIngredientOptions(group).length > 1) {
-                selectedIngredientGroup = group;
-                ingredientPickerScroll = 0;
-                showSideConfig = false;
-                return true;
+        for (int i = 0; i < 27; i++) {
+            UiLayoutProfile.Element cell = layoutEditor.element("preview_slot_" + i, "preview_slot",
+                    184 + (i % 9) * 18, 71 + (i / 9) * 18, 16, 16);
+            int cellX = leftPos + cell.x, cellY = topPos + cell.y;
+            if (mouseX >= cellX && mouseX < cellX + cell.width
+                    && mouseY >= cellY && mouseY < cellY + cell.height) {
+                int group = menu.getPreviewPage() * 27 + i;
+                if (menu.getIngredientOptions(group).length > 1) {
+                    selectedIngredientGroup = group;
+                    ingredientPickerScroll = 0;
+                    showSideConfig = false;
+                    return true;
+                }
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
