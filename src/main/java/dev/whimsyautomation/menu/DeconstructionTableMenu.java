@@ -121,7 +121,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 184, 17));
         }
         for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
-        addPlayerInventory(playerInventory, 8, 182);
+        addPlayerInventory(playerInventory, 8, 139);
         addDataSlot(new DataSlot() {
             @Override public int get() { return getServerRecipeIndex(); }
             @Override public void set(int value) { syncedRecipeIndex = value; }
