@@ -8,26 +8,37 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentConversionTableScreen extends AbstractContainerScreen<EnchantmentConversionTableMenu> {
-    private static final ResourceLocation SLOT_SPRITE = ResourceLocation.withDefaultNamespace("container/slot");
+    private static final ResourceLocation BACKGROUND =
+            ResourceLocation.withDefaultNamespace("textures/gui/container/smithing.png");
+
     public EnchantmentConversionTableScreen(EnchantmentConversionTableMenu menu, Inventory inventory, Component title) {
-        super(menu,inventory,title); imageWidth=194; imageHeight=196; inventoryLabelY=100; titleLabelY=7;
+        super(menu, inventory, title);
+        imageWidth = 176;
+        imageHeight = 166;
+        inventoryLabelY = 72;
+        titleLabelY = 6;
     }
-    @Override protected void renderBg(GuiGraphics g,float partial,int mouseX,int mouseY) {
-        int x=leftPos,y=topPos;
-        g.fill(x,y,x+imageWidth,y+imageHeight,0xFF21150F);
-        g.fill(x+3,y+3,x+imageWidth-3,y+imageHeight-3,0xFF392319);
-        g.fill(x+5,y+5,x+imageWidth-5,y+22,0xFF604021);
-        for(int i=0;i<4;i++){int sx=x+35+i*36,sy=y+52;g.blitSprite(SLOT_SPRITE,sx,sy,16,16);}
-        for(int i=0;i<27;i++){int sx=x+8+(i%9)*18,sy=y+112+(i/9)*18;g.blitSprite(SLOT_SPRITE,sx,sy,16,16);}
-        for(int i=0;i<9;i++){int sx=x+8+i*18,sy=y+170;g.blitSprite(SLOT_SPRITE,sx,sy,16,16);}
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight, 176, 166);
     }
-    @Override protected void renderLabels(GuiGraphics g,int mouseX,int mouseY) {
-        g.drawString(font,Component.translatable("screen.whimsy_automation.conversion_table"),8,7,0xFFFFD27C,false);
-        g.drawString(font,Component.translatable("screen.whimsy_automation.book"),29,34,0xFFE8D6B2,false);
-        g.drawString(font,Component.translatable("screen.whimsy_automation.payment"),65,34,0xFFE8D6B2,false);
-        g.drawString(font,Component.translatable("screen.whimsy_automation.template"),101,34,0xFFE8D6B2,false);
-        g.drawString(font,Component.translatable("screen.whimsy_automation.copy_result"),137,34,0xFFE8D6B2,false);
-        g.drawString(font,Component.translatable("container.inventory"),8,inventoryLabelY,0xFFE8D6B2,false);
+
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        graphics.drawString(font, Component.translatable("screen.whimsy_automation.conversion_table"),
+                8, titleLabelY, 0x404040, false);
+        graphics.drawString(font, Component.translatable("screen.whimsy_automation.book"), 8, 36, 0x404040, false);
+        graphics.drawString(font, Component.translatable("screen.whimsy_automation.payment"), 44, 36, 0x404040, false);
+        graphics.drawString(font, Component.translatable("screen.whimsy_automation.template"), 80, 36, 0x404040, false);
+        graphics.drawString(font, Component.translatable("screen.whimsy_automation.copy_result"), 134, 36, 0x404040, false);
+        graphics.drawString(font, Component.translatable("container.inventory"), 8, inventoryLabelY, 0x404040, false);
     }
-    @Override public void render(GuiGraphics g,int mouseX,int mouseY,float partial){renderBackground(g,mouseX,mouseY,partial);super.render(g,mouseX,mouseY,partial);renderTooltip(g,mouseX,mouseY);}
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        renderTooltip(graphics, mouseX, mouseY);
+    }
 }
