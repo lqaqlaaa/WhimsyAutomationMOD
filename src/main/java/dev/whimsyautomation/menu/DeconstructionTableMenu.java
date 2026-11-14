@@ -109,12 +109,12 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             @Override public boolean isItemValid(int slot, ItemStack stack) { return false; }
         };
         if (machine != null) {
-            addSlot(new SlotItemHandler(machine.getInventory(), 0, 184, 17));
+            addSlot(new SlotItemHandler(machine.getInventory(), 0, 184, 71));
         } else {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 184, 17));
         }
         for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
-        addPlayerInventory(playerInventory, 8, 84);
+        addPlayerInventory(playerInventory, 8, 138);
         addDataSlot(new DataSlot() {
             @Override public int get() { return getServerRecipeIndex(); }
             @Override public void set(int value) { syncedRecipeIndex = value; }
