@@ -112,11 +112,16 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 8, inventoryLabelY, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (outputModeButton != null) outputModeButton.setMessage(outputModeLabel());
+
+        // renderLabels runs in the container's GUI-local pose after its normal
+        // contents/widgets, so the dialog covers the original right pane.
+        if (showSideConfig) renderSideConfig(graphics);
     }
 
     private void renderSideConfig(GuiGraphics graphics) {
         if (!showSideConfig) return;
-        int x = leftPos + 176, y = topPos + 54;
+        // renderLabels is already translated to the GUI origin.
+        int x = 176, y = 54;
         // Replace the complete right machine pane, not just the top 116 px.
         // This prevents controls and labels underneath the dialog from showing.
         panel(graphics, x, y, 176, 166);
@@ -192,7 +197,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             // real slot contents, and widgets exactly once. A second explicit
             // renderBackground call was darkening the world a second time.
             super.render(graphics, -10000, -10000, partialTick);
-            renderSideConfig(graphics);
             return;
         }
         super.render(graphics, mouseX, mouseY, partialTick);
