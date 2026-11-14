@@ -92,7 +92,10 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : OUTPUT_STACK_LIMIT; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (stack.isEmpty()) return false;
-            if (slot == 0) return !getStackEnchantments(stack).isEmpty();
+            // The extractor must accept every non-empty input. Items without
+            // enchantments are valid pass-through items and are exposed to the
+            // bottom automation handler once there is nothing to extract.
+            if (slot == 0) return true;
             // Output slots are a virtual projection of the input item's enchantments.
             // Restoration is handled explicitly by the menu's page handler; allowing
             // direct writes here lets stale/client slot updates overwrite the projection.
@@ -391,15 +394,20 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
 
         internalInventoryUpdate = true;
-        if (input.is(Items.ENCHANTED_BOOK)) input.set(DataComponents.STORED_ENCHANTMENTS, remaining.toImmutable());
-        else input.set(DataComponents.ENCHANTMENTS, remaining.toImmutable());
-        inventory.setStackInSlot(0, input);
-        if (!outputAlreadyExtracted) {
-            ItemStack remainingOutput = inventory.getStackInSlot(outputSlot).copy();
-            remainingOutput.shrink(book.getCount());
-            inventory.setStackInSlot(outputSlot, remainingOutput);
+        try {
+            if (input.is(Items.ENCHANTED_BOOK)) input.set(DataComponents.STORED_ENCHANTMENTS, remaining.toImmutable());
+            else input.set(DataComponents.ENCHANTMENTS, remaining.toImmutable());
+            inventory.setStackInSlot(0, input);
+            if (!outputAlreadyExtracted) {
+                ItemStack remainingOutput = inventory.getStackInSlot(outputSlot).copy();
+                remainingOutput.shrink(book.getCount());
+                inventory.setStackInSlot(outputSlot, remainingOutput);
+            }
+        } finally {
+            internalInventoryUpdate = false;
         }
-        internalInventoryUpdate = false;
+        // Keep other output slots stable. Their stacks remain valid projections
+        // of the remaining input enchantments and are validated on extraction.
         setChanged();
         return true;
     }
