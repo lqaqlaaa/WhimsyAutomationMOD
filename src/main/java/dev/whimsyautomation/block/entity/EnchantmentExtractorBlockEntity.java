@@ -48,9 +48,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
     private final IItemHandler[] sidedHandlers = new IItemHandler[6];
 
-    private final DynamicInputBuffer inputBuffer = new DynamicInputBuffer(18) {
-        @Override protected void onContentsChanged(int slot) { setChanged(); }
-    };
+    private final DynamicInputBuffer inputBuffer = new DynamicInputBuffer(18);
 
     private boolean internalInventoryUpdate;
     private boolean extractingGeneratedOutput;
@@ -270,9 +268,10 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         return next;
     }
 
-    private static final class DynamicInputBuffer extends ItemStackHandler {
+    private final class DynamicInputBuffer extends ItemStackHandler {
         private DynamicInputBuffer(int size) { super(size); }
 
+        @Override protected void onContentsChanged(int slot) { setChanged(); }
         @Override public int getSlotLimit(int slot) { return 64; }
         @Override protected int getStackLimit(int slot, ItemStack stack) {
             return Math.min(64, stack.getMaxStackSize());
