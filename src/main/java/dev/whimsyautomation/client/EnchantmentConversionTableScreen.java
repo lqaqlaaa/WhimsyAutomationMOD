@@ -28,10 +28,10 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.conversion_table"),
                 8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.book"), 8, 36, 0x404040, false);
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.payment"), 44, 36, 0x404040, false);
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.template"), 80, 36, 0x404040, false);
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.copy_result"), 134, 36, 0x404040, false);
+        graphics.drawString(font, Component.literal("书"), 8, 36, 0x404040, false);
+        graphics.drawString(font, Component.literal("费"), 26, 36, 0x404040, false);
+        graphics.drawString(font, Component.literal("模"), 44, 36, 0x404040, false);
+        graphics.drawString(font, Component.literal("结果"), 134, 36, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"), 8, inventoryLabelY, 0x404040, false);
     }
 
