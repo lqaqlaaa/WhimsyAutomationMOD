@@ -30,7 +30,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         imageWidth = 352;
         imageHeight = 222;
         inventoryLabelY = 130;
-        titleLabelY = 60;
+        titleLabelY = 42;
     }
 
     private double uiScale() {
@@ -55,7 +55,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     private EditBox pageField(int x, int y, int initialPage) {
-        EditBox field = new EditBox(font, leftPos + x, topPos + y, 22, 14, Component.literal("页码"));
+        EditBox field = new EditBox(font, leftPos + x, topPos + y, 18, 18, Component.literal("页码"));
         field.setMaxLength(10);
         field.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         field.setValue(Integer.toString(initialPage));
@@ -106,58 +106,58 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     protected void init() {
         super.init();
         topPos -= 27;
-        outputPageField = pageField(90, 57, menu.getPage() + 1);
+        outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 114, topPos + 57, 18, 14).build());
+                .bounds(leftPos + 110, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 134, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 130, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(5); outputPageField.setValue(Integer.toString(Math.min(menu.getPageCount(), menu.getPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 148, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 150, topPos + 53, 18, 18).build());
 
-        previewPageField = pageField(250, 57, menu.getPreviewPage() + 1);
+        previewPageField = pageField(266, 53, menu.getPreviewPage() + 1);
         addRenderableWidget(previewPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(previewPageField, menu.getPreviewPageCount(), 1))
-                .bounds(leftPos + 274, topPos + 57, 18, 14).build());
+                .bounds(leftPos + 286, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             int page = Math.max(0, menu.getPreviewPage() - 1);
             send(-((page * 2 + 1) + 1));
             previewPageField.setValue(Integer.toString(page + 1));
         }).tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 294, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 306, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             int page = Math.min(menu.getPreviewPageCount() - 1, menu.getPreviewPage() + 1);
             send(-((page * 2 + 1) + 1));
             previewPageField.setValue(Integer.toString(page + 1));
         }).tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 308, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 326, topPos + 53, 18, 18).build());
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 151, 16, 18).build());
+                .bounds(leftPos + 184, topPos + 175, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 202, topPos + 151, 16, 18).build());
+                .bounds(leftPos + 204, topPos + 175, 18, 18).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 220, topPos + 151, 50, 18).build();
+                .bounds(leftPos + 224, topPos + 175, 50, 18).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 274, topPos + 151, 70, 18).build());
+                .bounds(leftPos + 276, topPos + 175, 68, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 175, 78, 18).build();
+                .bounds(leftPos + 184, topPos + 197, 78, 18).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
-                .bounds(leftPos + 264, topPos + 175, 80, 18).build());
+                .bounds(leftPos + 264, topPos + 197, 80, 18).build());
     }
 
     @Override
@@ -174,17 +174,17 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
         // Input and ingredients share the upper-right work area. Ingredient
         // previews use the same nine-column slot grid as every inventory.
-        drawSlot(graphics, leftPos + 184, topPos + 71);
+        drawSlot(graphics, leftPos + 184, topPos + 53);
         List<ItemStack> preview = menu.getPreviewStacks();
-        for (int i = 0; i < 18; i++) {
+        for (int i = 0; i < 27; i++) {
             int x = leftPos + 184 + (i % 9) * 18;
-            int y = topPos + 89 + (i / 9) * 18;
+            int y = topPos + 71 + (i / 9) * 18;
             drawSlot(graphics, x, y);
             if (i < preview.size()) {
                 ItemStack stack = preview.get(i);
                 graphics.renderItem(stack, x, y);
                 graphics.renderItemDecorations(font, stack, x, y);
-                int group = menu.getPreviewPage() * 18 + i;
+                int group = menu.getPreviewPage() * 27 + i;
                 if (menu.getIngredientOptions(group).length > 1) graphics.drawString(font, "▾", x + 10, y + 1, 0xFF245B9A, true);
             }
         }
@@ -195,13 +195,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"),
                 8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 42, 0x404040, false);
+        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 60, 0x404040, false);
         if (outputPageField != null && !outputPageField.isFocused())
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 58, 0x404040, false);
-        graphics.drawString(font, Component.literal("输入"), 202, 75, 0x404040, false);
+        graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 60, 0x404040, false);
+        graphics.drawString(font, Component.literal("输入"), 202, 57, 0x404040, false);
         graphics.drawString(font, Component.literal("配方 " + menu.getSelectedRecipePosition() + "/" + menu.getCandidateCount()), 184, 130, 0x404040, false);
         if (previewPageField != null && !previewPageField.isFocused())
             previewPageField.setValue(Integer.toString(menu.getPreviewPage() + 1));
