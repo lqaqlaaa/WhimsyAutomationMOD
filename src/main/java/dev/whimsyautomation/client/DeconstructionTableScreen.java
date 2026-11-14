@@ -154,11 +154,18 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 184, 177, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
+
+        // Draw modal content in renderLabels, where AbstractContainerScreen has
+        // already translated the pose to leftPos/topPos. This keeps the dialog
+        // aligned with the right machine pane and above its slots/widgets.
+        if (showSideConfig) renderSideConfig(graphics);
+        else if (selectedIngredientGroup >= 0) renderIngredientPicker(graphics, mouseX, mouseY);
     }
 
     private void renderSideConfig(GuiGraphics graphics) {
         if (!showSideConfig) return;
-        int x = leftPos + 176, y = topPos + 54;
+        // renderLabels is already translated to the GUI origin.
+        int x = 176, y = 54;
         // Cover the entire right machine pane so no preview labels, input
         // slots, or action buttons leak out below the dialog.
         panel(graphics, x, y, 176, 166);
@@ -330,8 +337,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             // real slot contents, and widgets exactly once. A second explicit
             // renderBackground call was darkening the world a second time.
             super.render(graphics, -10000, -10000, partialTick);
-            if (showSideConfig) renderSideConfig(graphics);
-            else renderIngredientPicker(graphics, mouseX, mouseY);
             return;
         }
         super.render(graphics, mouseX, mouseY, partialTick);
