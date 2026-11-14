@@ -54,7 +54,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private List<ItemStack> cachedPreviewStacks = List.of();
     private boolean quickMoveSingle;
     private final int[] syncedIngredientVariants = new int[32];
-    private final int[] syncedSideModes = new int[] {2, 1, 1, 1, 1, 1};
+    private final int[] syncedSideModes = new int[] {0, 0, 0, 0, 0, 0};
 
     public DeconstructionTableMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos());
