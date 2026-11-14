@@ -51,14 +51,13 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private boolean autoMode = false;
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
-        @Override public int getSlotLimit(int slot) { return 64; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : Integer.MAX_VALUE; }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            if (slot != 0 || stack.isEmpty()) return false;
-            // A locked recipe also constrains insertion, not just processing.
-            // This prevents hoppers from filling the input with unrelated items.
-            return lockedRecipe.isEmpty() || matchesRecipeIdOutput(lockedRecipe, stack);
+            if (stack.isEmpty()) return false;
+            // Output storage accepts manual returns. Input accepts any item; a locked recipe
+            // is enforced by processOneItem rather than preventing recovery from accidental removal.
         }
 
         @Override protected void onContentsChanged(int slot) {
@@ -316,10 +315,13 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
+        if (incoming.isEmpty()) return true;
+        incoming.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, Integer.MAX_VALUE);
         for (ItemStack existing : plan) {
+            if (!existing.isEmpty()) existing.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, Integer.MAX_VALUE);
             if (incoming.isEmpty()) return true;
             if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, incoming)) continue;
-            int limit = Math.min(existing.getMaxStackSize(), inventory.getSlotLimit(OUTPUT_START));
+            int limit = Integer.MAX_VALUE;
             int moved = Math.min(incoming.getCount(), Math.max(0, limit - existing.getCount()));
             if (moved > 0) {
                 existing.grow(moved);
@@ -328,7 +330,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
         for (int i = 0; i < plan.size() && !incoming.isEmpty(); i++) {
             if (!plan.get(i).isEmpty()) continue;
-            int moved = Math.min(incoming.getCount(), Math.min(incoming.getMaxStackSize(), inventory.getSlotLimit(OUTPUT_START)));
+            int moved = incoming.getCount();
             plan.set(i, incoming.copyWithCount(moved));
             incoming.shrink(moved);
         }
