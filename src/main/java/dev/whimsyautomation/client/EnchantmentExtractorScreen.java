@@ -5,9 +5,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentExtractorScreen extends AbstractContainerScreen<EnchantmentExtractorMenu> {
+    private static final ResourceLocation SLOT_SPRITE = ResourceLocation.withDefaultNamespace("container/slot");
     private Button processButton;
     private Button outputModeButton;
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
@@ -94,10 +96,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     private void slot(GuiGraphics g, int x, int y) {
-        g.fill(x - 1, y - 1, x + 17, y + 17, 0xFF08090B);
-        g.fill(x, y, x + 16, y + 16, 0xFF77716A);
-        g.fill(x + 1, y + 1, x + 15, y + 15, 0xFF292B2E);
-        g.fill(x + 2, y + 2, x + 14, y + 14, 0xFF202225);
+        g.blitSprite(SLOT_SPRITE, x, y, 16, 16);
     }
 
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
