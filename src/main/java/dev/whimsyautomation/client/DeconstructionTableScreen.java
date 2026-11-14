@@ -5,13 +5,16 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 
 public final class DeconstructionTableScreen extends AbstractContainerScreen<DeconstructionTableMenu> {
+    private static final ResourceLocation SLOT_SPRITE = ResourceLocation.withDefaultNamespace("container/slot");
     private Button lockButton;
+    private Button autoButton;
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -45,22 +48,18 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 .bounds(leftPos + 200, topPos + 152, 20, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
                 .bounds(leftPos + 222, topPos + 152, 20, 18).build());
+        autoButton = Button.builder(autoLabel(), b -> send(2)).bounds(leftPos + 8, topPos + 126, 42, 18).build();
+        addRenderableWidget(autoButton);
     }
 
-    private void drawSwitch(GuiGraphics g, int x, int y, boolean enabled) {
-        int track = enabled ? 0xFF3E9B68 : 0xFF555B66;
-        g.fill(x, y, x + 30, y + 13, 0xFF090B10);
-        g.fill(x + 1, y + 1, x + 29, y + 12, track);
-        int knobX = enabled ? x + 17 : x + 3;
-        g.fill(knobX, y + 2, knobX + 10, y + 11, 0xFFE9EDF2);
-        g.fill(knobX + 1, y + 3, knobX + 9, y + 10, 0xFFFFFFFF);
+    private Component autoLabel() {
+        return Component.translatable(menu.isAutoMode()
+                ? "screen.whimsy_automation.auto_on_short"
+                : "screen.whimsy_automation.auto_off_short");
     }
 
     private void slot(GuiGraphics g, int x, int y) {
-        g.fill(x - 1, y - 1, x + 17, y + 17, 0xFF08090B);
-        g.fill(x, y, x + 16, y + 16, 0xFF77716A);
-        g.fill(x + 1, y + 1, x + 15, y + 15, 0xFF292B2E);
-        g.fill(x + 2, y + 2, x + 14, y + 14, 0xFF202225);
+        g.blitSprite(SLOT_SPRITE, x, y, 16, 16);
     }
 
     @Override
@@ -93,7 +92,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             g.renderItem(preview.get(i), itemX, itemY);
             g.renderItemDecorations(font, preview.get(i), itemX, itemY);
         }
-        drawSwitch(g, x + 8, y + 128, menu.isAutoMode());
     }
 
     @Override
@@ -109,19 +107,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             lockButton.setMessage(Component.translatable(menu.isLocked()
                     ? "screen.whimsy_automation.unlock" : "screen.whimsy_automation.lock"));
         }
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0) {
-            int localX = (int) mouseX - leftPos;
-            int localY = (int) mouseY - topPos;
-            if (localX >= 8 && localX < 38 && localY >= 128 && localY < 141) {
-                send(2);
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
+        if (autoButton != null) autoButton.setMessage(autoLabel());
     }
 
     @Override
