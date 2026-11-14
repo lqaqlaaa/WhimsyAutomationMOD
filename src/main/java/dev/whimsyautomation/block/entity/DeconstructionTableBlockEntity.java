@@ -165,6 +165,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
     public void cycleSideMode(Direction side) {
         sideModes[side.ordinal()] = (sideModes[side.ordinal()] + 1) % 3;
+        sidedHandlers[side.ordinal()] = null;
         if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         setChanged();
     }
