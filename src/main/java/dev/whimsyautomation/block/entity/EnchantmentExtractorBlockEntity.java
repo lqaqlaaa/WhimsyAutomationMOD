@@ -237,7 +237,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (level.isClientSide) return;
         // The automation input queue feeds the single authoritative processing slot.
         // Keep the queue FIFO and never merge queued items into the active item.
-        if (machine.autoMode && machine.inventory.getStackInSlot(0).isEmpty()) {
+        if (machine.inventory.getStackInSlot(0).isEmpty()) {
             ItemStack next = machine.takeNextBufferedItem();
             if (!next.isEmpty()) machine.inventory.setStackInSlot(0, next);
         }
@@ -284,10 +284,16 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             ItemStack remainder = super.insertItem(slot, stack, simulate);
             if (!remainder.isEmpty() && slot == getSlots() - 1) {
                 int oldSize = getSlots();
-                if (!simulate) {
-                    resize(oldSize + 18);
-                    return super.insertItem(oldSize, remainder, false);
+                if (simulate) {
+                    // Advertise the capacity of a prospective new slot so pipes
+                    // that simulate before inserting will still trigger expansion.
+                    int accepted = Math.min(remainder.getCount(),
+                            Math.min(64, remainder.getMaxStackSize()));
+                    int left = remainder.getCount() - accepted;
+                    return left <= 0 ? ItemStack.EMPTY : remainder.copyWithCount(left);
                 }
+                resize(oldSize + 18);
+                return super.insertItem(oldSize, remainder, false);
             }
             return remainder;
         }
