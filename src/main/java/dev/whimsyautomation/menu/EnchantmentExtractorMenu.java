@@ -37,6 +37,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private boolean syncedAutoMode;
     private boolean quickMoveSingle;
     private int syncedOutputMode = 1;
+    private final int[] syncedSideModes = new int[] {2, 1, 1, 1, 1, 1};
 
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos());
@@ -146,6 +147,13 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public int get() { return machine != null ? machine.getOutputMode() : 1; }
             @Override public void set(int value) { syncedOutputMode = Math.max(0, Math.min(2, value)); }
         });
+        for (int side = 0; side < 6; side++) {
+            final int sideIndex = side;
+            addDataSlot(new DataSlot() {
+                @Override public int get() { return machine == null ? 0 : machine.getSideMode(net.minecraft.core.Direction.values()[sideIndex]); }
+                @Override public void set(int value) { syncedSideModes[sideIndex] = Math.max(0, Math.min(2, value)); }
+            });
+        }
     }
 
     private void addPagedOutputSlot(int outputIndex) {
@@ -187,6 +195,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isSplitLevels() { return syncedOutputMode == 2; }
     public int getOutputMode() { return syncedOutputMode; }
+    public int getSideMode(int side) { return side < 0 || side >= 6 ? 0 : syncedSideModes[side]; }
     public int getPageCount() {
         int outputSlots = machine == null || (machine.getLevel() != null && machine.getLevel().isClientSide)
                 ? syncedOutputSlotCount - OUTPUT_START
@@ -196,6 +205,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
+        if (buttonId >= 10 && buttonId <= 15) { machine.cycleSideMode(net.minecraft.core.Direction.values()[buttonId - 10]); return true; }
         if (buttonId == 0) machine.setAutoMode(!machine.isAutoMode());
         else if (buttonId == 1) machine.processOnce();
         else if (buttonId == 2) machine.setOutputMode((machine.getOutputMode() + 1) % 3);
