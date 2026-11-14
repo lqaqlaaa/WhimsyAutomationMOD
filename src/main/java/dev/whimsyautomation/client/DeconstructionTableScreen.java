@@ -200,7 +200,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 151, 0x404040, false);
+        graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 130, 0x404040, false);
         graphics.drawString(font, Component.literal("输入"), 202, 57, 0x404040, false);
         graphics.drawString(font, Component.literal("配方 " + menu.getSelectedRecipePosition() + "/" + menu.getCandidateCount()), 184, 130, 0x404040, false);
         if (previewPageField != null && !previewPageField.isFocused())
