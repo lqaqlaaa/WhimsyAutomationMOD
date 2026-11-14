@@ -39,7 +39,7 @@ public final class UiLayoutEditor {
         for (GuiEventListener child : children) {
             if (!(child instanceof AbstractWidget widget)) continue;
             String label = widget.getMessage().getString().replaceAll("[^a-zA-Z0-9]+", "_");
-            if (label.equals("布局")) continue;
+            if (widget.getMessage().getString().equals("布局")) continue;
             String id = "widget_" + index++ + "_" + label;
             UiLayoutProfile.Element e = profile.element(id, "widget",
                     widget.getX() - originX, widget.getY() - originY,
@@ -69,6 +69,10 @@ public final class UiLayoutEditor {
             return true;
         }
         String hit = null;
+        graphics.fill(originX, originY + 20, originX + 240, originY + 34, 0xCC202020);
+        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font,
+                Component.literal("拖动移动 · 右下角缩放 · E导出JSON · R恢复默认 · 点击“布局”退出"),
+                originX + 3, originY + 23, 0xFFFFFFFF, false);
         for (Map.Entry<String, UiLayoutProfile.Element> entry : profile.elements().entrySet()) {
             UiLayoutProfile.Element e = entry.getValue();
             double x = originX + e.x, y = originY + e.y;
