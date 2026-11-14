@@ -8,7 +8,7 @@ import java.util.function.BooleanSupplier;
 /** Compact, live view of a machine inventory for external automation. */
 public final class SidedMachineItemHandler implements IItemHandler {
     private final ItemStackHandler inventory;
-    private final ItemStackHandler inputInventory;
+    private final IItemHandler inputInventory;
     private final int outputStart;
     private final boolean input;
     private final boolean output;
@@ -29,7 +29,7 @@ public final class SidedMachineItemHandler implements IItemHandler {
         this(inventory, inventory, outputStart, input, output, allowInputExtraction, enabled);
     }
 
-    public SidedMachineItemHandler(ItemStackHandler inventory, ItemStackHandler inputInventory,
+    public SidedMachineItemHandler(ItemStackHandler inventory, IItemHandler inputInventory,
                                    int outputStart, boolean input, boolean output,
                                    BooleanSupplier allowInputExtraction, BooleanSupplier enabled) {
         this.inventory = inventory;
