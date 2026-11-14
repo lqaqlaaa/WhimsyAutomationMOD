@@ -3,6 +3,7 @@ package dev.whimsyautomation.client;
 import dev.whimsyautomation.menu.EnchantmentExtractorMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -46,17 +47,23 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         super.init();
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(3))
+                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
                 .bounds(leftPos + 136, topPos + 5, 16, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(4))
+                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.next")))
                 .bounds(leftPos + 154, topPos + 5, 16, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
+                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.auto_state",
+                        Component.translatable(menu.isAutoMode() ? "screen.whimsy_automation.on" : "screen.whimsy_automation.off"))))
                 .bounds(leftPos + 26, topPos + 106, 32, 18).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
+                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
                 .bounds(leftPos + 60, topPos + 106, 40, 18).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
+                .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.output_mode")))
                 .bounds(leftPos + 102, topPos + 106, 66, 18).build();
         addRenderableWidget(outputModeButton);
     }
