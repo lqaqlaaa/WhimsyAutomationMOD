@@ -98,12 +98,45 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         g.blitSprite(SLOT, x, y, 16, 16);
     }
 
+    private void drawLayoutLabel(GuiGraphics graphics, String id, Component value,
+                                  int x, int y, int color, boolean shadow) {
+        UiLayoutProfile.Element e = layoutEditor.element(id, "label", x, y,
+                Math.max(1, font.width(value)), 9);
+        float sx = e.width / (float) Math.max(1, font.width(value));
+        float sy = e.height / 9.0F;
+        graphics.pose().pushPose();
+        graphics.pose().translate(e.x, e.y, 0.0F);
+        graphics.pose().scale(sx, sy, 1.0F);
+        graphics.drawString(font, value, 0, 0, color, shadow);
+        graphics.pose().popPose();
+    }
+
+    private void drawLayoutPanel(GuiGraphics graphics, String id,
+                                 int x, int y, int width, int height) {
+        UiLayoutProfile.Element e = layoutEditor.element(id, "panel", x, y, width, height);
+        panel(graphics, leftPos + e.x, topPos + e.y, e.width, e.height);
+    }
+
+    private void drawLayoutSlot(GuiGraphics graphics, String id, int menuSlot,
+                                int x, int y) {
+        UiLayoutProfile.Element e = layoutEditor.element(id, "slot", x, y, 16, 16);
+        if (menuSlot >= 0 && menuSlot < menu.slots.size()) {
+            menu.slots.get(menuSlot).x = e.x + (e.width - 16) / 2;
+            menu.slots.get(menuSlot).y = e.y + (e.height - 16) / 2;
+        }
+        graphics.blitSprite(SLOT, leftPos + e.x, topPos + e.y, e.width, e.height);
+    }
+
     private void drawPlayerSlots(GuiGraphics g) {
         for (int row = 0; row < 3; row++)
-            for (int col = 0; col < 9; col++)
-                drawSlot(g, leftPos + 8 + col * 18, topPos + 139 + row * 18);
-        for (int col = 0; col < 9; col++)
-            drawSlot(g, leftPos + 8 + col * 18, topPos + 197);
+            for (int col = 0; col < 9; col++) {
+                int index = 28 + row * 9 + col;
+                drawLayoutSlot(g, "player_slot_" + index, index, 8 + col * 18, 139 + row * 18);
+            }
+        for (int col = 0; col < 9; col++) {
+            int index = 55 + col;
+            drawLayoutSlot(g, "player_slot_" + index, index, 8 + col * 18, 197);
+        }
     }
 
     @Override
@@ -182,20 +215,23 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // Background art must use screen coordinates; menu slots remain local.
         // One continuous vanilla-style container surface: no artificial
         // divider between the machine inventory and the player inventory.
-        panel(graphics, leftPos, topPos + 36, imageWidth, imageHeight - 38);
+        drawLayoutPanel(graphics, "main_panel", 0, 36, imageWidth, imageHeight - 38);
 
         // Exactly 27 real machine output slots.
         for (int i = 0; i < 27; i++)
-            drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
+            drawLayoutSlot(graphics, "output_slot_" + i, 1 + i,
+                    8 + (i % 9) * 18, 71 + (i / 9) * 18);
 
         // Input and ingredients share the upper-right work area. Ingredient
         // previews use the same nine-column slot grid as every inventory.
-        drawSlot(graphics, leftPos + 184, topPos + 53);
+        drawLayoutSlot(graphics, "input_slot", 0, 184, 53);
         List<ItemStack> preview = menu.getPreviewStacks();
         for (int i = 0; i < 27; i++) {
-            int x = leftPos + 184 + (i % 9) * 18;
-            int y = topPos + 71 + (i / 9) * 18;
-            drawSlot(graphics, x, y);
+            UiLayoutProfile.Element previewSlot = layoutEditor.element("preview_slot_" + i, "preview_slot",
+                    184 + (i % 9) * 18, 71 + (i / 9) * 18, 16, 16);
+            int x = leftPos + previewSlot.x;
+            int y = topPos + previewSlot.y;
+            graphics.blitSprite(SLOT, x, y, previewSlot.width, previewSlot.height);
             if (i < preview.size()) {
                 ItemStack stack = preview.get(i);
                 graphics.renderItem(stack, x, y);
@@ -209,16 +245,22 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"),
+        drawLayoutLabel(graphics, "title", Component.translatable("screen.whimsy_automation.deconstruction"),
                 8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 54, 0x404040, false);
+        drawLayoutLabel(graphics, "output_page_label",
+                Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"),
+                8, 54, 0x404040, false);
         if (outputPageField != null && !outputPageField.isFocused())
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
-        graphics.drawString(font, Component.translatable("container.inventory"),
+        drawLayoutLabel(graphics, "inventory_label", Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 130, 0x404040, false);
-        graphics.drawString(font, Component.literal("输入"), 202, 57, 0x404040, false);
-        graphics.drawString(font, Component.literal("配方 " + menu.getSelectedRecipePosition() + "/" + menu.getCandidateCount()), 184, 151, 0x404040, false);
+        drawLayoutLabel(graphics, "preview_page_label",
+                Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"),
+                184, 130, 0x404040, false);
+        drawLayoutLabel(graphics, "input_label", Component.literal("输入"), 202, 57, 0x404040, false);
+        drawLayoutLabel(graphics, "recipe_page_label",
+                Component.literal("配方 " + menu.getSelectedRecipePosition() + "/" + menu.getCandidateCount()),
+                184, 151, 0x404040, false);
         if (previewPageField != null && !previewPageField.isFocused())
             previewPageField.setValue(Integer.toString(menu.getPreviewPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
