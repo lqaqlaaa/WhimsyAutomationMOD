@@ -85,7 +85,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
 
             @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-                if (machine == null || slot < 0 || slot >= PAGE_SIZE
+                if (machine == null || machine.isPersistentOutputMode() || slot < 0 || slot >= PAGE_SIZE
                         || !stack.is(Items.ENCHANTED_BOOK)
                         || !machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack)) return stack;
                 // Output cells are a projection of the input enchantments. Putting
@@ -121,7 +121,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
 
             @Override public boolean isItemValid(int slot, ItemStack stack) {
-                return machine != null && stack.is(Items.ENCHANTED_BOOK)
+                return machine != null && !machine.isPersistentOutputMode() && stack.is(Items.ENCHANTED_BOOK)
                         && machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack);
             }
         };
@@ -231,7 +231,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 // right-click would overwrite a generated slot instead of
                 // restoring the book to the input. Route ordinary clicks through
                 // the same transactional path used by the item handler/shift-click.
-                if (stack.isEmpty() || increment <= 0 || machine == null
+                if (stack.isEmpty() || increment <= 0 || machine == null || machine.isPersistentOutputMode()
                         || !stack.is(Items.ENCHANTED_BOOK)
                         || !machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack)) {
                     return stack;
@@ -304,14 +304,14 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             int actualOutputSlot = getActualOutputSlot(index);
             int requested = quickMoveSingle ? 1 : source.getCount();
             ItemStack moving = source.copyWithCount(Math.min(requested, source.getCount()));
-            if (!player.level().isClientSide
+            if (!player.level().isClientSide && !machine.isPersistentOutputMode()
                     && !machine.canConsumeGeneratedBook(actualOutputSlot, moving)) {
                 return ItemStack.EMPTY;
             }
             if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
             int movedCount = Math.min(requested, source.getCount()) - moving.getCount();
             if (movedCount <= 0) return ItemStack.EMPTY;
-            if (!player.level().isClientSide
+            if (!player.level().isClientSide && !machine.isPersistentOutputMode()
                     && !machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount))) {
                 // The server-side validation above should make this unreachable;
                 // refuse to report a successful transfer if the source changed.
