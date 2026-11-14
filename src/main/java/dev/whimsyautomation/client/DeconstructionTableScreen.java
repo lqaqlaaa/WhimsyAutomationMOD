@@ -448,8 +448,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
         if (layoutEditor != null && layoutEditor.enabled()) {
-            if (layoutEditor.hasFocusedInput() || layoutEditor.isControlAt(x, y))
-                return super.mouseReleased(x, y, button);
+            if (layoutEditor.hasFocusedInput() || layoutEditor.isControlAt(mouseX, mouseY))
+                return super.mouseReleased(mouseX, mouseY, button);
             return layoutEditor.release();
         }
         pickerDragging = false;
