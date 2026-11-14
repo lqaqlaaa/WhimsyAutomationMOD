@@ -80,20 +80,20 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 120, 160, 14).build();
+                .bounds(leftPos + 184, topPos + 138, 160, 14).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 187, topPos + 147, 12, 12).build());
+                .bounds(leftPos + 187, topPos + 156, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 207, topPos + 147, 12, 12).build());
+                .bounds(leftPos + 207, topPos + 156, 18, 18).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 224, topPos + 144, 44, 18).build();
+                .bounds(leftPos + 230, topPos + 156, 44, 18).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 272, topPos + 144, 72, 18).build());
+                .bounds(leftPos + 278, topPos + 156, 66, 18).build());
     }
 
     @Override
@@ -136,7 +136,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         int recipeCount = menu.getCandidateCount();
         int recipeIndex = menu.getSelectedRecipePosition();
         graphics.drawString(font, Component.literal("配方 " + (recipeCount == 0 ? 0 : recipeIndex) + "/" + recipeCount),
-                184, 181, 0x404040, false);
+                184, 177, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
     }
