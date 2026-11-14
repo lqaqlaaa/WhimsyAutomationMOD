@@ -203,6 +203,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
                 .bounds(leftPos + 264, topPos + 198, 80, 15).build());
         layoutEditor.bindWidgets(children(), leftPos, topPos);
+        for (net.minecraft.client.gui.components.AbstractWidget control : layoutEditor.createControls(font, leftPos, topPos))
+            addRenderableWidget(control);
     }
 
     @Override
@@ -373,7 +375,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             return true;
         }
         if (layoutEditor != null && layoutEditor.enabled()) {
-            if ((layoutExportButton != null && layoutExportButton.isMouseOver(mouseX, mouseY))
+            if (layoutEditor.isControlAt(mouseX, mouseY)
+                    || (layoutExportButton != null && layoutExportButton.isMouseOver(mouseX, mouseY))
                     || (layoutResetButton != null && layoutResetButton.isMouseOver(mouseX, mouseY)))
                 return super.mouseClicked(mouseX, mouseY, button);
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
@@ -444,15 +447,29 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
-        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.release();
+        if (layoutEditor != null && layoutEditor.enabled()) {
+            if (layoutEditor.hasFocusedInput() || layoutEditor.isControlAt(x, y))
+                return super.mouseReleased(x, y, button);
+            return layoutEditor.release();
+        }
         pickerDragging = false;
         if (selectedIngredientGroup >= 0 || showSideConfig) return true;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (layoutEditor != null && layoutEditor.enabled() && layoutEditor.hasFocusedInput())
+            return super.charTyped(codePoint, modifiers);
+        if (layoutEditor != null && layoutEditor.enabled()) return true;
+        return super.charTyped(codePoint, modifiers);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (layoutEditor != null && layoutEditor.enabled()) {
+            if (layoutEditor.hasFocusedInput()) return super.keyPressed(keyCode, scanCode, modifiers);
+            if (layoutEditor.keyPressed(keyCode, modifiers)) return true;
             if (keyCode == 69) {
                 try { layoutEditor.export(); } catch (java.io.IOException ignored) { }
                 return true;
