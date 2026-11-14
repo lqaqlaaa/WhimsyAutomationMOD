@@ -48,7 +48,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
-                .bounds(leftPos + 136, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 136, topPos + 1, 16, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(4))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.next")))
                 .bounds(leftPos + 154, topPos + 5, 16, 18).build());
