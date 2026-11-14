@@ -51,10 +51,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
                 .tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 118, topPos + 56, 18, 18).build());
+                .bounds(leftPos + 112, topPos + 56, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
                 .tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 138, topPos + 56, 18, 18).build());
+                .bounds(leftPos + 132, topPos + 56, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
@@ -105,13 +105,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"),
                 8, titleLabelY, 0x404040, false);
         graphics.drawString(font, Component.literal((menu.getPage() + 1) + "/" + menu.getPageCount()),
-                150, 61, 0x404040, false);
+                152, 61, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("输入物品"), 184, 60, 0x404040, false);
-        graphics.drawString(font, Component.literal("配方材料"), 202, 60, 0x404040, false);
+        graphics.drawString(font, Component.literal("输入"), 184, 60, 0x404040, false);
+        graphics.drawString(font, Component.literal("材料预览"), 220, 60, 0x404040, false);
         graphics.drawString(font, Component.literal((menu.getPreviewPage() + 1) + "/" + menu.getPreviewPageCount()),
-                274, 60, 0x404040, false);
+                314, 60, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
     }
