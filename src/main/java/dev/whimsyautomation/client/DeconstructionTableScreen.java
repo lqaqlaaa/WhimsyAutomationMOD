@@ -78,26 +78,26 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 4, 160, 18).build();
+                .bounds(leftPos + 184, topPos + 120, 160, 18).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 28, 18, 18).build());
+                .bounds(leftPos + 184, topPos + 144, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 204, topPos + 28, 18, 18).build());
+                .bounds(leftPos + 204, topPos + 144, 18, 18).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 224, topPos + 28, 44, 18).build();
+                .bounds(leftPos + 224, topPos + 144, 44, 18).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 272, topPos + 28, 72, 18).build());
+                .bounds(leftPos + 272, topPos + 144, 72, 18).build());
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         panel(graphics, leftPos, topPos + 54, 176, 166);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 71);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 166);
 
         // Exactly 27 real machine output slots.
         for (int i = 0; i < 27; i++)
