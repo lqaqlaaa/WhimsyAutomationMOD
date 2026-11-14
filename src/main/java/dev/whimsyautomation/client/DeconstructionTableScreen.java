@@ -309,6 +309,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
+        if (layoutEditor != null && layoutEditor.enabled()) return true;
         if (showSideConfig) return true;
         if (selectedIngredientGroup >= 0) {
             int x = pickerHitX(), y = pickerHitY();
