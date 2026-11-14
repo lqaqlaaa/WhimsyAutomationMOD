@@ -13,10 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 public final class DeconstructionTableScreen extends AbstractContainerScreen<DeconstructionTableMenu> {
-    private static final ResourceLocation BACKGROUND =
-            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
-    private static final ResourceLocation SLOT =
-            ResourceLocation.withDefaultNamespace("container/slot");
+    private static final ResourceLocation SLOT = ResourceLocation.withDefaultNamespace("container/slot");
     private Button autoButton;
     private Button lockButton;
 
@@ -39,22 +36,45 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                         ? "screen.whimsy_automation.on" : "screen.whimsy_automation.off"));
     }
 
+    private static void panel(GuiGraphics g, int x, int y, int w, int h) {
+        // Vanilla inventory-panel bevel, without borrowing a chest GUI that
+        // would paint dozens of slots which do not exist in this machine.
+        g.fill(x, y, x + w, y + h, 0xFF373737);
+        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFFC6C6C6);
+        g.fill(x + 1, y + 1, x + w - 1, y + 2, 0xFFFFFFFF);
+        g.fill(x + 1, y + 1, x + 2, y + h - 1, 0xFFFFFFFF);
+        g.fill(x + w - 2, y + 2, x + w - 1, y + h - 1, 0xFF555555);
+        g.fill(x + 2, y + h - 2, x + w - 1, y + h - 1, 0xFF555555);
+    }
+
+    private void drawSlot(GuiGraphics g, int x, int y) {
+        g.blitSprite(SLOT, x, y, 16, 16);
+    }
+
+    private void drawPlayerSlots(GuiGraphics g) {
+        for (int row = 0; row < 3; row++)
+            for (int col = 0; col < 9; col++)
+                drawSlot(g, 8 + col * 18, 138 + row * 18);
+        for (int col = 0; col < 9; col++)
+            drawSlot(g, 8 + col * 18, 196);
+    }
+
     @Override
     protected void init() {
         super.init();
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
                 .tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 274, topPos + 56, 18, 18).build());
+                .bounds(leftPos + 274, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
                 .tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 294, topPos + 56, 18, 18).build());
+                .bounds(leftPos + 294, topPos + 53, 18, 18).build());
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
                 .tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 112, topPos + 56, 18, 18).build());
+                .bounds(leftPos + 112, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
                 .tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 132, topPos + 56, 18, 18).build());
+                .bounds(leftPos + 132, topPos + 53, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
@@ -76,29 +96,27 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        // Vanilla 27-slot chest layout: draw the three-row chest header,
-        // then the inventory section from the lower part of generic_54.png.
-        // This avoids the non-existent generic_27 texture and keeps the
-        // rendered slots aligned with the menu's real Slot coordinates.
-        // Two adjacent vanilla 27-slot container panels: machine outputs on
-        // the left, input/material preview on the right. Controls live above
-        // the panels so they never cover inventory slots.
-        graphics.blit(BACKGROUND, leftPos, topPos + 54, 0, 0, 176, 71, 256, 256);
-        graphics.blit(BACKGROUND, leftPos, topPos + 125, 0, 126, 176, 95, 256, 256);
-        graphics.blit(BACKGROUND, leftPos + 176, topPos + 54, 0, 0, 176, 71, 256, 256);
-        // The right-hand area is machine-specific preview/storage only.
-        // Do not draw a second vanilla player-inventory panel here.
-                List<ItemStack> preview = menu.getPreviewStacks();
+        panel(graphics, leftPos, topPos + 54, 176, 166);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 71);
+
+        // Exactly 27 real machine output slots.
+        for (int i = 0; i < 27; i++)
+            drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
+
+        // One real input slot, followed by exactly 18 non-interactive preview slots.
+        drawSlot(graphics, leftPos + 184, topPos + 71);
+        List<ItemStack> preview = menu.getPreviewStacks();
         for (int i = 0; i < 18; i++) {
-            int x = leftPos + 202 + (i % 8) * 18;
-            int y = topPos + 71 + (i / 8) * 18;
-            graphics.blitSprite(SLOT, x, y, 16, 16);
+            int x = leftPos + 202 + (i % 6) * 18;
+            int y = topPos + 71 + (i / 6) * 18;
+            drawSlot(graphics, x, y);
             if (i < preview.size()) {
                 ItemStack stack = preview.get(i);
                 graphics.renderItem(stack, x, y);
                 graphics.renderItemDecorations(font, stack, x, y);
             }
         }
+        drawPlayerSlots(graphics);
     }
 
     @Override

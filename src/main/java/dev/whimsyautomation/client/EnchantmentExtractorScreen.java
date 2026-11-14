@@ -10,10 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentExtractorScreen extends AbstractContainerScreen<EnchantmentExtractorMenu> {
-    private static final ResourceLocation BACKGROUND =
-            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
-    private static final ResourceLocation SLOT =
-            ResourceLocation.withDefaultNamespace("container/slot");
+    private static final ResourceLocation SLOT = ResourceLocation.withDefaultNamespace("container/slot");
     private Button autoButton;
     private Button processButton;
     private Button outputModeButton;
@@ -43,15 +40,36 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         });
     }
 
+    private static void panel(GuiGraphics g, int x, int y, int w, int h) {
+        g.fill(x, y, x + w, y + h, 0xFF373737);
+        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFFC6C6C6);
+        g.fill(x + 1, y + 1, x + w - 1, y + 2, 0xFFFFFFFF);
+        g.fill(x + 1, y + 1, x + 2, y + h - 1, 0xFFFFFFFF);
+        g.fill(x + w - 2, y + 2, x + w - 1, y + h - 1, 0xFF555555);
+        g.fill(x + 2, y + h - 2, x + w - 1, y + h - 1, 0xFF555555);
+    }
+
+    private void drawSlot(GuiGraphics graphics, int x, int y) {
+        graphics.blitSprite(SLOT, x, y, 16, 16);
+    }
+
+    private void drawPlayerSlots(GuiGraphics g) {
+        for (int row = 0; row < 3; row++)
+            for (int col = 0; col < 9; col++)
+                drawSlot(g, leftPos + 8 + col * 18, topPos + 138 + row * 18);
+        for (int col = 0; col < 9; col++)
+            drawSlot(g, leftPos + 8 + col * 18, topPos + 196);
+    }
+
     @Override
     protected void init() {
         super.init();
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
-                .bounds(leftPos + 112, topPos + 56, 18, 18).build());
+                .bounds(leftPos + 112, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(4))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.next")))
-                .bounds(leftPos + 132, topPos + 56, 18, 18).build());
+                .bounds(leftPos + 132, topPos + 53, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
                 .bounds(leftPos + 184, topPos + 4, 160, 18).build();
@@ -66,18 +84,15 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        // Vanilla 27-slot chest layout: draw the three-row chest header,
-        // then the inventory section from the lower part of generic_54.png.
-        // This avoids the non-existent generic_27 texture and keeps the
-        // rendered slots aligned with the menu's real Slot coordinates.
-        // Full two-panel vanilla container layout. Output inventory stays
-        // on the left; the right panel contains the book input and controls.
-        graphics.blit(BACKGROUND, leftPos, topPos + 54, 0, 0, 176, 71, 256, 256);
-        graphics.blit(BACKGROUND, leftPos, topPos + 125, 0, 126, 176, 95, 256, 256);
-        graphics.blit(BACKGROUND, leftPos + 176, topPos + 54, 0, 0, 176, 71, 256, 256);
-        // The right-hand area is machine-specific preview/storage only.
-        // Do not draw a second vanilla player-inventory panel here.
-                graphics.blitSprite(SLOT, leftPos + 184, topPos + 71, 16, 16);
+        panel(graphics, leftPos, topPos + 54, 176, 166);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 71);
+
+        // Exactly 27 stored-output slots, one machine input slot, and the
+        // player's single native 36-slot inventory. No decorative fake slots.
+        for (int i = 0; i < 27; i++)
+            drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
+        drawSlot(graphics, leftPos + 184, topPos + 71);
+        drawPlayerSlots(graphics);
     }
 
     @Override
