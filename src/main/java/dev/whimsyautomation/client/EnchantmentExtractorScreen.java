@@ -266,6 +266,16 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             if (keyCode == 256) showSideConfig = false;
             return true;
         }
+        if (keyCode == 257 || keyCode == 335) {
+            if (outputPageField != null && outputPageField.isFocused()) {
+                jumpPage(outputPageField, menu.getPageCount(), 0);
+                return true;
+            }
+            if (bufferPageField != null && bufferPageField.isFocused()) {
+                jumpPage(bufferPageField, menu.getBufferPageCount(), 1);
+                return true;
+            }
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
