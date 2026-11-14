@@ -67,12 +67,12 @@ public final class UiLayoutEditor {
         this.originX = originX;
         this.originY = originY;
         controls.clear();
-        xField = numberField(font, originX + 4, originY + 2, "X");
-        yField = numberField(font, originX + 44, originY + 2, "Y");
-        widthField = numberField(font, originX + 84, originY + 2, "宽");
-        heightField = numberField(font, originX + 124, originY + 2, "高");
+        xField = numberField(font, originX + 4, originY + 10, "X");
+        yField = numberField(font, originX + 44, originY + 10, "Y");
+        widthField = numberField(font, originX + 84, originY + 10, "宽");
+        heightField = numberField(font, originX + 124, originY + 10, "高");
         Button applyButton = Button.builder(Component.literal("应用"), b -> applyNumeric())
-                .bounds(originX + 164, originY + 2, 34, 14)
+                .bounds(originX + 164, originY + 10, 34, 14)
                 .tooltip(Tooltip.create(Component.literal("应用 X、Y、宽度和高度数值"))).build();
         controls.add(xField);
         controls.add(yField);
@@ -289,10 +289,14 @@ public final class UiLayoutEditor {
 
     public void render(GuiGraphics graphics, int originX, int originY) {
         if (!enabled) return;
-        graphics.fill(originX, originY + 20, originX + 350, originY + 34, 0xCC202020);
+        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, Component.literal("X"), originX + 4, originY + 1, 0xFFFFFFFF, false);
+        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, Component.literal("Y"), originX + 44, originY + 1, 0xFFFFFFFF, false);
+        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, Component.literal("宽"), originX + 84, originY + 1, 0xFFFFFFFF, false);
+        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, Component.literal("高"), originX + 124, originY + 1, 0xFFFFFFFF, false);
+        graphics.fill(originX, originY + 27, originX + 350, originY + 41, 0xCC202020);
         graphics.drawString(net.minecraft.client.Minecraft.getInstance().font,
                 Component.literal("拖动移动 · 右下角缩放 · 数值栏可精确编辑 · 方向键微调 · Shift+方向键步进10px"),
-                originX + 3, originY + 23, 0xFFFFFFFF, false);
+                originX + 3, originY + 30, 0xFFFFFFFF, false);
 
         if (snapGuideX != Integer.MIN_VALUE)
             graphics.fill(originX + snapGuideX, originY - 2000,
