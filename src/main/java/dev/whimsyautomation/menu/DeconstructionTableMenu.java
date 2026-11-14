@@ -116,9 +116,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             @Override public boolean isItemValid(int slot, ItemStack stack) { return !stack.isEmpty(); }
         };
         if (machine != null) {
-            addSlot(new SlotItemHandler(machine.getInventory(), 0, 184, 71));
+            addSlot(new SlotItemHandler(machine.getInventory(), 0, 184, 53));
         } else {
-            addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 184, 17));
+            addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 184, 53));
         }
         for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
         addPlayerInventory(playerInventory, 8, 139);
@@ -372,8 +372,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private boolean minecraftServerSide() { return !level.isClientSide; }
     public List<ItemStack> getPreviewStacks() {
         List<ItemStack> all = getAllPreviewStacks();
-        int start = getPreviewPage() * 18;
-        int end = Math.min(all.size(), start + 18);
+        int start = getPreviewPage() * 27;
+        int end = Math.min(all.size(), start + 27);
         List<ItemStack> page = new ArrayList<>();
         for (int index = start; index < end; index++) page.add(all.get(index).copy());
         return List.copyOf(page);
@@ -392,7 +392,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         syncedPreviewPage = Math.max(0, Math.min(pages - 1, getPreviewPage() + delta));
     }
     public int getPreviewPageCount() {
-        return Math.max(1, (getAllPreviewStacks().size() + 17) / 18);
+        return Math.max(1, (getAllPreviewStacks().size() + 26) / 27);
     }
 
     public ItemStack getPreviewResult() {
