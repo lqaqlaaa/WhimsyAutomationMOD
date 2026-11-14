@@ -8,6 +8,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
@@ -17,6 +18,7 @@ import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.SlotItemHandler;
+import java.util.Arrays;
 
 public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int PAGE_SIZE = 27;
@@ -25,6 +27,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int OUTPUT_MENU_START = 1;
     private static final int MACHINE_SLOT_COUNT = OUTPUT_MENU_START + PAGE_SIZE;
     private final EnchantmentExtractorBlockEntity machine;
+    private final Level level;
+    private final ItemStack[] clientPageStacks = new ItemStack[PAGE_SIZE];
     private final ContainerLevelAccess access;
     private final IItemHandler pageHandler;
     private int syncedPage;
@@ -38,7 +42,9 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
     public EnchantmentExtractorMenu(int id, Inventory playerInventory, BlockPos pos) {
         super(ModMenus.ENCHANTMENT_EXTRACTOR.get(), id);
-        this.machine = playerInventory.player.level().getBlockEntity(pos) instanceof EnchantmentExtractorBlockEntity be ? be : null;
+        this.level = playerInventory.player.level();
+        this.machine = level.getBlockEntity(pos) instanceof EnchantmentExtractorBlockEntity be ? be : null;
+        Arrays.fill(clientPageStacks, ItemStack.EMPTY);
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         this.pageHandler = new IItemHandlerModifiable() {
             private int actualSlot(int pageSlot) {
@@ -49,6 +55,10 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
             @Override public void setStackInSlot(int slot, ItemStack stack) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return;
+                if (level.isClientSide) {
+                    clientPageStacks[slot] = stack.copy();
+                    return;
+                }
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
                 machine.getInventory().setStackInSlot(actual, stack);
@@ -56,6 +66,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
             @Override public ItemStack getStackInSlot(int slot) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                if (level.isClientSide) return clientPageStacks[slot];
                 int actual = actualSlot(slot);
                 return actual < machine.getInventory().getSlots()
                         ? machine.getInventory().getStackInSlot(actual) : ItemStack.EMPTY;
@@ -63,6 +74,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
             @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return stack;
+                if (level.isClientSide) return stack;
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
                 return machine.getInventory().insertItem(actual, stack, simulate);
@@ -70,6 +82,13 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
             @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                if (level.isClientSide) {
+                    ItemStack cached = clientPageStacks[slot];
+                    if (cached.isEmpty()) return ItemStack.EMPTY;
+                    ItemStack extracted = cached.split(amount);
+                    if (cached.isEmpty()) clientPageStacks[slot] = ItemStack.EMPTY;
+                    return extracted;
+                }
                 int actual = actualSlot(slot);
                 return actual < machine.getInventory().getSlots()
                         ? machine.getInventory().extractItem(actual, amount, simulate) : ItemStack.EMPTY;
