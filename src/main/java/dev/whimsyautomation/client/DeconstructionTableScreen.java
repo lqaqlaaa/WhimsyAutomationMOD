@@ -330,5 +330,4 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
     }
-}}
 }
