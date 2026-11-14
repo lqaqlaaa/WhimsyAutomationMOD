@@ -83,6 +83,12 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
                 .bounds(leftPos + 184, topPos + 144, 160, 16).build());
+        addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(5))
+                .tooltip(Tooltip.create(Component.literal("上一页缓冲物品")) )
+                .bounds(leftPos + 306, topPos + 162, 14, 12).build());
+        addRenderableWidget(Button.builder(Component.literal("›"), b -> send(6))
+                .tooltip(Tooltip.create(Component.literal("下一页缓冲物品")) )
+                .bounds(leftPos + 326, topPos + 162, 14, 12).build());
     }
 
     @Override
@@ -97,6 +103,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         for (int i = 0; i < 27; i++)
             drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
         drawSlot(graphics, leftPos + 184, topPos + 71);
+        // Eighteen real queue slots: two rows of nine, entirely inside the
+        // right machine pane and clear of the player's inventory.
+        for (int i = 0; i < 18; i++)
+            drawSlot(graphics, leftPos + 184 + (i % 9) * 18, topPos + 174 + (i / 9) * 18);
         drawPlayerSlots(graphics);
     }
 
@@ -110,6 +120,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 202, 75, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
+        graphics.drawString(font, Component.literal("输入缓冲区  " + (menu.getBufferPage() + 1)
+                + "/" + menu.getBufferPageCount()), 184, 164, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (outputModeButton != null) outputModeButton.setMessage(outputModeLabel());
 
@@ -119,10 +131,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         if (!showSideConfig) return;
         // renderLabels is already translated to the GUI origin.
         int x = 176, y = 54;
-        // Replace the complete right machine pane, not just the top 116 px.
-        // This prevents controls and labels underneath the dialog from showing.
-        panel(graphics, x, y, 176, 166);
-        graphics.fill(x + 2, y + 2, x + 174, y + 114, 0xFFE0E0E0);
+        // The direction editor occupies only the upper control region.
+        // The expandable input buffer remains visible and interactive below it.
+        panel(graphics, x, y, 176, 108);
+        graphics.fill(x + 2, y + 2, x + 174, y + 106, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
         graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
@@ -152,6 +164,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 send(10 + row * 3 + col);
                 return true;
             }
+            // Leave the buffer slots and their page controls usable while the
+            // six-direction editor is open.
+            if (mouseY >= topPos + 160 && mouseX >= leftPos + 176)
+                return super.mouseClicked(mouseX, mouseY, button);
             showSideConfig = false;
             return true;
         }
@@ -172,6 +188,12 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        boolean overBuffer = mouseX >= leftPos + 180 && mouseX < leftPos + 352
+                && mouseY >= topPos + 170 && mouseY < topPos + 220;
+        if (overBuffer && menu.getBufferPageCount() > 1) {
+            send(deltaY < 0 ? 6 : 5);
+            return true;
+        }
         if (showSideConfig) return true;
         return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
     }
