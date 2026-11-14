@@ -66,34 +66,34 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         super.init();
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
                 .tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 274, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 276, topPos + 56, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
                 .tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 294, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 296, topPos + 56, 14, 14).build());
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
                 .tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 112, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 114, topPos + 56, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
                 .tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 132, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 134, topPos + 56, 14, 14).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 120, 160, 18).build();
+                .bounds(leftPos + 184, topPos + 138, 160, 14).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 144, 18, 18).build());
+                .bounds(leftPos + 187, topPos + 156, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 204, topPos + 144, 18, 18).build());
+                .bounds(leftPos + 207, topPos + 156, 18, 18).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 224, topPos + 144, 44, 18).build();
+                .bounds(leftPos + 224, topPos + 156, 44, 18).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 272, topPos + 144, 72, 18).build());
+                .bounds(leftPos + 272, topPos + 156, 72, 18).build());
     }
 
     @Override
@@ -133,6 +133,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.drawString(font, Component.literal("材料预览"), 220, 60, 0x404040, false);
         graphics.drawString(font, Component.literal((menu.getPreviewPage() + 1) + "/" + menu.getPreviewPageCount()),
                 314, 60, 0x404040, false);
+        int recipeCount = menu.getCandidateCount();
+        int recipeIndex = menu.getSelectedRecipePosition();
+        graphics.drawString(font, Component.literal("配方 " + (recipeCount == 0 ? 0 : recipeIndex) + "/" + recipeCount),
+                184, 177, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
     }
