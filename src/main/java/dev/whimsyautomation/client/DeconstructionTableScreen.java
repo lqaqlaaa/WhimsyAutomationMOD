@@ -164,6 +164,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
                 .bounds(leftPos + 264, topPos + 198, 80, 15).build());
+        layoutEditor.bindWidgets(children(), leftPos, topPos);
     }
 
     @Override
