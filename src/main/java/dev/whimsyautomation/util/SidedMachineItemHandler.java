@@ -60,7 +60,7 @@ public final class SidedMachineItemHandler implements IItemHandler {
     private int map(int slot) {
         if (!enabled.getAsBoolean() || slot < 0 || slot >= getSlots()) return -1;
         int inputSlots = input ? inputInventory.getSlots() : 0;
-        if (input && slot < inputSlots) return slot;
+        if (input && slot < inputSlots) return -slot - 2;
         int outputIndex = slot - inputSlots;
         if (output) {
             for (int i = outputStart; i < inventory.getSlots(); i++) {
@@ -75,37 +75,35 @@ public final class SidedMachineItemHandler implements IItemHandler {
     @Override
     public ItemStack getStackInSlot(int slot) {
         int mapped = map(slot);
-        return mapped < 0 ? ItemStack.EMPTY : (input && mapped < inputInventory.getSlots() ? inputInventory.getStackInSlot(mapped) : inventory.getStackInSlot(mapped));
+        if (mapped == -1) return ItemStack.EMPTY;
+        return mapped <= -2 ? inputInventory.getStackInSlot(-mapped - 2) : inventory.getStackInSlot(mapped);
     }
 
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
         int mapped = map(slot);
-        if (!input || mapped < 0 || mapped >= inputInventory.getSlots()) return stack;
-        return inputInventory.insertItem(mapped, stack, simulate);
+        if (!input || mapped > -2) return stack;
+        return inputInventory.insertItem(-mapped - 2, stack, simulate);
     }
 
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         int mapped = map(slot);
         if (!output || mapped < 0 || amount <= 0) return ItemStack.EMPTY;
-        if (input && mapped < inputInventory.getSlots()) {
-            if (!allowInputExtraction.getAsBoolean()) return ItemStack.EMPTY;
-            return inputInventory.extractItem(mapped, amount, simulate);
-        }
+        if (mapped == 0 && !allowInputExtraction.getAsBoolean()) return ItemStack.EMPTY;
         return inventory.extractItem(mapped, amount, simulate);
     }
 
     @Override
     public int getSlotLimit(int slot) {
         int mapped = map(slot);
-        return mapped < 0 ? 0 : inventory.getSlotLimit(mapped);
+        if (mapped == -1) return 0;
+        return mapped <= -2 ? inputInventory.getSlotLimit(-mapped - 2) : inventory.getSlotLimit(mapped);
     }
 
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
         int mapped = map(slot);
-        return mapped >= 0 && mapped < inputInventory.getSlots() && input
-                && inputInventory.isItemValid(mapped, stack);
+        return input && mapped <= -2 && inputInventory.isItemValid(-mapped - 2, stack);
     }
 }
