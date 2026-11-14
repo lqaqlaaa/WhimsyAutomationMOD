@@ -24,6 +24,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private static final int PICKER_VISIBLE_ROWS = 7;
     private boolean pickerDragging;
     private boolean showSideConfig;
+    private UiLayoutEditor layoutEditor;
+    private Button layoutDebugButton;
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -106,6 +108,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     protected void init() {
         super.init();
         topPos -= 27;
+        layoutEditor = new UiLayoutEditor("deconstruction_table");
+        layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
+                .bounds(leftPos + 312, topPos + 38, 32, 14).build();
+        addRenderableWidget(layoutDebugButton);
         outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
@@ -351,6 +357,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
+        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.drag(mouseX, mouseY);
         double scale = uiScale();
         if (selectedIngredientGroup >= 0) {
             int y = pickerHitY();
@@ -372,6 +379,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
+        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.release();
         pickerDragging = false;
         if (selectedIngredientGroup >= 0 || showSideConfig) return true;
         return super.mouseReleased(mouseX, mouseY, button);
@@ -395,6 +403,18 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 jumpPage(previewPageField, menu.getPreviewPageCount(), 1);
                 return true;
             }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (layoutEditor != null && layoutEditor.enabled()) {
+            if (keyCode == 69) {
+                try { layoutEditor.export(); } catch (java.io.IOException ignored) { }
+                return true;
+            }
+            if (keyCode == 82) { layoutEditor.reset(); return true; }
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
@@ -428,6 +448,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             return;
         }
         super.render(graphics, (int) virtualX, (int) virtualY, partialTick);
+        if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, (int) virtualX, (int) virtualY);
         graphics.pose().popPose();
     }
