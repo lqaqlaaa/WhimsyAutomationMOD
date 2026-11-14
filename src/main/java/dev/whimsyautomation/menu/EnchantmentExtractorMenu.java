@@ -226,10 +226,12 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 // it must not be routed through the player's inventory or cloned
                 // into an unrelated output slot.
                 if (player.level().isClientSide) return ItemStack.EMPTY;
-                ItemStack remainder = pageHandler.insertItem(0, source.copy(), false);
-                int restoredCount = source.getCount() - remainder.getCount();
+                int restoredCount = 0;
+                while (!source.isEmpty() && machine.restoreBook(source)) {
+                    source.shrink(1);
+                    restoredCount++;
+                }
                 if (restoredCount <= 0) return ItemStack.EMPTY;
-                source.shrink(restoredCount);
             } else if (!moveItemStackTo(source, 0, 1, false)) {
                 return ItemStack.EMPTY;
             }
