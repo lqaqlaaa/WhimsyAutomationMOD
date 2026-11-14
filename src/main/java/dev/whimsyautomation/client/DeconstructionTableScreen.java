@@ -121,25 +121,25 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 121, 68, 14).build();
+                .bounds(leftPos + 184, topPos + 121, 38, 14).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
-                .bounds(leftPos + 254, topPos + 121, 90, 14).build());
+                .bounds(leftPos + 224, topPos + 121, 38, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 121, 18, 14).build());
+                .bounds(leftPos + 264, topPos + 121, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 204, topPos + 121, 18, 14).build());
+                .bounds(leftPos + 280, topPos + 121, 14, 14).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 224, topPos + 121, 44, 14).build();
+                .bounds(leftPos + 296, topPos + 121, 24, 14).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 272, topPos + 121, 72, 14).build());
+                .bounds(leftPos + 322, topPos + 121, 30, 14).build());
     }
 
     @Override
@@ -199,7 +199,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         int x = 176, y = 54;
         // Cover the entire right machine pane so no preview labels, input
         // slots, or action buttons leak out below the dialog.
-        panel(graphics, x, y, 76 > 0 ? 76 : 76);
+        panel(graphics, x, y, 176, 76);
         graphics.fill(x + 2, y + 2, x + 174, y + 74, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
         graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
