@@ -242,6 +242,18 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         return !additions.isEmpty();
     }
 
+    /** Restores an extracted enchanted book to the machine's current input item. */
+    public boolean restoreBook(ItemStack book) {
+        if (level == null || level.isClientSide || book.isEmpty()) return false;
+        ItemStack remaining = book.copy();
+        boolean restored = false;
+        while (!remaining.isEmpty() && applyBookToInput(remaining)) {
+            remaining.shrink(1);
+            restored = true;
+        }
+        return restored;
+    }
+
     private boolean applyBookToInput(ItemStack book) {
         ItemStack item = inventory.getStackInSlot(0);
         if (!canApplyBook(item, book)) return false;
