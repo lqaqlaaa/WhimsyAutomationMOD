@@ -109,55 +109,55 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 114, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 114, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 134, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 130, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(5); outputPageField.setValue(Integer.toString(Math.min(menu.getPageCount(), menu.getPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 154, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 146, topPos + 55, 14, 14).build());
 
         previewPageField = pageField(262, 53, menu.getPreviewPage() + 1);
         addRenderableWidget(previewPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(previewPageField, menu.getPreviewPageCount(), 1))
-                .bounds(leftPos + 286, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 286, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             int page = Math.max(0, menu.getPreviewPage() - 1);
             send(-((page * 2 + 1) + 1));
             previewPageField.setValue(Integer.toString(page + 1));
         }).tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 306, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 302, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             int page = Math.min(menu.getPreviewPageCount() - 1, menu.getPreviewPage() + 1);
             send(-((page * 2 + 1) + 1));
             previewPageField.setValue(Integer.toString(page + 1));
         }).tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 326, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 318, topPos + 55, 14, 14).build());
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 175, 18, 18).build());
+                .bounds(leftPos + 184, topPos + 177, 18, 15).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 204, topPos + 175, 18, 18).build());
+                .bounds(leftPos + 204, topPos + 177, 18, 15).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 224, topPos + 175, 50, 18).build();
+                .bounds(leftPos + 224, topPos + 177, 50, 15).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 276, topPos + 175, 68, 18).build());
+                .bounds(leftPos + 276, topPos + 177, 68, 15).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 197, 78, 18).build();
+                .bounds(leftPos + 184, topPos + 198, 78, 15).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
-                .bounds(leftPos + 264, topPos + 197, 80, 18).build());
+                .bounds(leftPos + 264, topPos + 198, 80, 15).build());
     }
 
     @Override
