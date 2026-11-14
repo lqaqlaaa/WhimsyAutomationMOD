@@ -38,7 +38,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     public static final int OUTPUT_START = 1;
     private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_STACK_LIMIT = Integer.MAX_VALUE;
-    private static final int BOOK_STACK_COMPONENT_LIMIT = 99;
     private int workTicks;
     private boolean autoMode = false;
     private boolean splitLevels = false;
@@ -124,12 +123,23 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (!simulate && slot > 0) extractingGeneratedOutput = true;
-            ItemStack extracted = super.extractItem(slot, amount, simulate);
-            extractingGeneratedOutput = false;
-            if (!simulate && !internalInventoryUpdate && slot > 0 && !extracted.isEmpty()) {
-                removeGeneratedBook(slot, extracted, true);
+            if (slot <= 0 || amount <= 0) return super.extractItem(slot, amount, simulate);
+            ItemStack present = getStackInSlot(slot);
+            if (present.isEmpty()) return ItemStack.EMPTY;
+            int requestedCount = Math.min(amount, present.getCount());
+            ItemStack requested = present.copyWithCount(requestedCount);
+            // Validate against the authoritative input before the output slot is
+            // touched. A stale client slot can therefore never mint a book.
+            if (!canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
+            if (simulate) return super.extractItem(slot, requestedCount, true);
+            extractingGeneratedOutput = true;
+            ItemStack extracted;
+            try {
+                extracted = super.extractItem(slot, requestedCount, false);
+            } finally {
+                extractingGeneratedOutput = false;
             }
+            if (!extracted.isEmpty()) removeGeneratedBook(slot, extracted, true);
             return extracted;
         }
 
@@ -220,7 +230,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int bookLevel = entry.getIntValue();
             // Follow EnchantmentCustomTable: do not reject an enchanted book merely
             // because its enchantment conflicts with another enchantment on the item.
-            if (bookLevel <= 0 || !enchantment.value().isSupportedItem(item)) return false;
+            // Extracted enchantments must be restorable to the same item, even if
+            // the item/enchantment pair is normally rejected by vanilla anvil rules.
+            if (bookLevel <= 0) return false;
             int oldLevel = existing.getLevel(enchantment);
             int mergedLevel = oldLevel == 0 ? bookLevel
                     : oldLevel == bookLevel ? oldLevel + 1 : oldLevel + bookLevel;
@@ -269,17 +281,18 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         if (!input.isEmpty() && !enchantments.isEmpty()) {
             if (combinedOutput) {
-                // One book contains every enchantment and its original level.
+                // A combined result is one physical enchanted book.
                 generated.add(createCombinedBook(enchantments));
             } else {
                 for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
                     int enchantmentLevel = entry.getIntValue();
+                    if (enchantmentLevel <= 0) continue;
                     if (splitLevels) {
-                        // One slot represents every extracted level of this
-                        // enchantment: Sharpness 1000 becomes Sharpness I x1000.
-                        ItemStack stack = createBook(entry.getKey(), 1);
-                        stack.setCount(enchantmentLevel);
-                        generated.add(stack);
+                        // Each level is a separate real book in a separate slot.
+                        // Never raise an enchanted book's max-stack component.
+                        for (int i = 0; i < enchantmentLevel; i++) {
+                            generated.add(createBook(entry.getKey(), 1));
+                        }
                     } else {
                         generated.add(createBook(entry.getKey(), enchantmentLevel));
                     }
@@ -288,7 +301,14 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
 
         internalInventoryUpdate = true;
-        inventory.resize(Math.max(OUTPUT_START + 27 * 10, OUTPUT_START + generated.size()));
+        int requiredSize = Math.max(OUTPUT_START + 27 * 10, OUTPUT_START + generated.size());
+        inventory.resize(requiredSize);
+        // Clear the entire previous projection first. Without this, changing
+        // from split-level mode to combined/separate mode leaves ghost books
+        // behind in old output slots and can duplicate extracted enchantments.
+        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
+            inventory.setStackInSlot(slot, ItemStack.EMPTY);
+        }
         for (int index = 0; index < generated.size(); index++) {
             inventory.setStackInSlot(OUTPUT_START + index, generated.get(index));
         }
@@ -308,15 +328,14 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     private ItemStack createBook(Holder<Enchantment> enchantment, int level) {
         ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
-        book.set(DataComponents.MAX_STACK_SIZE, BOOK_STACK_COMPONENT_LIMIT);
         ItemEnchantments.Mutable stored = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
         stored.set(enchantment, level);
         book.set(DataComponents.STORED_ENCHANTMENTS, stored.toImmutable());
         return book;
     }
 
-    /** Called by the menu after a shift-click has actually transferred a generated book. */
-    public boolean consumeGeneratedBook(int outputSlot, ItemStack book) {
+    /** Validate a generated output against the current authoritative input item. */
+    public boolean canConsumeGeneratedBook(int outputSlot, ItemStack book) {
         if (outputSlot < OUTPUT_START || outputSlot >= inventory.getSlots()
                 || book.isEmpty() || !book.is(Items.ENCHANTED_BOOK)) return false;
         ItemStack currentOutput = inventory.getStackInSlot(outputSlot);
@@ -329,24 +348,29 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             long requestedLevel = (long) entry.getIntValue() * book.getCount();
             if (available.getLevel(entry.getKey()) < requestedLevel) return false;
         }
-        removeGeneratedBook(outputSlot, book, false);
         return true;
     }
 
-    private void removeGeneratedBook(int outputSlot, ItemStack book, boolean outputAlreadyExtracted) {
-        if (level == null || level.isClientSide || book.isEmpty()) return;
+    /** Called by the menu only after the requested amount was transferred. */
+    public boolean consumeGeneratedBook(int outputSlot, ItemStack book) {
+        if (!canConsumeGeneratedBook(outputSlot, book)) return false;
+        return removeGeneratedBook(outputSlot, book, false);
+    }
+
+    private boolean removeGeneratedBook(int outputSlot, ItemStack book, boolean outputAlreadyExtracted) {
+        if (level == null || level.isClientSide || book.isEmpty()) return false;
         ItemStack input = inventory.getStackInSlot(0);
-        if (input.isEmpty()) return;
+        if (input.isEmpty()) return false;
         ItemEnchantments current = getStackEnchantments(input);
         ItemEnchantments removed = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-        if (removed.isEmpty()) return;
+        if (removed.isEmpty()) return false;
 
         ItemEnchantments.Mutable remaining = new ItemEnchantments.Mutable(current);
         int extractedCount = book.getCount();
         for (Object2IntMap.Entry<Holder<Enchantment>> entry : removed.entrySet()) {
             long totalRemoved = (long) entry.getIntValue() * extractedCount;
             int currentLevel = current.getLevel(entry.getKey());
-            if (totalRemoved > currentLevel) return;
+            if (totalRemoved > currentLevel) return false;
             remaining.set(entry.getKey(), currentLevel - (int) totalRemoved);
         }
 
@@ -354,9 +378,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (input.is(Items.ENCHANTED_BOOK)) input.set(DataComponents.STORED_ENCHANTMENTS, remaining.toImmutable());
         else input.set(DataComponents.ENCHANTMENTS, remaining.toImmutable());
         inventory.setStackInSlot(0, input);
-        // Keep every other generated book in its original slot. Rebuilding the
-        // entire output list here compacts the remaining books and makes a
-        // shift-click/automation extraction drain more than the requested slot.
         if (!outputAlreadyExtracted) {
             ItemStack remainingOutput = inventory.getStackInSlot(outputSlot).copy();
             remainingOutput.shrink(book.getCount());
@@ -364,6 +385,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
         internalInventoryUpdate = false;
         setChanged();
+        return true;
     }
 
     private static List<Integer> splitSingleEnchantmentLevels(int sourceLevel) {
