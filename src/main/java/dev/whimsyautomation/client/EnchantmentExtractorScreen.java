@@ -186,6 +186,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         }).tooltip(Tooltip.create(Component.literal("下一页缓冲物品")))
                 .bounds(leftPos + 318, topPos + 155, 14, 14).build());
         layoutEditor.bindWidgets(children(), leftPos, topPos);
+        for (net.minecraft.client.gui.components.AbstractWidget control : layoutEditor.createControls(font, leftPos, topPos))
+            addRenderableWidget(control);
     }
 
     @Override
@@ -266,7 +268,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             return true;
         }
         if (layoutEditor != null && layoutEditor.enabled()) {
-            if ((layoutExportButton != null && layoutExportButton.isMouseOver(mouseX, mouseY))
+            if (layoutEditor.isControlAt(mouseX, mouseY)
+                    || (layoutExportButton != null && layoutExportButton.isMouseOver(mouseX, mouseY))
                     || (layoutResetButton != null && layoutResetButton.isMouseOver(mouseX, mouseY)))
                 return super.mouseClicked(mouseX, mouseY, button);
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
@@ -306,7 +309,11 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
-        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.release();
+        if (layoutEditor != null && layoutEditor.enabled()) {
+            if (layoutEditor.hasFocusedInput() || layoutEditor.isControlAt(x, y))
+                return super.mouseReleased(x, y, button);
+            return layoutEditor.release();
+        }
         if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 162)
             return true;
         return super.mouseReleased(x, y, button);
@@ -336,8 +343,18 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (layoutEditor != null && layoutEditor.enabled() && layoutEditor.hasFocusedInput())
+            return super.charTyped(codePoint, modifiers);
+        if (layoutEditor != null && layoutEditor.enabled()) return true;
+        return super.charTyped(codePoint, modifiers);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (layoutEditor != null && layoutEditor.enabled()) {
+            if (layoutEditor.hasFocusedInput()) return super.keyPressed(keyCode, scanCode, modifiers);
+            if (layoutEditor.keyPressed(keyCode, modifiers)) return true;
             if (keyCode == 69) {
                 try { layoutEditor.export(); } catch (java.io.IOException ignored) { }
                 return true;
