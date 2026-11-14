@@ -44,6 +44,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private boolean splitLevels = false;
     private boolean combinedOutput = false;
     private boolean autoExtractionPaused;
+    // 0=disabled, 1=input, 2=output; Direction ordinal order.
+    private final int[] sideModes = new int[] {2, 1, 1, 1, 1, 1};
+    private final IItemHandler[] sidedHandlers = new IItemHandler[6];
 
     private boolean internalInventoryUpdate;
     private boolean extractingGeneratedOutput;
@@ -166,11 +169,17 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
     }
 
-    private final IItemHandler topHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
-    private final IItemHandler bottomHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, false, true,
+    private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, true,
             () -> getStackEnchantments(inventory.getStackInSlot(0)).isEmpty());
-    private final IItemHandler sideHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, false);
-    private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, true);
+
+    public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
+    public void cycleSideMode(Direction side) {
+        int index = side.ordinal();
+        sideModes[index] = (sideModes[index] + 1) % 3;
+        sidedHandlers[index] = null;
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
 
     public EnchantmentExtractorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), pos, state);
@@ -204,9 +213,14 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
         if (side == null) return unsidedHandler;
-        if (side == Direction.DOWN) return bottomHandler;
-        if (side == Direction.UP) return topHandler;
-        return sideHandler;
+        int index = side.ordinal();
+        if (sidedHandlers[index] == null) {
+            int mode = sideModes[index];
+            sidedHandlers[index] = new SidedMachineItemHandler(inventory, OUTPUT_START,
+                    mode == 1, mode == 2,
+                    () -> mode == 2 && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty());
+        }
+        return sidedHandlers[index];
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, EnchantmentExtractorBlockEntity machine) {
@@ -443,6 +457,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         tag.putBoolean("SplitLevels", splitLevels);
         tag.putBoolean("CombinedOutput", combinedOutput);
         tag.putBoolean("AutoExtractionPaused", autoExtractionPaused);
+        tag.putIntArray("SideModes", sideModes);
     }
 
     @Override
@@ -454,6 +469,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         autoMode = tag.getBoolean("AutoMode");
         splitLevels = tag.getBoolean("SplitLevels");
         combinedOutput = tag.getBoolean("CombinedOutput");
+        int[] savedSideModes = tag.getIntArray("SideModes");
+        for (int i = 0; i < Math.min(savedSideModes.length, sideModes.length); i++) sideModes[i] = Math.max(0, Math.min(2, savedSideModes[i]));
+        java.util.Arrays.fill(sidedHandlers, null);
         // Rebuild only after mode flags have been restored from disk.
         if (level != null && !level.isClientSide) refreshGeneratedSlots();
     }
