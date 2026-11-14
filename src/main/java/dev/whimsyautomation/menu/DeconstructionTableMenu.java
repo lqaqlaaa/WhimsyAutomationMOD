@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -50,6 +51,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private ItemStack cachedPreviewInput = ItemStack.EMPTY;
     private String cachedPreviewRecipeId = "";
     private List<ItemStack> cachedPreviewStacks = List.of();
+    private boolean quickMoveSingle;
 
     public DeconstructionTableMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
         this(id, playerInventory, data.readBlockPos());
@@ -105,8 +107,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 machine.ensureOutputInventorySize(actual + 1);
                 return machine.getInventory().extractItem(actual, amount, simulate);
             }
-            @Override public int getSlotLimit(int slot) { return 64; }
-            @Override public boolean isItemValid(int slot, ItemStack stack) { return false; }
+            @Override public int getSlotLimit(int slot) { return Integer.MAX_VALUE; }
+            @Override public boolean isItemValid(int slot, ItemStack stack) { return !stack.isEmpty(); }
         };
         if (machine != null) {
             addSlot(new SlotItemHandler(machine.getInventory(), 0, 184, 71));
@@ -400,6 +402,14 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return true;
     }
 
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        // Shift + right-click extracts one item; shift + left-click moves the full stack.
+        quickMoveSingle = clickType == ClickType.QUICK_MOVE && button == 1;
+        try { super.clicked(slotId, button, clickType, player); }
+        finally { quickMoveSingle = false; }
+    }
+
     @Override public ItemStack quickMoveStack(Player player, int index) {
         if (index < 0 || index >= slots.size()) return ItemStack.EMPTY;
         Slot slot = slots.get(index);
@@ -408,11 +418,14 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         ItemStack copy = source.copy();
         if (index >= OUTPUT_START && index < MACHINE_SLOT_COUNT) {
             int actualOutput = OUTPUT_START + syncedPage * PAGE_SIZE + (index - OUTPUT_START);
-            ItemStack moving = source.copy();
+            int requested = quickMoveSingle ? 1 : source.getCount();
+            ItemStack moving = source.copyWithCount(Math.min(requested, source.getCount()));
             if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
-            int movedCount = copy.getCount() - moving.getCount();
+            int movedCount = Math.min(requested, source.getCount()) - moving.getCount();
             if (movedCount <= 0) return ItemStack.EMPTY;
-            machine.getInventory().extractItem(actualOutput, movedCount, false);
+            // Only the server mutates the block entity. The client predicts the
+            // destination transfer and waits for authoritative slot synchronization.
+            if (!player.level().isClientSide) machine.getInventory().extractItem(actualOutput, movedCount, false);
             return copy.copyWithCount(movedCount);
         }
         if (index < MACHINE_SLOT_COUNT) {
