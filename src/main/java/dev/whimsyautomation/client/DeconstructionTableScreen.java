@@ -22,10 +22,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageWidth = 300;
-        imageHeight = 166;
-        inventoryLabelY = 72;
-        titleLabelY = 6;
+        imageWidth = 352;
+        imageHeight = 220;
+        inventoryLabelY = 126;
+        titleLabelY = 60;
     }
 
     private void send(int id) {
@@ -44,34 +44,34 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         super.init();
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
                 .tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 184, topPos + 126, 18, 18).build());
+                .bounds(leftPos + 274, topPos + 56, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
                 .tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 204, topPos + 126, 18, 18).build());
+                .bounds(leftPos + 294, topPos + 56, 18, 18).build());
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
                 .tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 118, topPos + 2, 18, 18).build());
+                .bounds(leftPos + 118, topPos + 56, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
                 .tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 138, topPos + 2, 18, 18).build());
+                .bounds(leftPos + 138, topPos + 56, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 204, topPos + 17, 88, 18).build();
+                .bounds(leftPos + 184, topPos + 4, 160, 18).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 42, 18, 18).build());
+                .bounds(leftPos + 184, topPos + 28, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 204, topPos + 42, 18, 18).build());
+                .bounds(leftPos + 204, topPos + 28, 18, 18).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 224, topPos + 42, 32, 18).build();
+                .bounds(leftPos + 224, topPos + 28, 44, 18).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 260, topPos + 42, 32, 18).build());
+                .bounds(leftPos + 272, topPos + 28, 72, 18).build());
     }
 
     @Override
@@ -80,13 +80,17 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // then the inventory section from the lower part of generic_54.png.
         // This avoids the non-existent generic_27 texture and keeps the
         // rendered slots aligned with the menu's real Slot coordinates.
-        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, 176, 71, 256, 256);
-        graphics.blit(BACKGROUND, leftPos, topPos + 71, 0, 126, 176, 95, 256, 256);
-        graphics.blitSprite(SLOT, leftPos + 184, topPos + 17, 16, 16);
-        List<ItemStack> preview = menu.getPreviewStacks();
+        // Two adjacent vanilla 27-slot container panels: machine outputs on
+        // the left, input/material preview on the right. Controls live above
+        // the panels so they never cover inventory slots.
+        graphics.blit(BACKGROUND, leftPos, topPos + 54, 0, 0, 176, 71, 256, 256);
+        graphics.blit(BACKGROUND, leftPos, topPos + 125, 0, 126, 176, 95, 256, 256);
+        graphics.blit(BACKGROUND, leftPos + 176, topPos + 54, 0, 0, 176, 71, 256, 256);
+        graphics.blit(BACKGROUND, leftPos + 176, topPos + 125, 0, 126, 176, 95, 256, 256);
+                List<ItemStack> preview = menu.getPreviewStacks();
         for (int i = 0; i < 18; i++) {
-            int x = leftPos + 184 + (i % 6) * 18;
-            int y = topPos + 65 + (i / 6) * 18;
+            int x = leftPos + 202 + (i % 8) * 18;
+            int y = topPos + 71 + (i / 8) * 18;
             graphics.blitSprite(SLOT, x, y, 16, 16);
             if (i < preview.size()) {
                 ItemStack stack = preview.get(i);
@@ -101,13 +105,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"),
                 8, titleLabelY, 0x404040, false);
         graphics.drawString(font, Component.literal((menu.getPage() + 1) + "/" + menu.getPageCount()),
-                158, 7, 0x404040, false);
+                150, 61, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("输入物品"), 184, 36, 0x404040, false);
-        graphics.drawString(font, Component.literal("配方材料"), 184, 55, 0x404040, false);
+        graphics.drawString(font, Component.literal("输入物品"), 8, 96, 0x404040, false);
+        graphics.drawString(font, Component.literal("配方材料"), 184, 60, 0x404040, false);
         graphics.drawString(font, Component.literal((menu.getPreviewPage() + 1) + "/" + menu.getPreviewPageCount()),
-                228, 131, 0x404040, false);
+                274, 60, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
     }
