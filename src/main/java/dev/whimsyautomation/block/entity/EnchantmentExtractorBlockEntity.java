@@ -123,6 +123,12 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int moved = Math.min(room, remaining);
             if (moved > 0) { present.grow(moved); remaining -= moved; }
         }
+        for (int i = 0; i < plan.size() && remaining > 0; i++) {
+            if (!plan.get(i).isEmpty()) continue;
+            int moved = Math.min(limit, remaining);
+            plan.set(i, template.copyWithCount(moved));
+            remaining -= moved;
+        }
         while (remaining > 0) {
             int moved = Math.min(limit, remaining);
             plan.add(template.copyWithCount(moved));
@@ -383,13 +389,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                     remainder = super.insertItem(slot, remainder, simulate);
             }
             if (remainder.isEmpty()) return ItemStack.EMPTY;
-            int perSlot = Math.min(64, remainder.getMaxStackSize());
-            if (simulate) {
-                int possible = Math.max(1, perSlot) * 18;
-                int accepted = Math.min(remainder.getCount(), possible);
-                int left = remainder.getCount() - accepted;
-                return left <= 0 ? ItemStack.EMPTY : remainder.copyWithCount(left);
-            }
+            // The queue grows in page-sized chunks, so simulation must advertise
+            // the same effectively unbounded capacity as the real insertion.
+            if (simulate) return ItemStack.EMPTY;
             while (!remainder.isEmpty()) {
                 int start = getSlots();
                 resize(start + 18);
