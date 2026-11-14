@@ -108,8 +108,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 150, 61, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("输入物品"), 8, 96, 0x404040, false);
-        graphics.drawString(font, Component.literal("配方材料"), 184, 60, 0x404040, false);
+        graphics.drawString(font, Component.literal("输入物品"), 184, 60, 0x404040, false);
+        graphics.drawString(font, Component.literal("配方材料"), 202, 60, 0x404040, false);
         graphics.drawString(font, Component.literal((menu.getPreviewPage() + 1) + "/" + menu.getPreviewPageCount()),
                 274, 60, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
