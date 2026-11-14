@@ -45,7 +45,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private boolean combinedOutput = false;
     private boolean autoExtractionPaused;
     // 0=disabled, 1=input, 2=output; Direction ordinal order.
-    private final int[] sideModes = new int[] {2, 1, 1, 1, 1, 1};
+    private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
     private final IItemHandler[] sidedHandlers = new IItemHandler[6];
 
     private boolean internalInventoryUpdate;
@@ -170,7 +170,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, true,
-            () -> getStackEnchantments(inventory.getStackInSlot(0)).isEmpty());
+            () -> getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
 
     public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
     public void cycleSideMode(Direction side) {
@@ -218,7 +218,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int mode = sideModes[index];
             sidedHandlers[index] = new SidedMachineItemHandler(inventory, OUTPUT_START,
                     mode == 1, mode == 2,
-                    () -> mode == 2 && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty());
+                    () -> mode == 2 && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
         }
         return sidedHandlers[index];
     }
