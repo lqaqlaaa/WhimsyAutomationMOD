@@ -262,10 +262,17 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
 
         internalInventoryUpdate = true;
-        if (item.is(Items.ENCHANTED_BOOK)) item.set(DataComponents.STORED_ENCHANTMENTS, merged.toImmutable());
-        else item.set(DataComponents.ENCHANTMENTS, merged.toImmutable());
-        inventory.setStackInSlot(0, item);
-        internalInventoryUpdate = false;
+        try {
+            if (item.is(Items.ENCHANTED_BOOK)) item.set(DataComponents.STORED_ENCHANTMENTS, merged.toImmutable());
+            else item.set(DataComponents.ENCHANTMENTS, merged.toImmutable());
+            inventory.setStackInSlot(0, item);
+        } finally {
+            internalInventoryUpdate = false;
+        }
+        // Restoring a physical book changes the authoritative input enchantments.
+        // Rebuild the virtual output projection immediately so restored books can
+        // be extracted again and no stale preview survives the inventory update.
+        refreshGeneratedSlots();
         setChanged();
         return true;
     }
