@@ -321,8 +321,16 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
         if (layoutEditor != null && layoutEditor.enabled()) return true;
-        boolean overBuffer = mouseX >= leftPos + 180 && mouseX < leftPos + 352
-                && mouseY >= topPos + 175 && mouseY < topPos + 213;
+        boolean overBuffer = false;
+        for (int i = 0; i < 18; i++) {
+            UiLayoutProfile.Element cell = layoutEditor.element("buffer_slot_" + i, "slot",
+                    184 + (i % 9) * 18, i / 9 == 0 ? 175 : 197, 16, 16);
+            int x = leftPos + cell.x, y = topPos + cell.y;
+            if (mouseX >= x && mouseX < x + cell.width && mouseY >= y && mouseY < y + cell.height) {
+                overBuffer = true;
+                break;
+            }
+        }
         if (overBuffer && menu.getBufferPageCount() > 1) {
             send(deltaY < 0 ? 6 : 5);
             return true;
