@@ -1,9 +1,13 @@
 package dev.whimsyautomation.client;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.network.chat.Component;
 
 import java.util.Map;
+import java.util.List;
+import java.util.LinkedHashMap;
 
 /** Mouse-driven editor for any registered logical UI element. */
 public final class UiLayoutEditor {
@@ -14,6 +18,9 @@ public final class UiLayoutEditor {
     private boolean dragging;
     private double lastX;
     private double lastY;
+    private int originX;
+    private int originY;
+    private final Map<String, AbstractWidget> widgets = new LinkedHashMap<>();
 
     public UiLayoutEditor(String screenId) {
         profile = UiLayoutProfile.load(screenId);
@@ -22,6 +29,31 @@ public final class UiLayoutEditor {
     public UiLayoutProfile.Element element(String id, String type,
                                             int x, int y, int width, int height) {
         return profile.element(id, type, x, y, width, height);
+    }
+
+    public void bindWidgets(List<? extends GuiEventListener> children, int originX, int originY) {
+        this.originX = originX;
+        this.originY = originY;
+        widgets.clear();
+        int index = 0;
+        for (GuiEventListener child : children) {
+            if (!(child instanceof AbstractWidget widget)) continue;
+            String label = widget.getMessage().getString().replaceAll("[^a-zA-Z0-9]+", "_");
+            if (label.equals("布局")) continue;
+            String id = "widget_" + index++ + "_" + label;
+            UiLayoutProfile.Element e = profile.element(id, "widget",
+                    widget.getX() - originX, widget.getY() - originY,
+                    widget.getWidth(), widget.getHeight());
+            widgets.put(id, widget);
+            apply(widget, e);
+        }
+    }
+
+    private void apply(AbstractWidget widget, UiLayoutProfile.Element e) {
+        widget.setX(originX + e.x);
+        widget.setY(originY + e.y);
+        widget.setWidth(e.width);
+        widget.setHeight(e.height);
     }
 
     public boolean enabled() { return enabled; }
@@ -69,6 +101,8 @@ public final class UiLayoutEditor {
         }
         lastX = mouseX;
         lastY = mouseY;
+        AbstractWidget widget = widgets.get(selected);
+        if (widget != null) apply(widget, e);
         return true;
     }
 
