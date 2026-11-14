@@ -347,6 +347,23 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return candidates().size();
     }
 
+    /** One-based position of the currently displayed recipe among switchable candidates. */
+    public int getSelectedRecipePosition() {
+        List<RecipeHolder<?>> found = candidates();
+        if (found.isEmpty()) return 0;
+        if (syncedLocked) {
+            RecipeHolder<?> locked = getLockedRecipeHolder();
+            if (locked != null) {
+                for (int i = 0; i < found.size(); i++) {
+                    if (found.get(i).id().equals(locked.id())) return i + 1;
+                }
+            }
+        }
+        int index = level.isClientSide ? syncedRecipeIndex : getServerRecipeIndex();
+        if (index < 0 || index >= found.size()) index = 0;
+        return index + 1;
+    }
+
     public String getPreviewRecipeId() {
         RecipeHolder<?> recipe = getPreviewRecipe();
         return recipe == null ? "" : recipe.id().toString();
