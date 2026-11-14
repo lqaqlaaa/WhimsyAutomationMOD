@@ -151,7 +151,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     private void addPagedOutputSlot(int outputIndex) {
         int x = 8 + (outputIndex % 9) * 18;
-        int y = 17 + (outputIndex / 9) * 18;
+        int y = 71 + (outputIndex / 9) * 18;
         addSlot(new SlotItemHandler(pageHandler, outputIndex, x, y));
     }
 
