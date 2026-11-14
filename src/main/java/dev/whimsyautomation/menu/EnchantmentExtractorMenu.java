@@ -67,11 +67,12 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public int getSlots() { return PAGE_SIZE; }
 
             @Override public void setStackInSlot(int slot, ItemStack stack) {
-                if (machine == null || slot < 0 || slot >= PAGE_SIZE || isPersistentOutputMode()) return;
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return;
                 if (level.isClientSide) {
                     clientPageStacks[slot] = stack.copy();
                     return;
                 }
+                if (isPersistentOutputMode()) return;
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
                 machine.getInventory().setStackInSlot(actual, stack);
