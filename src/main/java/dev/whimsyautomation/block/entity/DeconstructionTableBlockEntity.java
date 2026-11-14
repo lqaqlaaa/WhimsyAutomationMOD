@@ -209,6 +209,15 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         // priority, and a mismatch is a hard stop: never fall back to another recipe.
         String chosenId = !lockedRecipe.isEmpty() ? lockedRecipe : selectedRecipe;
         RecipeHolder<?> selected = chosenId.isEmpty() ? null : findRecipe(chosenId);
+        // A previously selected recipe can become stale when the player replaces
+        // the input stack. A locked recipe is intentionally strict; an unlocked
+        // selection must be re-resolved against the new input instead of silently
+        // leaving the machine stuck forever.
+        if (selected != null && !matchesRecipeOutput(
+                selected.value().getResultItem(level.registryAccess()), input)) {
+            if (!lockedRecipe.isEmpty()) return;
+            selected = null;
+        }
         if (selected == null && lockedRecipe.isEmpty()) {
             List<RecipeHolder<?>> matches = new ArrayList<>();
             for (RecipeHolder<?> candidate : level.getRecipeManager().getRecipes()) {
@@ -274,9 +283,17 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         // Scale the per-craft recovery list once, then insert each aggregated
         // result. This avoids cloning the entire output inventory for every batch.
         for (ItemStack result : recoveredPerBatch) {
-            ItemStack total = result.copy();
-            total.setCount(Math.multiplyExact(result.getCount(), processedItems));
-            insertIntoOutputPlan(outputPlan, total);
+            // ItemStack stores its count in a signed int. Multiplying a large
+            // modded ingredient count by the processed input amount must not
+            // overflow and crash the server tick; split the long total into
+            // representable chunks and let the output planner merge each chunk.
+            long remaining = (long) result.getCount() * processedItems;
+            while (remaining > 0) {
+                int chunk = (int) Math.min(Integer.MAX_VALUE, remaining);
+                ItemStack total = result.copyWithCount(chunk);
+                insertIntoOutputPlan(outputPlan, total);
+                remaining -= chunk;
+            }
         }
 
         inventory.resize(OUTPUT_START + outputPlan.size());
