@@ -26,13 +26,19 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private static final int MIN_OUTPUT_PAGES = 10;
     private static final int OUTPUT_START = 1;
     private static final int OUTPUT_MENU_START = 1;
-    private static final int MACHINE_SLOT_COUNT = OUTPUT_MENU_START + PAGE_SIZE;
+    private static final int BUFFER_PAGE_SIZE = 18;
+    private static final int BUFFER_MENU_START = OUTPUT_MENU_START + PAGE_SIZE;
+    private static final int MACHINE_SLOT_COUNT = BUFFER_MENU_START + BUFFER_PAGE_SIZE;
     private final EnchantmentExtractorBlockEntity machine;
     private final Level level;
     private final ItemStack[] clientPageStacks = new ItemStack[PAGE_SIZE];
+    private final ItemStack[] clientBufferStacks = new ItemStack[BUFFER_PAGE_SIZE];
     private final ContainerLevelAccess access;
     private final IItemHandler pageHandler;
+    private final IItemHandler bufferPageHandler;
     private int syncedPage;
+    private int syncedBufferPage;
+    private int syncedBufferSlotCount = BUFFER_PAGE_SIZE;
     private int syncedOutputSlotCount = OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES;
     private boolean syncedAutoMode;
     private boolean quickMoveSingle;
@@ -48,6 +54,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         this.level = playerInventory.player.level();
         this.machine = level.getBlockEntity(pos) instanceof EnchantmentExtractorBlockEntity be ? be : null;
         Arrays.fill(clientPageStacks, ItemStack.EMPTY);
+        Arrays.fill(clientBufferStacks, ItemStack.EMPTY);
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         this.pageHandler = new IItemHandlerModifiable() {
             private int actualSlot(int pageSlot) {
@@ -117,10 +124,50 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
         };
 
+        this.bufferPageHandler = new IItemHandlerModifiable() {
+            private int actualSlot(int pageSlot) { return getBufferPage() * BUFFER_PAGE_SIZE + pageSlot; }
+            @Override public int getSlots() { return BUFFER_PAGE_SIZE; }
+            @Override public void setStackInSlot(int slot, ItemStack stack) {
+                if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE) return;
+                if (level.isClientSide) { clientBufferStacks[slot] = stack.copy(); return; }
+                int actual = actualSlot(slot);
+                if (actual < machine.getInputBuffer().getSlots())
+                    machine.getInputBuffer().setStackInSlot(actual, stack);
+            }
+            @Override public ItemStack getStackInSlot(int slot) {
+                if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE) return ItemStack.EMPTY;
+                if (level.isClientSide) return clientBufferStacks[slot];
+                int actual = actualSlot(slot);
+                return actual < machine.getInputBuffer().getSlots()
+                        ? machine.getInputBuffer().getStackInSlot(actual) : ItemStack.EMPTY;
+            }
+            @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE || level.isClientSide) return stack;
+                int actual = actualSlot(slot);
+                if (actual >= machine.getInputBuffer().getSlots()) return stack;
+                return machine.getInputBuffer().insertItem(actual, stack, simulate);
+            }
+            @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE || level.isClientSide) return ItemStack.EMPTY;
+                int actual = actualSlot(slot);
+                return actual < machine.getInputBuffer().getSlots()
+                        ? machine.getInputBuffer().extractItem(actual, amount, simulate) : ItemStack.EMPTY;
+            }
+            @Override public int getSlotLimit(int slot) { return 64; }
+            @Override public boolean isItemValid(int slot, ItemStack stack) {
+                return machine != null && !stack.isEmpty();
+            }
+        };
+
         addSlot(new net.neoforged.neoforge.items.SlotItemHandler(
                 machine != null ? machine.getInventory() : new net.neoforged.neoforge.items.ItemStackHandler(1),
                 0, 184, 71));
         for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
+        for (int i = 0; i < BUFFER_PAGE_SIZE; i++) {
+            int x = 184 + (i % 9) * 18;
+            int y = 174 + (i / 9) * 18;
+            addSlot(new SlotItemHandler(bufferPageHandler, i, x, y));
+        }
         addPlayerInventory(playerInventory, 8, 138);
 
         addDataSlot(new DataSlot() {
@@ -154,6 +201,17 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 @Override public void set(int value) { syncedSideModes[sideIndex] = Math.max(0, Math.min(2, value)); }
             });
         }
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return machine == null ? BUFFER_PAGE_SIZE : Math.min(32767, machine.getInputBuffer().getSlots()); }
+            @Override public void set(int value) {
+                syncedBufferSlotCount = Math.max(BUFFER_PAGE_SIZE, value);
+                syncedBufferPage = Math.min(syncedBufferPage, getBufferPageCount() - 1);
+            }
+        });
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return syncedBufferPage; }
+            @Override public void set(int value) { syncedBufferPage = Math.max(0, Math.min(value, getBufferPageCount() - 1)); }
+        });
     }
 
     private void addPagedOutputSlot(int outputIndex) {
@@ -192,6 +250,12 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     }
 
     public int getPage() { return Math.min(syncedPage, getPageCount() - 1); }
+    public int getBufferPage() { return Math.min(syncedBufferPage, getBufferPageCount() - 1); }
+    public int getBufferPageCount() {
+        int count = machine == null || (machine.getLevel() != null && machine.getLevel().isClientSide)
+                ? syncedBufferSlotCount : machine.getInputBuffer().getSlots();
+        return Math.max(1, (count + BUFFER_PAGE_SIZE - 1) / BUFFER_PAGE_SIZE);
+    }
     public boolean isAutoMode() { return syncedAutoMode; }
     public boolean isSplitLevels() { return syncedOutputMode == 2; }
     public int getOutputMode() { return syncedOutputMode; }
@@ -211,6 +275,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         else if (buttonId == 2) machine.setOutputMode((machine.getOutputMode() + 1) % 3);
         else if (buttonId == 3) syncedPage = Math.max(0, syncedPage - 1);
         else if (buttonId == 4) syncedPage = Math.min(getPageCount() - 1, syncedPage + 1);
+        else if (buttonId == 5) syncedBufferPage = Math.max(0, syncedBufferPage - 1);
+        else if (buttonId == 6) syncedBufferPage = Math.min(getBufferPageCount() - 1, syncedBufferPage + 1);
         else return false;
         return true;
     }
@@ -271,7 +337,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                     restoredCount++;
                 }
                 if (restoredCount <= 0) return ItemStack.EMPTY;
-            } else if (!moveItemStackTo(source, 0, 1, false)) {
+            } else if (!moveItemStackTo(source, BUFFER_MENU_START, MACHINE_SLOT_COUNT, false)) {
                 return ItemStack.EMPTY;
             }
         }
