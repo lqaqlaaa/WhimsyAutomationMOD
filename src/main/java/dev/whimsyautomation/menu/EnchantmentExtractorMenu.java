@@ -216,6 +216,14 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 // refuse to report a successful transfer if the source changed.
                 return ItemStack.EMPTY;
             }
+            if (player.level().isClientSide) {
+                // Predict the source-slot shrink on the client as well. Without
+                // this, shift-click briefly leaves the full virtual stack visible
+                // while its copied contents have already entered the player inventory.
+                ItemStack predictedRemainder = source.copy();
+                predictedRemainder.shrink(movedCount);
+                slot.set(predictedRemainder);
+            }
             return copy.copyWithCount(movedCount);
         }
         if (index < MACHINE_SLOT_COUNT) {
@@ -227,7 +235,9 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 // into an unrelated output slot.
                 if (player.level().isClientSide) return ItemStack.EMPTY;
                 int restoredCount = 0;
-                while (!source.isEmpty() && machine.restoreBook(source)) {
+                int requestedCount = quickMoveSingle ? 1 : source.getCount();
+                while (restoredCount < requestedCount && !source.isEmpty()
+                        && machine.restoreBook(source)) {
                     source.shrink(1);
                     restoredCount++;
                 }
