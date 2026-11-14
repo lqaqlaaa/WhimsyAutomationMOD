@@ -23,7 +23,7 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
         access=ContainerLevelAccess.create(inv.player.level(),pos);
         ItemStackHandler handler=machine==null?new ItemStackHandler(4):machine.getInventory();
         for(int i=0;i<4;i++) {
-            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler,i,new int[]{8,44,80,134}[i],48));
+            addSlot(new net.neoforged.neoforge.items.SlotItemHandler(handler,i,new int[]{8,26,44,134}[i],48));
         }
         for(int row=0;row<3;row++) for(int col=0;col<9;col++) addSlot(new Slot(inv,col+row*9+9,8+col*18,84+row*18));
         for(int col=0;col<9;col++) addSlot(new Slot(inv,col,8+col*18,142));
