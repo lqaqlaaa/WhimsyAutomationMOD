@@ -117,47 +117,49 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 .bounds(leftPos + 156, topPos + 55, 14, 14).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .bounds(leftPos + 204, topPos + 107, 140, 14).build();
+                .bounds(leftPos + 204, topPos + 90, 140, 14).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 204, topPos + 124, 68, 14).build();
+                .bounds(leftPos + 204, topPos + 107, 68, 14).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 274, topPos + 124, 70, 14).build();
+                .bounds(leftPos + 274, topPos + 107, 70, 14).build();
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
-                .bounds(leftPos + 184, topPos + 124, 18, 14).build());
+                .bounds(leftPos + 184, topPos + 107, 18, 14).build());
 
-        bufferPageField = pageField(262, 55, menu.getBufferPage() + 1);
+        bufferPageField = pageField(262, 130, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(bufferPageField, menu.getBufferPageCount(), 1))
-                .bounds(leftPos + 292, topPos + 55, 18, 14).build());
+                .bounds(leftPos + 292, topPos + 130, 18, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(5); bufferPageField.setValue(Integer.toString(Math.max(1, menu.getBufferPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页缓冲物品")))
-                .bounds(leftPos + 312, topPos + 55, 14, 14).build());
+                .bounds(leftPos + 312, topPos + 130, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(6); bufferPageField.setValue(Integer.toString(Math.min(menu.getBufferPageCount(), menu.getBufferPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页缓冲物品")))
-                .bounds(leftPos + 328, topPos + 55, 14, 14).build());
+                .bounds(leftPos + 328, topPos + 130, 14, 14).build());
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         // renderBg uses screen coordinates; the menu owns its independent
         // GUI-local slot positions. Do not mix the two coordinate spaces.
-        panel(graphics, leftPos, topPos + 54, 176, 166);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 166);
+        panel(graphics, leftPos, topPos + 54, 176, 71);
+        panel(graphics, leftPos, topPos + 125, 176, 95);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 71);
+        panel(graphics, leftPos + 176, topPos + 125, 176, 95);
 
         // Exactly 27 stored-output slots, one machine input slot, and the
         // player's single native 36-slot inventory. No decorative fake slots.
         for (int i = 0; i < 27; i++)
             drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
-        drawSlot(graphics, leftPos + 184, topPos + 107);
+        drawSlot(graphics, leftPos + 184, topPos + 71);
         // Eighteen real queue slots: two rows of nine, entirely inside the
         // right machine pane and clear of the player's inventory.
         for (int i = 0; i < 18; i++)
-            drawSlot(graphics, leftPos + 184 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
+            drawSlot(graphics, leftPos + 184 + (i % 9) * 18, topPos + 151 + (i / 9) * 18);
         drawPlayerSlots(graphics);
     }
 
@@ -172,7 +174,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 202, 75, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("缓冲 " + (menu.getBufferPage() + 1) + "/" + Math.max(1, menu.getBufferPageCount()) + "页"), 184, 42, 0x404040, false);
+        graphics.drawString(font, Component.literal("缓冲区"), 184, 130, 0x404040, false);
         if (bufferPageField != null && !bufferPageField.isFocused())
             bufferPageField.setValue(Integer.toString(menu.getBufferPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
@@ -186,8 +188,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         int x = 176, y = 54;
         // The direction editor occupies only the upper control region.
         // The expandable input buffer remains visible and interactive below it.
-        panel(graphics, x, y, 176, 76);
-        graphics.fill(x + 2, y + 2, x + 174, y + 74, 0xFFE0E0E0);
+        panel(graphics, x, y, 176, 71);
+        graphics.fill(x + 2, y + 2, x + 174, y + 69, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
         graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
@@ -200,7 +202,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             graphics.drawString(font, Component.literal(names[i] + "：" + modes[Math.min(2, menu.getSideMode(i))]),
                     cellX + 12, cellY, 0xFF303030, false);
         }
-        graphics.drawString(font, Component.literal("点击切换输入/输出/关闭"), x + 8, y + 68, 0xFF606060, false);
+        graphics.drawString(font, Component.literal("点击切换输入/输出/关闭"), x + 8, y + 63, 0xFF606060, false);
     }
 
     @Override
@@ -251,7 +253,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
         boolean overBuffer = mouseX >= leftPos + 180 && mouseX < leftPos + 352
-                && mouseY >= topPos + 70 && mouseY < topPos + 108;
+                && mouseY >= topPos + 151 && mouseY < topPos + 187;
         if (overBuffer && menu.getBufferPageCount() > 1) {
             send(deltaY < 0 ? 6 : 5);
             return true;
