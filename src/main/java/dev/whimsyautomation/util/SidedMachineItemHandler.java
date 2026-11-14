@@ -8,6 +8,7 @@ import java.util.function.BooleanSupplier;
 /** Compact, live view of a machine inventory for external automation. */
 public final class SidedMachineItemHandler implements IItemHandler {
     private final ItemStackHandler inventory;
+    private final ItemStackHandler inputInventory;
     private final int outputStart;
     private final boolean input;
     private final boolean output;
@@ -15,17 +16,24 @@ public final class SidedMachineItemHandler implements IItemHandler {
     private final BooleanSupplier enabled;
 
     public SidedMachineItemHandler(ItemStackHandler inventory, int outputStart, boolean input, boolean output) {
-        this(inventory, outputStart, input, output, () -> false, () -> true);
+        this(inventory, inventory, outputStart, input, output, () -> false, () -> true);
     }
 
     public SidedMachineItemHandler(ItemStackHandler inventory, int outputStart, boolean input, boolean output,
                                    BooleanSupplier allowInputExtraction) {
-        this(inventory, outputStart, input, output, allowInputExtraction, () -> true);
+        this(inventory, inventory, outputStart, input, output, allowInputExtraction, () -> true);
     }
 
     public SidedMachineItemHandler(ItemStackHandler inventory, int outputStart, boolean input, boolean output,
                                    BooleanSupplier allowInputExtraction, BooleanSupplier enabled) {
+        this(inventory, inventory, outputStart, input, output, allowInputExtraction, enabled);
+    }
+
+    public SidedMachineItemHandler(ItemStackHandler inventory, ItemStackHandler inputInventory,
+                                   int outputStart, boolean input, boolean output,
+                                   BooleanSupplier allowInputExtraction, BooleanSupplier enabled) {
         this.inventory = inventory;
+        this.inputInventory = inputInventory;
         this.outputStart = outputStart;
         this.input = input;
         this.output = output;
@@ -45,14 +53,15 @@ public final class SidedMachineItemHandler implements IItemHandler {
     @Override
     public int getSlots() {
         if (!enabled.getAsBoolean()) return 0;
-        return (input ? 1 : 0) + occupiedOutputSlots()
+        return (input ? inputInventory.getSlots() : 0) + occupiedOutputSlots()
                 + (output && allowInputExtraction.getAsBoolean() ? 1 : 0);
     }
 
     private int map(int slot) {
         if (!enabled.getAsBoolean() || slot < 0 || slot >= getSlots()) return -1;
-        if (input && slot == 0) return 0;
-        int outputIndex = slot - (input ? 1 : 0);
+        int inputSlots = input ? inputInventory.getSlots() : 0;
+        if (input && slot < inputSlots) return slot;
+        int outputIndex = slot - inputSlots;
         if (output) {
             for (int i = outputStart; i < inventory.getSlots(); i++) {
                 if (inventory.getStackInSlot(i).isEmpty()) continue;
@@ -66,21 +75,24 @@ public final class SidedMachineItemHandler implements IItemHandler {
     @Override
     public ItemStack getStackInSlot(int slot) {
         int mapped = map(slot);
-        return mapped < 0 ? ItemStack.EMPTY : inventory.getStackInSlot(mapped);
+        return mapped < 0 ? ItemStack.EMPTY : (input && mapped < inputInventory.getSlots() ? inputInventory.getStackInSlot(mapped) : inventory.getStackInSlot(mapped));
     }
 
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
         int mapped = map(slot);
-        if (mapped != 0 || !input) return stack;
-        return inventory.insertItem(mapped, stack, simulate);
+        if (!input || mapped < 0 || mapped >= inputInventory.getSlots()) return stack;
+        return inputInventory.insertItem(mapped, stack, simulate);
     }
 
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         int mapped = map(slot);
         if (!output || mapped < 0 || amount <= 0) return ItemStack.EMPTY;
-        if (mapped == 0 && !allowInputExtraction.getAsBoolean()) return ItemStack.EMPTY;
+        if (input && mapped < inputInventory.getSlots()) {
+            if (!allowInputExtraction.getAsBoolean()) return ItemStack.EMPTY;
+            return inputInventory.extractItem(mapped, amount, simulate);
+        }
         return inventory.extractItem(mapped, amount, simulate);
     }
 
@@ -93,6 +105,7 @@ public final class SidedMachineItemHandler implements IItemHandler {
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
         int mapped = map(slot);
-        return mapped == 0 && input && inventory.isItemValid(mapped, stack);
+        return mapped >= 0 && mapped < inputInventory.getSlots() && input
+                && inputInventory.isItemValid(mapped, stack);
     }
 }
