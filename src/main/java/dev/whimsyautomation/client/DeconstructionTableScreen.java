@@ -61,9 +61,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // backgrounds must use the same leftPos/topPos transform as real slots.
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                drawSlot(g, leftPos + 8 + col * 18, topPos + 138 + row * 18);
+                drawSlot(g, 8 + col * 18, 138 + row * 18);
         for (int col = 0; col < 9; col++)
-            drawSlot(g, leftPos + 8 + col * 18, topPos + 196);
+            drawSlot(g, 8 + col * 18, 196);
     }
 
     @Override
