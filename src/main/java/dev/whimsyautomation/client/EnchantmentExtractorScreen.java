@@ -194,9 +194,15 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             // real slot contents, and widgets exactly once. A second explicit
             // renderBackground call was darkening the world a second time.
             super.render(graphics, -10000, -10000, partialTick);
+            // Flush the container's item/widget buffers before the modal pass.
+            // Vanilla item rendering applies its own positive GUI Z offset;
+            // the modal must be placed in front of that layer, not merely
+            // drawn later at Z=0.
+            graphics.flush();
             graphics.pose().pushPose();
-            graphics.pose().translate(leftPos, topPos, 0);
+            graphics.pose().translate(leftPos, topPos, 500.0F);
             renderSideConfig(graphics);
+            graphics.flush();
             graphics.pose().popPose();
             return;
         }
