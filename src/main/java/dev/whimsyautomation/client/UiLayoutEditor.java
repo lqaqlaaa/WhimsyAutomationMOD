@@ -21,6 +21,7 @@ public final class UiLayoutEditor {
     private int originX;
     private int originY;
     private final Map<String, AbstractWidget> widgets = new LinkedHashMap<>();
+    private final Map<String, UiLayoutProfile.Element> defaults = new LinkedHashMap<>();
 
     public UiLayoutEditor(String screenId) {
         profile = UiLayoutProfile.load(screenId);
@@ -40,11 +41,14 @@ public final class UiLayoutEditor {
             if (!(child instanceof AbstractWidget widget)) continue;
             String label = widget.getMessage().getString().replaceAll("[^a-zA-Z0-9]+", "_");
             if (widget.getMessage().getString().equals("布局")) continue;
-            String id = "widget_" + index++ + "_" + label;
-            UiLayoutProfile.Element e = profile.element(id, "widget",
+            String id = "widget_" + index++;
+            UiLayoutProfile.Element e = profile.element(id, "widget:" + label,
                     widget.getX() - originX, widget.getY() - originY,
                     widget.getWidth(), widget.getHeight());
             widgets.put(id, widget);
+            defaults.putIfAbsent(id, new UiLayoutProfile.Element("widget:" + label,
+                    widget.getX() - originX, widget.getY() - originY,
+                    widget.getWidth(), widget.getHeight()));
             apply(widget, e);
         }
     }
@@ -143,5 +147,16 @@ public final class UiLayoutEditor {
     }
 
     public void export() throws java.io.IOException { profile.export(); }
-    public void reset() { profile.reset(); selected = null; }
+    public void reset() {
+        profile.reset();
+        selected = null;
+        for (Map.Entry<String, AbstractWidget> entry : widgets.entrySet()) {
+            UiLayoutProfile.Element original = defaults.get(entry.getKey());
+            if (original == null) continue;
+            UiLayoutProfile.Element restored = profile.element(entry.getKey(), original.type,
+                    original.x, original.y, original.width, original.height);
+            apply(entry.getValue(), restored);
+        }
+        profile.save();
+    }
 }
