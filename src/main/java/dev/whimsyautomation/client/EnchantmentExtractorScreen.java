@@ -72,20 +72,20 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 .bounds(leftPos + 132, topPos + 53, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .bounds(leftPos + 184, topPos + 4, 160, 18).build();
+                .bounds(leftPos + 184, topPos + 96, 160, 18).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 184, topPos + 28, 76, 18).build();
+                .bounds(leftPos + 184, topPos + 120, 76, 18).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 264, topPos + 28, 80, 18).build();
+                .bounds(leftPos + 264, topPos + 120, 80, 18).build();
         addRenderableWidget(outputModeButton);
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         panel(graphics, leftPos, topPos + 54, 176, 166);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 71);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 166);
 
         // Exactly 27 stored-output slots, one machine input slot, and the
         // player's single native 36-slot inventory. No decorative fake slots.
