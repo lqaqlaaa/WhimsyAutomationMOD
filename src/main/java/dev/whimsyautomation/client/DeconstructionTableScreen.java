@@ -306,9 +306,11 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if ((selectedIngredientGroup >= 0 || showSideConfig) && keyCode == 256) {
-            selectedIngredientGroup = -1;
-            showSideConfig = false;
+        if (selectedIngredientGroup >= 0 || showSideConfig) {
+            if (keyCode == 256) {
+                selectedIngredientGroup = -1;
+                showSideConfig = false;
+            }
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
