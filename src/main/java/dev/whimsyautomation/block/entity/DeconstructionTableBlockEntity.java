@@ -322,12 +322,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             // overflow and crash the server tick; split the long total into
             // representable chunks and let the output planner merge each chunk.
             long remaining = (long) result.getCount() * processedItems;
-            while (remaining > 0) {
-                int chunk = (int) Math.min(Integer.MAX_VALUE, remaining);
-                ItemStack total = result.copyWithCount(chunk);
-                insertIntoOutputPlan(outputPlan, total);
-                remaining -= chunk;
-            }
+            insertCountIntoOutputPlan(outputPlan, result, remaining);
         }
 
         inventory.resize(OUTPUT_START + outputPlan.size());
@@ -368,32 +363,65 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
     private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
         if (incoming.isEmpty()) return true;
-        incoming.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, Integer.MAX_VALUE);
+        insertCountIntoOutputPlan(plan, incoming, incoming.getCount());
+        return true;
+    }
+
+    /**
+     * Inserts an aggregate amount without ever creating an invalid ItemStack.
+     * MAX_STACK_SIZE is a data component constrained by vanilla to [1, 99];
+     * machine output capacity must be represented by additional slots, not by
+     * writing Integer.MAX_VALUE into the component or stack count.
+     */
+    private void insertCountIntoOutputPlan(List<ItemStack> plan, ItemStack template, long amount) {
+        if (template.isEmpty() || amount <= 0) return;
+
+        ItemStack normalizedTemplate = template.copyWithCount(1);
+        normalizeStackLimit(normalizedTemplate);
+        int stackLimit = Math.max(1, Math.min(99, normalizedTemplate.getMaxStackSize()));
+        int slotLimit = Math.max(1, inventory.getSlotLimit(OUTPUT_START));
+        stackLimit = Math.min(stackLimit, slotLimit);
+        long remaining = amount;
+
+        // Merge into compatible stacks, respecting each stack's legal limit.
         for (ItemStack existing : plan) {
-            if (!existing.isEmpty()) existing.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, Integer.MAX_VALUE);
-            if (incoming.isEmpty()) return true;
-            if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, incoming)) continue;
-            int limit = Integer.MAX_VALUE;
-            int moved = Math.min(incoming.getCount(), Math.max(0, limit - existing.getCount()));
+            if (remaining <= 0) return;
+            if (existing.isEmpty()) continue;
+            normalizeStackLimit(existing);
+            if (!ItemStack.isSameItemSameComponents(existing, normalizedTemplate)) continue;
+
+            int existingLimit = Math.max(1, Math.min(99, existing.getMaxStackSize()));
+            existingLimit = Math.min(existingLimit, slotLimit);
+            int space = Math.max(0, existingLimit - existing.getCount());
+            int moved = (int) Math.min(remaining, (long) space);
             if (moved > 0) {
                 existing.grow(moved);
-                incoming.shrink(moved);
+                remaining -= moved;
             }
         }
-        for (int i = 0; i < plan.size() && !incoming.isEmpty(); i++) {
+
+        // Reuse empty slots before expanding the machine's output inventory.
+        for (int i = 0; i < plan.size() && remaining > 0; i++) {
             if (!plan.get(i).isEmpty()) continue;
-            int moved = incoming.getCount();
-            plan.set(i, incoming.copyWithCount(moved));
-            incoming.shrink(moved);
+            int moved = (int) Math.min(remaining, (long) stackLimit);
+            plan.set(i, normalizedTemplate.copyWithCount(moved));
+            remaining -= moved;
         }
-        // The output inventory grows to fit large machine recipes instead of
-        // rejecting an otherwise valid dismantle when all existing slots fill.
-        while (!incoming.isEmpty()) {
-            int moved = Math.min(incoming.getCount(), Math.min(incoming.getMaxStackSize(), inventory.getSlotLimit(OUTPUT_START)));
-            plan.add(incoming.copyWithCount(moved));
-            incoming.shrink(moved);
+
+        // Large recipe yields are spread across ordinary legal stacks.
+        while (remaining > 0) {
+            int moved = (int) Math.min(remaining, (long) stackLimit);
+            plan.add(normalizedTemplate.copyWithCount(moved));
+            remaining -= moved;
         }
-        return true;
+    }
+
+    private static void normalizeStackLimit(ItemStack stack) {
+        if (stack.isEmpty()) return;
+        Integer declaredLimit = stack.get(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE);
+        if (declaredLimit != null && (declaredLimit < 1 || declaredLimit > 99)) {
+            stack.remove(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE);
+        }
     }
 
     @Override
