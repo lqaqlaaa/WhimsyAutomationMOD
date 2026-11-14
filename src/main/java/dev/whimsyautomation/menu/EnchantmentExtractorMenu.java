@@ -154,8 +154,10 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
                 if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE || level.isClientSide) return ItemStack.EMPTY;
                 int actual = actualSlot(slot);
-                return actual < machine.getInputBuffer().getSlots()
-                        ? machine.getInputBuffer().extractItem(actual, amount, simulate) : ItemStack.EMPTY;
+                if (actual >= machine.getInputBuffer().getSlots()) return ItemStack.EMPTY;
+                ItemStack extracted = machine.getInputBuffer().extractItem(actual, amount, simulate);
+                if (!simulate && !extracted.isEmpty()) machine.compactInputBuffer();
+                return extracted;
             }
             @Override public int getSlotLimit(int slot) { return 64; }
             @Override public boolean isItemValid(int slot, ItemStack stack) {
@@ -172,7 +174,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             int y = 174 + (i / 9) * 18;
             addSlot(new SlotItemHandler(bufferPageHandler, i, x, y));
         }
-        addPlayerInventory(playerInventory, 8, 138);
+        addPlayerInventory(playerInventory, 8, 210);
 
         addIntDataSlots(() -> syncedPage, value -> syncedPage = Math.max(0, value));
         addIntDataSlots(
@@ -284,6 +286,13 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
+        if (buttonId < 0) {
+            int encoded = -buttonId - 1;
+            int targetPage = encoded >>> 1;
+            if ((encoded & 1) == 0) syncedPage = Math.max(0, Math.min(getPageCount() - 1, targetPage));
+            else syncedBufferPage = Math.max(0, Math.min(getBufferPageCount() - 1, targetPage));
+            return true;
+        }
         if (buttonId >= 10 && buttonId <= 15) { machine.cycleSideMode(net.minecraft.core.Direction.values()[buttonId - 10]); return true; }
         if (buttonId == 0) machine.setAutoMode(!machine.isAutoMode());
         else if (buttonId == 1) machine.processOnce();
