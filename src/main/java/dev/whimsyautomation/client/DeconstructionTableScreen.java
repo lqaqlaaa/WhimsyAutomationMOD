@@ -237,7 +237,12 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 graphics.renderItem(stack, itemX, itemY);
                 graphics.renderItemDecorations(font, stack, itemX, itemY);
                 int group = menu.getPreviewPage() * 27 + i;
-                if (menu.getIngredientOptions(group).length > 1) graphics.drawString(font, "▾", x + previewSlot.width - 6, y + 1, 0xFF245B9A, true);
+                if (menu.getIngredientOptions(group).length > 1) {
+                    // JEI-style tag badge: this slot represents an ingredient
+                    // with alternatives, not a single mandatory item.
+                    graphics.fill(x + previewSlot.width - 8, y, x + previewSlot.width, y + 8, 0xFF344F70);
+                    graphics.drawString(font, "#", x + previewSlot.width - 7, y, 0xFFFFFFFF, false);
+                }
             }
         }
         drawPlayerSlots(graphics);
@@ -498,6 +503,21 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
+    private Component alternativeTooltip(double mouseX, double mouseY) {
+        if (layoutEditor == null || selectedIngredientGroup >= 0 || showSideConfig) return null;
+        for (int i = 0; i < 27; i++) {
+            UiLayoutProfile.Element cell = layoutEditor.element("preview_slot_" + i, "preview_slot",
+                    184 + (i % 9) * 18, 71 + (i / 9) * 18, 16, 16);
+            int group = menu.getPreviewPage() * 27 + i;
+            if (menu.getIngredientOptions(group).length <= 1) continue;
+            int x = leftPos + cell.x, y = topPos + cell.y;
+            if (mouseX >= x && mouseX < x + cell.width && mouseY >= y && mouseY < y + cell.height) {
+                return Component.literal("可替代材料：点击选择其他配方材料");
+            }
+        }
+        return null;
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         double scale = uiScale();
@@ -531,6 +551,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         super.render(graphics, (int) virtualX, (int) virtualY, partialTick);
         if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, (int) virtualX, (int) virtualY);
+        Component alternativeHint = alternativeTooltip(virtualX, virtualY);
+        if (alternativeHint != null) {
+            graphics.renderTooltip(font, alternativeHint, (int) virtualX, (int) virtualY);
+        }
         graphics.pose().popPose();
     }
 }
