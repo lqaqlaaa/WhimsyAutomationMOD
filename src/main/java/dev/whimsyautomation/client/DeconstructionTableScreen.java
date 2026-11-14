@@ -14,22 +14,23 @@ import java.util.List;
 
 public final class DeconstructionTableScreen extends AbstractContainerScreen<DeconstructionTableMenu> {
     private static final ResourceLocation BACKGROUND =
-            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_27.png");
+    private static final ResourceLocation SLOT =
+            ResourceLocation.withDefaultNamespace("container/slot");
     private Button autoButton;
     private Button lockButton;
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageWidth = 176;
-        imageHeight = 222;
-        inventoryLabelY = 127;
+        imageWidth = 300;
+        imageHeight = 166;
+        inventoryLabelY = 72;
         titleLabelY = 6;
     }
 
     private void send(int id) {
-        if (minecraft != null && minecraft.gameMode != null) {
+        if (minecraft != null && minecraft.gameMode != null)
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
-        }
     }
 
     private Component autoLabel() {
@@ -41,57 +42,52 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     @Override
     protected void init() {
         super.init();
-
-        // The top row follows the vanilla container title area. Material-preview
-        // paging is kept separate from the actual output-inventory paging.
-        addRenderableWidget(Button.builder(Component.literal("材‹"), b -> menu.cyclePreviewPage(-1))
+        addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
                 .tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 72, topPos + 1, 16, 14).build());
-        addRenderableWidget(Button.builder(Component.literal("材›"), b -> menu.cyclePreviewPage(1))
+                .bounds(leftPos + 184, topPos + 126, 18, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
                 .tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 90, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 204, topPos + 126, 18, 18).build());
+
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
                 .tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 136, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 118, topPos + 2, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
                 .tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 154, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 138, topPos + 2, 18, 18).build());
 
-        // The sixth machine row is reserved for controls; the input slot remains
-        // a real menu slot at the far left and never shares a button hitbox.
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 26, topPos + 106, 64, 18).build();
+                .bounds(leftPos + 204, topPos + 17, 88, 18).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 92, topPos + 106, 18, 18).build());
+                .bounds(leftPos + 184, topPos + 42, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 112, topPos + 106, 18, 18).build());
-        lockButton = Button.builder(Component.literal(menu.isLocked() ? "解" : "锁"), b -> send(6))
-                .tooltip(Tooltip.create(Component.translatable(menu.isLocked()
-                        ? "screen.whimsy_automation.unlock" : "screen.whimsy_automation.lock")))
-                .bounds(leftPos + 132, topPos + 106, 18, 18).build();
+                .bounds(leftPos + 204, topPos + 42, 18, 18).build());
+        lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
+                .bounds(leftPos + 224, topPos + 42, 32, 18).build();
         addRenderableWidget(lockButton);
-        addRenderableWidget(Button.builder(Component.literal("▶"), b -> send(3))
+        addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 152, topPos + 106, 18, 18).build());
+                .bounds(leftPos + 260, topPos + 42, 32, 18).build());
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight, 176, 222);
-
-        // The vanilla generic container texture already supplies all 54 slot
-        // wells, including the preview rows and the player's inventory.
+        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, 176, 166, 176, 166);
+        graphics.blitSprite(SLOT, leftPos + 184, topPos + 17, 16, 16);
         List<ItemStack> preview = menu.getPreviewStacks();
-        int columns = 9;
-        for (int i = 0; i < preview.size() && i < 18; i++) {
-            int itemX = leftPos + 8 + (i % columns) * 18;
-            int itemY = topPos + 71 + (i / columns) * 18;
-            graphics.renderItem(preview.get(i), itemX, itemY);
-            graphics.renderItemDecorations(font, preview.get(i), itemX, itemY);
+        for (int i = 0; i < 18; i++) {
+            int x = leftPos + 184 + (i % 6) * 18;
+            int y = topPos + 65 + (i / 6) * 18;
+            graphics.blitSprite(SLOT, x, y, 16, 16);
+            if (i < preview.size()) {
+                ItemStack stack = preview.get(i);
+                graphics.renderItem(stack, x, y);
+                graphics.renderItemDecorations(font, stack, x, y);
+            }
         }
     }
 
@@ -100,12 +96,15 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"),
                 8, titleLabelY, 0x404040, false);
         graphics.drawString(font, Component.literal((menu.getPage() + 1) + "/" + menu.getPageCount()),
-                108, titleLabelY, 0x404040, false);
+                158, 7, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-
+        graphics.drawString(font, Component.literal("输入物品"), 184, 36, 0x404040, false);
+        graphics.drawString(font, Component.literal("配方材料"), 184, 55, 0x404040, false);
+        graphics.drawString(font, Component.literal((menu.getPreviewPage() + 1) + "/" + menu.getPreviewPageCount()),
+                228, 131, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
-        if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解" : "锁"));
+        if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
     }
 
     @Override
