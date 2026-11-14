@@ -24,6 +24,22 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         titleLabelY = 60;
     }
 
+    private double uiScale() {
+        double horizontal = (width - 8.0) / imageWidth;
+        double vertical = (height - 8.0) / imageHeight;
+        return Math.max(0.05, Math.min(1.0, Math.min(horizontal, vertical)));
+    }
+
+    private double virtualMouseX(double x) {
+        double scale = uiScale();
+        return width / 2.0 + (x - width / 2.0) / scale;
+    }
+
+    private double virtualMouseY(double y) {
+        double scale = uiScale();
+        return height / 2.0 + (y - height / 2.0) / scale;
+    }
+
     private void send(int id) {
         if (minecraft != null && minecraft.gameMode != null)
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
@@ -152,6 +168,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        mouseX = virtualMouseX(mouseX);
+        mouseY = virtualMouseY(mouseY);
         if (showSideConfig) {
             int x = leftPos + 176, y = topPos + 54;
             if (mouseX >= x + 150 && mouseX < x + 176 && mouseY >= y && mouseY < y + 24) {
@@ -176,18 +194,25 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (showSideConfig) return true;
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
+        if (showSideConfig && !(x >= leftPos + 176 && y >= topPos + 160))
+            return true;
+        double scale = uiScale();
+        return super.mouseDragged(x, y, button, dragX / scale, dragY / scale);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (showSideConfig) return true;
-        return super.mouseReleased(mouseX, mouseY, button);
+        double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
+        if (showSideConfig && !(x >= leftPos + 176 && y >= topPos + 160))
+            return true;
+        return super.mouseReleased(x, y, button);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        mouseX = virtualMouseX(mouseX);
+        mouseY = virtualMouseY(mouseY);
         boolean overBuffer = mouseX >= leftPos + 180 && mouseX < leftPos + 352
                 && mouseY >= topPos + 170 && mouseY < topPos + 220;
         if (overBuffer && menu.getBufferPageCount() > 1) {
@@ -209,26 +234,27 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        double scale = uiScale();
+        double virtualX = virtualMouseX(mouseX), virtualY = virtualMouseY(mouseY);
+        graphics.pose().pushPose();
+        graphics.pose().translate(width / 2.0 * (1.0 - scale),
+                height / 2.0 * (1.0 - scale), 0.0);
+        graphics.pose().scale((float) scale, (float) scale, 1.0F);
         if (showSideConfig) {
-            // Keep the left output storage and player inventory visible. The
-            // opaque dialog replaces only the right-hand machine controls.
-            // AbstractContainerScreen renders the background, machine GUI,
-            // real slot contents, and widgets exactly once. A second explicit
-            // renderBackground call was darkening the world a second time.
+            // The full interface is uniformly scaled to fit the available GUI
+            // viewport; the modal only replaces the upper control area.
             super.render(graphics, -10000, -10000, partialTick);
-            // Flush the container's item/widget buffers before the modal pass.
-            // Vanilla item rendering applies its own positive GUI Z offset;
-            // the modal must be placed in front of that layer, not merely
-            // drawn later at Z=0.
             graphics.flush();
             graphics.pose().pushPose();
             graphics.pose().translate(leftPos, topPos, 500.0F);
             renderSideConfig(graphics);
             graphics.flush();
             graphics.pose().popPose();
+            graphics.pose().popPose();
             return;
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
+        super.render(graphics, (int) virtualX, (int) virtualY, partialTick);
+        renderTooltip(graphics, (int) virtualX, (int) virtualY);
+        graphics.pose().popPose();
     }
 }
