@@ -24,7 +24,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         imageWidth = 352;
         imageHeight = 222;
         inventoryLabelY = 130;
-        titleLabelY = 60;
+        titleLabelY = 42;
     }
 
     private double uiScale() {
@@ -49,7 +49,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     private EditBox pageField(int x, int y, int initialPage) {
-        EditBox field = new EditBox(font, leftPos + x, topPos + y, 22, 14, Component.literal("页码"));
+        EditBox field = new EditBox(font, leftPos + x, topPos + y, 18, 18, Component.literal("页码"));
         field.setMaxLength(10);
         field.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         field.setValue(Integer.toString(initialPage));
@@ -104,43 +104,43 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void init() {
         super.init();
         topPos -= 27;
-        outputPageField = pageField(90, 57, menu.getPage() + 1);
+        outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 114, topPos + 57, 18, 14).build());
+                .bounds(leftPos + 110, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(3); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
-                .bounds(leftPos + 134, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 130, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.min(menu.getPageCount(), menu.getPage() + 2)));
         }).tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.next")))
-                .bounds(leftPos + 148, topPos + 57, 12, 14).build());
+                .bounds(leftPos + 150, topPos + 53, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
                 .bounds(leftPos + 184, topPos + 89, 78, 18).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 184, topPos + 109, 78, 18).build();
+                .bounds(leftPos + 184, topPos + 107, 78, 18).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 264, topPos + 109, 80, 18).build();
+                .bounds(leftPos + 264, topPos + 107, 80, 18).build();
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
                 .bounds(leftPos + 264, topPos + 89, 80, 18).build());
 
-        bufferPageField = pageField(224, 153, menu.getBufferPage() + 1);
+        bufferPageField = pageField(266, 153, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(bufferPageField, menu.getBufferPageCount(), 1))
-                .bounds(leftPos + 248, topPos + 153, 18, 14).build());
+                .bounds(leftPos + 286, topPos + 153, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(5); bufferPageField.setValue(Integer.toString(Math.max(1, menu.getBufferPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页缓冲物品")))
-                .bounds(leftPos + 268, topPos + 153, 12, 14).build());
+                .bounds(leftPos + 306, topPos + 153, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(6); bufferPageField.setValue(Integer.toString(Math.min(menu.getBufferPageCount(), menu.getBufferPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页缓冲物品")))
-                .bounds(leftPos + 282, topPos + 153, 12, 14).build());
+                .bounds(leftPos + 326, topPos + 153, 18, 18).build());
     }
 
     @Override
@@ -167,7 +167,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.extractor"),
                 8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 42, 0x404040, false);
+        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 60, 0x404040, false);
         if (outputPageField != null && !outputPageField.isFocused())
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.book_input"),
@@ -175,7 +175,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
         graphics.drawString(font, Component.literal("缓冲区"), 184, 130, 0x404040, false);
-        graphics.drawString(font, Component.literal("/ " + menu.getBufferPageCount() + "页"), 298, 156, 0x404040, false);
+        graphics.drawString(font, Component.literal("页数 " + (menu.getBufferPage() + 1) + "/" + menu.getBufferPageCount()), 184, 156, 0x404040, false);
         if (bufferPageField != null && !bufferPageField.isFocused())
             bufferPageField.setValue(Integer.toString(menu.getBufferPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
