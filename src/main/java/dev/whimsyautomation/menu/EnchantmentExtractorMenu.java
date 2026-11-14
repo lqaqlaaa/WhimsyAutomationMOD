@@ -151,7 +151,26 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
     private void addPagedOutputSlot(int outputIndex) {
         int x = 8 + (outputIndex % 9) * 18;
         int y = 71 + (outputIndex / 9) * 18;
-        addSlot(new SlotItemHandler(pageHandler, outputIndex, x, y));
+        addSlot(new SlotItemHandler(pageHandler, outputIndex, x, y) {
+            @Override
+            public ItemStack safeInsert(ItemStack stack, int increment) {
+                // Slot.safeInsert normally writes through setStackInSlot().
+                // That is unsafe for our virtual output projection: a normal
+                // right-click would overwrite a generated slot instead of
+                // restoring the book to the input. Route ordinary clicks through
+                // the same transactional path used by the item handler/shift-click.
+                if (stack.isEmpty() || increment <= 0 || machine == null
+                        || !stack.is(Items.ENCHANTED_BOOK)
+                        || !machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack)) {
+                    return stack;
+                }
+                int offeredCount = Math.min(increment, stack.getCount());
+                ItemStack offered = stack.copyWithCount(offeredCount);
+                ItemStack remainder = pageHandler.insertItem(outputIndex, offered, false);
+                int accepted = offeredCount - remainder.getCount();
+                return accepted <= 0 ? stack : stack.copyWithCount(stack.getCount() - accepted);
+            }
+        });
     }
 
     private void addPlayerInventory(Inventory inventory, int x, int y) {
