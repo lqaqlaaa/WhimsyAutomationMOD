@@ -236,10 +236,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     // Modal rendering runs under an explicit GUI-origin pose. Input hit tests
     // stay in absolute screen coordinates, so these are intentionally separate.
     private int pickerX() { return 176; }
-    private int pickerY() { return 125; }
+    private int pickerY() { return 54; }
     private int pickerHitX() { return leftPos + 176; }
-    private int pickerHitY() { return topPos + 125; }
-    private int pickerHeight() { return 95; }
+    private int pickerHitY() { return topPos + 54; }
+    private int pickerHeight() { return 166; }
 
     private void renderIngredientPicker(GuiGraphics graphics, int mouseX, int mouseY) {
         if (selectedIngredientGroup < 0) return;
