@@ -117,16 +117,16 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 .bounds(leftPos + 156, topPos + 55, 14, 14).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .bounds(leftPos + 204, topPos + 90, 140, 14).build();
+                .bounds(leftPos + 204, topPos + 89, 140, 22).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 204, topPos + 107, 68, 14).build();
+                .bounds(leftPos + 204, topPos + 113, 68, 18).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 274, topPos + 107, 70, 14).build();
+                .bounds(leftPos + 274, topPos + 113, 70, 18).build();
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
-                .bounds(leftPos + 184, topPos + 107, 18, 14).build());
+                .bounds(leftPos + 184, topPos + 113, 18, 18).build());
 
         bufferPageField = pageField(262, 130, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
@@ -146,10 +146,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         // renderBg uses screen coordinates; the menu owns its independent
         // GUI-local slot positions. Do not mix the two coordinate spaces.
-        panel(graphics, leftPos, topPos + 54, 176, 71);
-        panel(graphics, leftPos, topPos + 125, 176, 95);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 71);
-        panel(graphics, leftPos + 176, topPos + 125, 176, 95);
+        // Keep the machine area and player inventory on one continuous
+        // vanilla-style container background, without a fake middle divider.
+        panel(graphics, leftPos, topPos + 54, imageWidth, imageHeight - 56);
 
         // Exactly 27 stored-output slots, one machine input slot, and the
         // player's single native 36-slot inventory. No decorative fake slots.
