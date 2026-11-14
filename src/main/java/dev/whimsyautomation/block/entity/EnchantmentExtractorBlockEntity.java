@@ -64,9 +64,24 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     private boolean internalInventoryUpdate;
     private boolean extractingGeneratedOutput;
+    private boolean persistentOutputMode;
 
     public boolean isAutoMode() { return autoMode; }
-    public void setAutoMode(boolean enabled) { autoMode = enabled; setChanged(); }
+    public boolean isPersistentOutputMode() { return persistentOutputMode; }
+    public void setAutoMode(boolean enabled) {
+        if (autoMode == enabled) return;
+        autoMode = enabled;
+        if (enabled) {
+            internalInventoryUpdate = true;
+            for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) inventory.setStackInSlot(slot, ItemStack.EMPTY);
+            internalInventoryUpdate = false;
+            persistentOutputMode = true;
+        } else if (!hasStoredOutputs()) {
+            persistentOutputMode = false;
+            refreshGeneratedSlots();
+        }
+        setChanged();
+    }
     public boolean isSplitLevels() { return splitLevels; }
     public boolean isCombinedOutput() { return combinedOutput; }
     public int getOutputMode() { return combinedOutput ? 0 : (splitLevels ? 2 : 1); }
@@ -86,17 +101,80 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         refreshGeneratedSlots();
         setChanged();
     }
-    /** Rebuilds the virtual enchanted-book outputs; the input item is never consumed. */
-    public void processOnce() { if (level != null && !level.isClientSide) refreshGeneratedSlots(); }
+    /** Manual mode refreshes its preview; automatic mode performs a real extraction cycle. */
+    public void processOnce() {
+        if (level == null || level.isClientSide) return;
+        if (autoMode) processAutomaticInput(); else refreshGeneratedSlots();
+    }
+    private boolean hasStoredOutputs() {
+        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++)
+            if (!inventory.getStackInSlot(slot).isEmpty()) return true;
+        return false;
+    }
+    private void addToOutputPlan(List<ItemStack> plan, ItemStack incoming) {
+        if (incoming.isEmpty()) return;
+        ItemStack template = incoming.copyWithCount(1);
+        int limit = Math.max(1, Math.min(99, template.getMaxStackSize()));
+        int remaining = incoming.getCount();
+        for (ItemStack present : plan) {
+            if (remaining <= 0) break;
+            if (present.isEmpty() || !ItemStack.isSameItemSameComponents(present, template)) continue;
+            int room = Math.max(0, Math.min(99, present.getMaxStackSize()) - present.getCount());
+            int moved = Math.min(room, remaining);
+            if (moved > 0) { present.grow(moved); remaining -= moved; }
+        }
+        while (remaining > 0) {
+            int moved = Math.min(limit, remaining);
+            plan.add(template.copyWithCount(moved));
+            remaining -= moved;
+        }
+    }
+    /** Atomically converts one input into physical enchanted books and its stripped source item. */
+    private void processAutomaticInput() {
+        ItemStack input = inventory.getStackInSlot(0);
+        if (input.isEmpty()) return;
+        ItemEnchantments enchantments = getStackEnchantments(input);
+        List<ItemStack> plan = new ArrayList<>();
+        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) plan.add(inventory.getStackInSlot(slot).copy());
+        if (!enchantments.isEmpty()) {
+            if (combinedOutput) addToOutputPlan(plan, createCombinedBook(enchantments));
+            else for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
+                int lvl = entry.getIntValue();
+                if (lvl <= 0) continue;
+                if (splitLevels) {
+                    while (lvl > 0) {
+                        int count = Math.min(BOOK_STACK_COMPONENT_LIMIT, lvl);
+                        ItemStack book = createBook(entry.getKey(), 1);
+                        book.setCount(count);
+                        addToOutputPlan(plan, book);
+                        lvl -= count;
+                    }
+                } else addToOutputPlan(plan, createBook(entry.getKey(), lvl));
+            }
+        }
+        ItemStack stripped = input.copy();
+        if (stripped.is(Items.ENCHANTED_BOOK)) stripped.remove(DataComponents.STORED_ENCHANTMENTS);
+        else stripped.remove(DataComponents.ENCHANTMENTS);
+        addToOutputPlan(plan, stripped);
+        internalInventoryUpdate = true;
+        try {
+            inventory.resize(OUTPUT_START + Math.max(PAGE_SIZE * 10, plan.size()));
+            for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++)
+                inventory.setStackInSlot(slot, slot - OUTPUT_START < plan.size() ? plan.get(slot - OUTPUT_START) : ItemStack.EMPTY);
+            inventory.setStackInSlot(0, ItemStack.EMPTY);
+            persistentOutputMode = true;
+        } finally { internalInventoryUpdate = false; }
+        setChanged();
+    }
     public void dropAllContents() {
         if (level == null || level.isClientSide) return;
-        // Output books are virtual projections of the enchantments still stored
-        // on the input item. Drop only the input; dropping both would duplicate
-        // every enchantment that had not yet been extracted.
         ItemStack input = inventory.getStackInSlot(0);
-        if (!input.isEmpty()) {
-            Containers.dropItemStack(level, worldPosition.getX() + 0.5,
-                    worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, input);
+        if (!input.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5,
+                worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, input);
+        if (persistentOutputMode) for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
+            ItemStack stored = inventory.getStackInSlot(slot);
+            if (!stored.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5,
+                    worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, stored);
         }
         for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
             ItemStack queued = inputBuffer.getStackInSlot(slot);
@@ -112,7 +190,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
-        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : OUTPUT_STACK_LIMIT; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : 99; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (stack.isEmpty()) return false;
             // The extractor must accept every non-empty input. Items without
@@ -130,11 +208,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             // ItemStackHandler. The client must never apply an incoming enchanted
             // book to the input or clear the synchronized generated output slot.
             if (level == null || level.isClientSide) { setChanged(); return; }
-            if (slot == 0) {
-                refreshGeneratedSlots();
-            }
-            // Slots 1+ are generated, read-only projections. A book can only be
-            // restored through EnchantmentExtractorMenu.pageHandler.insertItem(),
+            if (slot == 0 && !autoMode && !persistentOutputMode) refreshGeneratedSlots();
+            // Manual mode uses virtual projections; persistent automatic outputs
+            // are real stacks and must never be rebuilt from the input,
             // which consumes exactly the amount actually accepted. Never infer a
             // player insertion from a raw slot mutation: that path used to apply
             // one book and erase an entire stacked input, or rebuild stale output.
@@ -148,9 +224,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             if (present.isEmpty()) return ItemStack.EMPTY;
             int requestedCount = Math.min(amount, present.getCount());
             ItemStack requested = present.copyWithCount(requestedCount);
-            // Validate against the authoritative input before the output slot is
-            // touched. A stale client slot can therefore never mint a book.
-            if (!canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
+            if (!persistentOutputMode && !canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
             if (simulate) return super.extractItem(slot, requestedCount, true);
             extractingGeneratedOutput = true;
             ItemStack extracted;
@@ -159,7 +233,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             } finally {
                 extractingGeneratedOutput = false;
             }
-            if (!extracted.isEmpty()) removeGeneratedBook(slot, extracted, true);
+            if (!extracted.isEmpty() && !persistentOutputMode) removeGeneratedBook(slot, extracted, true);
+            if (persistentOutputMode && !autoMode && !hasStoredOutputs()) {
+                persistentOutputMode = false;
+                refreshGeneratedSlots();
+            }
             return extracted;
         }
 
@@ -175,7 +253,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         private DynamicItemStackHandler(int size) { super(size); }
 
         @Override protected int getStackLimit(int slot, ItemStack stack) {
-            return slot == 0 ? 1 : OUTPUT_STACK_LIMIT;
+            return slot == 0 ? 1 : Math.max(1, Math.min(99, stack.getMaxStackSize()));
         }
 
         private void resize(int size) {
@@ -191,7 +269,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, automationInputHandler,
             OUTPUT_START, true, true,
-            () -> getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
+            () -> !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
 
     public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
     public void cycleSideMode(Direction side) {
@@ -240,7 +318,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int mode = sideModes[index];
             sidedHandlers[index] = new SidedMachineItemHandler(inventory, automationInputHandler, OUTPUT_START,
                     mode == 1, mode == 2,
-                    () -> mode == 2 && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
+                    () -> mode == 2 && !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
         }
         return sidedHandlers[index];
     }
@@ -253,8 +331,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             ItemStack next = machine.takeNextBufferedItem();
             if (!next.isEmpty()) machine.inventory.setStackInSlot(0, next);
         }
-        // Generated output is derived when the input or output mode changes.
-        // Rebuilding it on a timer would refill deliberately emptied output slots.
+        if (machine.autoMode) machine.processAutomaticInput();
     }
 
     private ItemStack takeNextBufferedItem() {
@@ -419,7 +496,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 : stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
     }
     private void refreshGeneratedSlots() {
-        if (level == null || level.isClientSide || internalInventoryUpdate) return;
+        if (level == null || level.isClientSide || internalInventoryUpdate || autoMode || persistentOutputMode) return;
         ItemStack input = inventory.getStackInSlot(0);
         ItemEnchantments enchantments = getStackEnchantments(input);
         List<ItemStack> generated = new ArrayList<>();
@@ -577,6 +654,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         tag.putBoolean("SplitLevels", splitLevels);
         tag.putBoolean("CombinedOutput", combinedOutput);
         tag.putBoolean("AutoExtractionPaused", autoExtractionPaused);
+        tag.putBoolean("PersistentOutputMode", persistentOutputMode);
         tag.putIntArray("SideModes", sideModes);
     }
 
@@ -586,6 +664,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         if (tag.contains("InputBuffer")) inputBuffer.deserializeNBT(registries, tag.getCompound("InputBuffer"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
+        persistentOutputMode = tag.getBoolean("PersistentOutputMode");
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
         splitLevels = tag.getBoolean("SplitLevels");
@@ -594,6 +673,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         for (int i = 0; i < Math.min(savedSideModes.length, sideModes.length); i++) sideModes[i] = Math.max(0, Math.min(2, savedSideModes[i]));
         java.util.Arrays.fill(sidedHandlers, null);
         // Rebuild only after mode flags have been restored from disk.
-        if (level != null && !level.isClientSide) refreshGeneratedSlots();
+        if (level != null && !level.isClientSide && !persistentOutputMode && !autoMode) refreshGeneratedSlots();
     }
 }
