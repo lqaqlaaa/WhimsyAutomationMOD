@@ -66,28 +66,28 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         super.init();
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
                 .tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 274, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 276, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
                 .tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 294, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 296, topPos + 55, 14, 14).build());
 
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
                 .tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 112, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 114, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
                 .tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 132, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 134, topPos + 55, 14, 14).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 120, 160, 18).build();
+                .bounds(leftPos + 184, topPos + 120, 160, 14).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 144, 18, 18).build());
+                .bounds(leftPos + 186, topPos + 146, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 204, topPos + 144, 18, 18).build());
+                .bounds(leftPos + 206, topPos + 146, 14, 14).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
                 .bounds(leftPos + 224, topPos + 144, 44, 18).build();
         addRenderableWidget(lockButton);
