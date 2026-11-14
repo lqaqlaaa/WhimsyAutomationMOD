@@ -168,10 +168,16 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (showSideConfig && keyCode == 256) { showSideConfig = false; return true; }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
-        renderSideConfig(graphics);
-        renderTooltip(graphics, mouseX, mouseY);
+        if (showSideConfig) renderSideConfig(graphics);
+        if (!showSideConfig) renderTooltip(graphics, mouseX, mouseY);
     }
 }
