@@ -1,13 +1,18 @@
 package dev.whimsyautomation.util;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
 
-/** Resolves recipe ingredient groups without losing alternatives or required counts. */
+/** Resolves logical recipe ingredient groups while preserving repeated ingredient counts. */
 public final class RecipeIngredientResolver {
     private RecipeIngredientResolver() {}
 
@@ -16,6 +21,7 @@ public final class RecipeIngredientResolver {
     }
 
     public static List<IngredientGroup> getGroups(Recipe<?> recipe) {
+        // Explicit NeoForge/modded input groups and counts are authoritative.
         try {
             Method inputsMethod = recipe.getClass().getMethod("getInputs");
             Object rawInputs = inputsMethod.invoke(recipe);
@@ -35,14 +41,28 @@ public final class RecipeIngredientResolver {
                 if (!resolved.isEmpty()) return List.copyOf(resolved);
             }
         } catch (ReflectiveOperationException | SecurityException ignored) { }
-        List<IngredientGroup> fallback = new ArrayList<>();
+
+        // Vanilla recipes expose one Ingredient per occupied crafting position.
+        // Collapse identical alternative sets into one selectable material group.
+        Map<String, IngredientGroup> grouped = new LinkedHashMap<>();
         for (Ingredient ingredient : recipe.getIngredients()) {
-            if (!ingredient.isEmpty()) fallback.add(new IngredientGroup(ingredient, 1));
+            if (ingredient.isEmpty()) continue;
+            String key = canonicalKey(ingredient);
+            IngredientGroup previous = grouped.get(key);
+            grouped.put(key, previous == null ? new IngredientGroup(ingredient, 1)
+                    : new IngredientGroup(previous.ingredient(), previous.count() + 1));
         }
-        return List.copyOf(fallback);
+        return List.copyOf(grouped.values());
     }
 
-    /** Compatibility view for callers that only need ingredient predicates. */
+    private static String canonicalKey(Ingredient ingredient) {
+        TreeSet<String> ids = new TreeSet<>();
+        for (ItemStack stack : ingredient.getItems()) {
+            if (!stack.isEmpty()) ids.add(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+        }
+        return String.join("|", ids);
+    }
+
     public static List<Ingredient> getIngredients(Recipe<?> recipe) {
         return getGroups(recipe).stream().map(IngredientGroup::ingredient).toList();
     }
