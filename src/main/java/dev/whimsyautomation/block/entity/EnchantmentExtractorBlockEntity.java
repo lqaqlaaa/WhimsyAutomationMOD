@@ -666,9 +666,19 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         if (tag.contains("InputBuffer")) inputBuffer.deserializeNBT(registries, tag.getCompound("InputBuffer"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
+        boolean hasOutputModeMarker = tag.contains("PersistentOutputMode");
         persistentOutputMode = tag.getBoolean("PersistentOutputMode");
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
+        // Older saves stored generated books in output slots as virtual previews.
+        // Never reinterpret those preview stacks as physical queued output.
+        if (!hasOutputModeMarker && autoMode) {
+            internalInventoryUpdate = true;
+            for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++)
+                inventory.setStackInSlot(slot, ItemStack.EMPTY);
+            internalInventoryUpdate = false;
+            persistentOutputMode = true;
+        }
         splitLevels = tag.getBoolean("SplitLevels");
         combinedOutput = tag.getBoolean("CombinedOutput");
         int[] savedSideModes = tag.getIntArray("SideModes");
