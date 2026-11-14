@@ -20,10 +20,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageWidth = 300;
-        imageHeight = 166;
-        inventoryLabelY = 72;
-        titleLabelY = 6;
+        imageWidth = 352;
+        imageHeight = 220;
+        inventoryLabelY = 126;
+        titleLabelY = 60;
     }
 
     private void send(int id) {
@@ -48,19 +48,19 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         super.init();
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
-                .bounds(leftPos + 118, topPos + 2, 18, 18).build());
+                .bounds(leftPos + 118, topPos + 56, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(4))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.next")))
-                .bounds(leftPos + 138, topPos + 2, 18, 18).build());
+                .bounds(leftPos + 138, topPos + 56, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .bounds(leftPos + 204, topPos + 17, 88, 18).build();
+                .bounds(leftPos + 184, topPos + 4, 160, 18).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 184, topPos + 42, 52, 18).build();
+                .bounds(leftPos + 184, topPos + 28, 76, 18).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 240, topPos + 42, 52, 18).build();
+                .bounds(leftPos + 264, topPos + 28, 80, 18).build();
         addRenderableWidget(outputModeButton);
     }
 
@@ -70,9 +70,13 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         // then the inventory section from the lower part of generic_54.png.
         // This avoids the non-existent generic_27 texture and keeps the
         // rendered slots aligned with the menu's real Slot coordinates.
-        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, 176, 71, 256, 256);
-        graphics.blit(BACKGROUND, leftPos, topPos + 71, 0, 126, 176, 95, 256, 256);
-        graphics.blitSprite(SLOT, leftPos + 184, topPos + 17, 16, 16);
+        // Full two-panel vanilla container layout. Output inventory stays
+        // on the left; the right panel contains the book input and controls.
+        graphics.blit(BACKGROUND, leftPos, topPos + 54, 0, 0, 176, 71, 256, 256);
+        graphics.blit(BACKGROUND, leftPos, topPos + 125, 0, 126, 176, 95, 256, 256);
+        graphics.blit(BACKGROUND, leftPos + 176, topPos + 54, 0, 0, 176, 71, 256, 256);
+        graphics.blit(BACKGROUND, leftPos + 176, topPos + 125, 0, 126, 176, 95, 256, 256);
+                graphics.blitSprite(SLOT, leftPos + 184, topPos + 71, 16, 16);
     }
 
     @Override
@@ -80,9 +84,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.extractor"),
                 8, titleLabelY, 0x404040, false);
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.page",
-                menu.getPage() + 1, menu.getPageCount()), 158, 7, 0x404040, false);
+                menu.getPage() + 1, menu.getPageCount()), 150, 61, 0x404040, false);
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.book_input"),
-                184, 36, 0x404040, false);
+                202, 75, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
         if (autoButton != null) autoButton.setMessage(autoLabel());
