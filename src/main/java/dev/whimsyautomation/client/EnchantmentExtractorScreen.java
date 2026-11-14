@@ -127,7 +127,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
         String[] modes = {"关", "入", "出"};
-        int[] colors = {0xFFE74C3C, 0xFF2ECC71, 0xFF3498DB, 0xFFF1C40F, 0xFF9B59B6, 0xFF1ABC9C};
+        int[] colors = {0xFF993333, 0xFF7FCC19, 0xFF334CB2, 0xFFE5E533, 0xFF7F3FB2, 0xFF4C7F99};
         for (int i = 0; i < 6; i++) {
             int col = i % 3, row = i / 3;
             int cellX = x + 8 + col * 55, cellY = y + 34 + row * 25;
