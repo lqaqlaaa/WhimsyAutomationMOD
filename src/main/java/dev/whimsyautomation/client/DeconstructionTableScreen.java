@@ -18,6 +18,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private Button lockButton;
     private int selectedIngredientGroup = -1;
     private int ingredientPickerScroll;
+    private boolean showSideConfig;
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -82,8 +83,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 138, 160, 14).build();
+                .bounds(leftPos + 184, topPos + 138, 98, 14).build();
         addRenderableWidget(autoButton);
+        addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
+            showSideConfig = !showSideConfig;
+            selectedIngredientGroup = -1;
+        }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")) )
+                .bounds(leftPos + 286, topPos + 138, 58, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
                 .bounds(leftPos + 184, topPos + 156, 18, 18).build());
@@ -145,6 +151,34 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
     }
 
+    private void renderSideConfig(GuiGraphics graphics) {
+        if (!showSideConfig) return;
+        int x = leftPos + 184, y = topPos + 74;
+        panel(graphics, x, y, 160, 66);
+        String[] names = {"下", "上", "北", "南", "西", "东"};
+        String[] modes = {"关", "入", "出"};
+        for (int i = 0; i < 6; i++) {
+            int col = i % 3, row = i / 3;
+            String label = names[i] + ":" + modes[Math.min(2, menu.getSideMode(i))];
+            graphics.drawString(font, Component.literal(label), x + 8 + col * 52, y + 8 + row * 25, 0x404040, false);
+        }
+        graphics.drawString(font, Component.literal("点击切换：关闭 / 输入 / 输出"), x + 5, y + 54, 0x606060, false);
+    }
+
+    private boolean clickSideConfig(double mouseX, double mouseY) {
+        if (!showSideConfig) return false;
+        int x = leftPos + 184, y = topPos + 74;
+        if (mouseX >= x && mouseX < x + 160 && mouseY >= y + 2 && mouseY < y + 52) {
+            int col = Math.min(2, (int) ((mouseX - (x + 4)) / 52));
+            int row = mouseY < y + 32 ? 0 : 1;
+            int side = row * 3 + col;
+            send(10 + side);
+            return true;
+        }
+        showSideConfig = false;
+        return false;
+    }
+
     private void renderIngredientPicker(GuiGraphics graphics, int mouseX, int mouseY) {
         if (selectedIngredientGroup < 0) return;
         ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
@@ -163,6 +197,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (clickSideConfig(mouseX, mouseY)) return true;
         if (selectedIngredientGroup >= 0) {
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup); int x = leftPos + 190, y = topPos + 74;
             int visible = Math.min(8, options.length);
@@ -187,6 +222,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderIngredientPicker(graphics, mouseX, mouseY);
+        renderSideConfig(graphics);
         renderTooltip(graphics, mouseX, mouseY);
     }
 }
