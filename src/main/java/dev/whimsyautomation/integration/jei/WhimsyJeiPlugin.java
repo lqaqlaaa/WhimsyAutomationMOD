@@ -58,7 +58,7 @@ public final class WhimsyJeiPlugin implements IModPlugin {
     private static void rebuildIndex(IJeiRuntime active) {
         IRecipeManager manager = active.getRecipeManager();
         Map<Item, List<Entry>> mutable = new HashMap<>();
-        manager.createRecipeCategoryLookup().get().forEach(category ->
+        manager.createRecipeCategoryLookup().includeHidden().get().forEach(category ->
                 collectMatches(manager, category, mutable));
         Map<Item, List<Entry>> frozen = new HashMap<>();
         mutable.forEach((item, entries) -> frozen.put(item, List.copyOf(entries)));
@@ -73,7 +73,7 @@ public final class WhimsyJeiPlugin implements IModPlugin {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void collectMatches(IRecipeManager manager, IRecipeCategory category,
                                        Map<Item, List<Entry>> index) {
-        manager.createRecipeLookup(category.getRecipeType()).get().forEach(recipe -> {
+        manager.createRecipeLookup(category.getRecipeType()).includeHidden().get().forEach(recipe -> {
             IIngredientSupplier ingredients = manager.getRecipeIngredients(category, recipe);
             List<ItemStack> outputs = ingredients.getIngredients(RecipeIngredientRole.OUTPUT).stream()
                     .map(typed -> typed.getIngredient(VanillaTypes.ITEM_STACK).orElse(ItemStack.EMPTY))
