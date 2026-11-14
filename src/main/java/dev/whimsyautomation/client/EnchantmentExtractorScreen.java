@@ -280,6 +280,15 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (layoutEditor != null && layoutEditor.enabled()) {
+            if (keyCode == 69) {
+                try { layoutEditor.export(); } catch (java.io.IOException ignored) { }
+                return true;
+            }
+            if (keyCode == 82) { layoutEditor.reset(); return true; }
+            if (keyCode == 256) { layoutEditor.toggle(); return true; }
+            return true;
+        }
         if (showSideConfig) {
             if (keyCode == 256) showSideConfig = false;
             return true;
@@ -293,18 +302,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 jumpPage(bufferPageField, menu.getBufferPageCount(), 1);
                 return true;
             }
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (layoutEditor != null && layoutEditor.enabled()) {
-            if (keyCode == 69) {
-                try { layoutEditor.export(); } catch (java.io.IOException ignored) { }
-                return true;
-            }
-            if (keyCode == 82) { layoutEditor.reset(); return true; }
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
