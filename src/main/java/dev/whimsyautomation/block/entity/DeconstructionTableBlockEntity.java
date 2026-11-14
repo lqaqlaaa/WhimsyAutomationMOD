@@ -380,7 +380,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
         normalizeOutputPlan(outputPlan);
+        int oldSize = inventory.getSlots();
         inventory.resize(OUTPUT_START + outputPlan.size());
+        if (inventory.getSlots() != oldSize) setChanged();
         for (int i = 0; i < outputPlan.size(); i++) {
             ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
             ItemStack after = outputPlan.get(i);
