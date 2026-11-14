@@ -171,6 +171,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
+        normalizeOutputInventory();
         if (side == null) return unsidedHandler;
         int index = side.ordinal();
         if (sidedHandlers[index] == null) {
@@ -181,7 +182,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, DeconstructionTableBlockEntity machine) {
-        if (level.isClientSide || !machine.autoMode) return;
+        if (level.isClientSide) return;
+        machine.normalizeOutputInventory();
+        if (!machine.autoMode) return;
         // Batch processing makes a full hopper-fed stack progress in one tick
         // instead of requiring one ten-tick cycle per item.
         machine.processOneItem(true);
@@ -313,6 +316,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
+        normalizeOutputPlan(outputPlan);
 
         // Scale the per-craft recovery list once, then insert each aggregated
         // result. This avoids cloning the entire output inventory for every batch.
@@ -342,6 +346,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
             outputPlan.add(inventory.getStackInSlot(slot).copy());
         }
+        normalizeOutputPlan(outputPlan);
 
         // insertIntoOutputPlan merges identical stacks and expands the output
         // inventory when necessary, so an unprocessable item is never trapped
@@ -359,6 +364,41 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
         inventory.setStackInSlot(0, ItemStack.EMPTY);
         setChanged();
+    }
+
+    /**
+     * Repairs output stacks created by older builds and splits oversized stacks
+     * before any automation capability can expose them to another mod.
+     */
+    private void normalizeOutputInventory() {
+        List<ItemStack> outputPlan = new ArrayList<>();
+        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
+            outputPlan.add(inventory.getStackInSlot(slot).copy());
+        }
+        normalizeOutputPlan(outputPlan);
+        inventory.resize(OUTPUT_START + outputPlan.size());
+        for (int i = 0; i < outputPlan.size(); i++) {
+            ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
+            ItemStack after = outputPlan.get(i);
+            if (!ItemStack.matches(before, after)) {
+                inventory.setStackInSlot(OUTPUT_START + i, after);
+            }
+        }
+    }
+
+    private void normalizeOutputPlan(List<ItemStack> plan) {
+        for (int i = 0; i < plan.size(); i++) {
+            ItemStack stack = plan.get(i);
+            if (stack.isEmpty()) continue;
+            normalizeStackLimit(stack);
+            int limit = Math.max(1, Math.min(99, stack.getMaxStackSize()));
+            if (stack.getCount() <= limit) continue;
+
+            long overflow = (long) stack.getCount() - limit;
+            ItemStack template = stack.copyWithCount(1);
+            stack.setCount(limit);
+            insertCountIntoOutputPlan(plan, template, overflow);
+        }
     }
 
     private boolean insertIntoOutputPlan(List<ItemStack> plan, ItemStack incoming) {
