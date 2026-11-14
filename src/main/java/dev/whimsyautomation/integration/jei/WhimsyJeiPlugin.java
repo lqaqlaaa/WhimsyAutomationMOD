@@ -58,6 +58,10 @@ public final class WhimsyJeiPlugin implements IModPlugin {
         categories = List.of();
     }
 
+    public static boolean isAvailable() {
+        return runtime != null;
+    }
+
     /**
      * Uses an OUTPUT focus against JEI's recipe lookup for each registered
      * category. The focus stack deliberately contains only the target item:
