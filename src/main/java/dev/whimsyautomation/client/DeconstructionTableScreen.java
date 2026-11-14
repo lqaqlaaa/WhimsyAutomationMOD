@@ -14,7 +14,7 @@ import java.util.List;
 
 public final class DeconstructionTableScreen extends AbstractContainerScreen<DeconstructionTableMenu> {
     private static final ResourceLocation BACKGROUND =
-            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_27.png");
+            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
     private static final ResourceLocation SLOT =
             ResourceLocation.withDefaultNamespace("container/slot");
     private Button autoButton;
@@ -76,7 +76,12 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, 176, 166, 176, 166);
+        // Vanilla 27-slot chest layout: draw the three-row chest header,
+        // then the inventory section from the lower part of generic_54.png.
+        // This avoids the non-existent generic_27 texture and keeps the
+        // rendered slots aligned with the menu's real Slot coordinates.
+        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, 176, 71, 256, 256);
+        graphics.blit(BACKGROUND, leftPos, topPos + 71, 0, 126, 176, 95, 256, 256);
         graphics.blitSprite(SLOT, leftPos + 184, topPos + 17, 16, 16);
         List<ItemStack> preview = menu.getPreviewStacks();
         for (int i = 0; i < 18; i++) {
