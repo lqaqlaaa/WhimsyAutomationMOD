@@ -115,7 +115,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private void renderSideConfig(GuiGraphics graphics) {
         if (!showSideConfig) return;
         int x = leftPos + 184, y = topPos + 72;
+        graphics.fill(leftPos, topPos + 54, leftPos + imageWidth, topPos + imageHeight, 0xFF303030);
         panel(graphics, x, y, 160, 68);
+        graphics.fill(x + 2, y + 2, x + 158, y + 66, 0xFFE0E0E0);
         String[] names = {"下", "上", "北", "南", "西", "东"};
         String[] modes = {"关", "入", "出"};
         int[] colors = {0xFFE74C3C, 0xFF2ECC71, 0xFF3498DB, 0xFFF1C40F, 0xFF9B59B6, 0xFF1ABC9C};
@@ -127,12 +129,14 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                     cellX + 10, cellY, 0x404040, false);
         }
         graphics.drawString(font, Component.literal("点击切换：关闭 / 输入 / 输出"), x + 5, y + 54, 0x606060, false);
+        graphics.drawString(font, Component.literal("×"), x + 148, y + 3, 0x404040, false);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (showSideConfig) {
             int x = leftPos + 184, y = topPos + 72;
+            if (mouseX >= x + 144 && mouseX < x + 160 && mouseY >= y && mouseY < y + 18) { showSideConfig = false; return true; }
             if (mouseX >= x + 4 && mouseX < x + 160 && mouseY >= y + 4 && mouseY < y + 52) {
                 int col = Math.min(2, Math.max(0, (int) ((mouseX - (x + 4)) / 52)));
                 int row = mouseY < y + 32 ? 0 : 1;
@@ -143,6 +147,24 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (showSideConfig) return true;
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (showSideConfig) return true;
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        if (showSideConfig) return true;
+        return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
     }
 
     @Override
