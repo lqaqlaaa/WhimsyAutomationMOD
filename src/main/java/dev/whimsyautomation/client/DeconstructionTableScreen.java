@@ -16,6 +16,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private static final ResourceLocation SLOT = ResourceLocation.withDefaultNamespace("container/slot");
     private Button autoButton;
     private Button lockButton;
+    private int selectedIngredientGroup = -1;
+    private int ingredientPickerScroll;
 
     public DeconstructionTableScreen(DeconstructionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -116,6 +118,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 ItemStack stack = preview.get(i);
                 graphics.renderItem(stack, x, y);
                 graphics.renderItemDecorations(font, stack, x, y);
+                int group = menu.getPreviewPage() * 18 + i;
+                if (menu.getIngredientOptions(group).length > 1) graphics.drawString(font, "+", x + 11, y - 2, 0xFF2A7FFF, true);
             }
         }
         drawPlayerSlots(graphics);
@@ -141,10 +145,48 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
     }
 
+    private void renderIngredientPicker(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (selectedIngredientGroup < 0) return;
+        ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
+        if (options.length <= 1) { selectedIngredientGroup = -1; return; }
+        int x = leftPos + 190, y = topPos + 74;
+        int visible = Math.min(8, options.length);
+        panel(graphics, x, y, 158, visible * 18 + 4);
+        graphics.drawString(font, Component.literal("选择材料"), x + 5, y + 4, 0x404040, false);
+        int start = Math.min(ingredientPickerScroll, Math.max(0, options.length - visible));
+        for (int row = 0; row < visible; row++) {
+            int index = start + row; ItemStack option = options[index]; int rowY = y + 16 + row * 18;
+            graphics.renderItem(option, x + 4, rowY);
+            graphics.drawString(font, option.getHoverName(), x + 24, rowY + 4, 0x404040, false);
+        }
+        if (options.length > visible) graphics.drawString(font, Component.literal((start + 1) + "-" + (start + visible) + "/" + options.length), x + 112, y + 4, 0x606060, false);
+    }
+
+    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (selectedIngredientGroup >= 0) {
+            ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup); int x = leftPos + 190, y = topPos + 74;
+            int visible = Math.min(8, options.length);
+            if (mouseX >= x && mouseX < x + 158 && mouseY >= y + 16 && mouseY < y + 16 + visible * 18) {
+                int row = (int) ((mouseY - (y + 16)) / 18); int index = ingredientPickerScroll + row;
+                if (index >= 0 && index < options.length) { send(1000 + selectedIngredientGroup * 32768 + index); selectedIngredientGroup = -1; return true; }
+            }
+            if (mouseX < x || mouseX >= x + 158 || mouseY < y || mouseY >= y + 16 + visible * 18) selectedIngredientGroup = -1;
+            return true;
+        }
+        int gridX = leftPos + 202, gridY = topPos + 71;
+        if (mouseX >= gridX && mouseX < gridX + 108 && mouseY >= gridY && mouseY < gridY + 54) {
+            int col = (int) ((mouseX - gridX) / 18), row = (int) ((mouseY - gridY) / 18);
+            int group = menu.getPreviewPage() * 18 + row * 6 + col;
+            if (menu.getIngredientOptions(group).length > 1) { selectedIngredientGroup = group; ingredientPickerScroll = 0; return true; }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderIngredientPicker(graphics, mouseX, mouseY);
         renderTooltip(graphics, mouseX, mouseY);
     }
 }
