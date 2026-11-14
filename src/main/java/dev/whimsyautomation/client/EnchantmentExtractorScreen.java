@@ -146,8 +146,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         // renderBg uses screen coordinates; the menu owns its independent
         // GUI-local slot positions. Do not mix the two coordinate spaces.
-        panel(graphics, leftPos, topPos + 54, 176, 76);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 76);
+        panel(graphics, leftPos, topPos + 54, 176, 166);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 166);
 
         // Exactly 27 stored-output slots, one machine input slot, and the
         // player's single native 36-slot inventory. No decorative fake slots.
@@ -165,14 +165,14 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.extractor"),
                 8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("页"), 80, 59, 0x404040, false);
+        graphics.drawString(font, Component.literal("产物 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 42, 0x404040, false);
         if (outputPageField != null && !outputPageField.isFocused())
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.book_input"),
                 202, 75, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("缓冲页 " + (menu.getBufferPage() + 1) + " / " + Math.max(1, menu.getBufferPageCount())), 184, 42, 0x404040, false);
+        graphics.drawString(font, Component.literal("缓冲 " + (menu.getBufferPage() + 1) + "/" + Math.max(1, menu.getBufferPageCount()) + "页"), 184, 42, 0x404040, false);
         if (bufferPageField != null && !bufferPageField.isFocused())
             bufferPageField.setValue(Integer.toString(menu.getBufferPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
