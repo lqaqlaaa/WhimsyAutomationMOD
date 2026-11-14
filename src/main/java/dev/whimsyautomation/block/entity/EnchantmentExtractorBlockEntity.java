@@ -275,7 +275,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, automationInputHandler,
             OUTPUT_START, true, true,
-            () -> !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
+            () -> !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode || persistentOutputMode);
 
     public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
     public void cycleSideMode(Direction side) {
@@ -324,7 +324,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int mode = sideModes[index];
             sidedHandlers[index] = new SidedMachineItemHandler(inventory, automationInputHandler, OUTPUT_START,
                     mode == 1, mode == 2,
-                    () -> mode == 2 && !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
+                    () -> mode == 2 && !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode || persistentOutputMode);
         }
         return sidedHandlers[index];
     }
