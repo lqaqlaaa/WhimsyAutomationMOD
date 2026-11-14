@@ -360,6 +360,16 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             }
             return true;
         }
+        if (keyCode == 257 || keyCode == 335) {
+            if (outputPageField != null && outputPageField.isFocused()) {
+                jumpPage(outputPageField, menu.getPageCount(), 0);
+                return true;
+            }
+            if (previewPageField != null && previewPageField.isFocused()) {
+                jumpPage(previewPageField, menu.getPreviewPageCount(), 1);
+                return true;
+            }
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
