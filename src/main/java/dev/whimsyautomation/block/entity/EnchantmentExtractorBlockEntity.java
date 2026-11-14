@@ -248,14 +248,21 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     private ItemStack takeNextBufferedItem() {
-        if (inputBuffer.getSlots() == 0) return ItemStack.EMPTY;
-        ItemStack first = inputBuffer.getStackInSlot(0);
-        if (first.isEmpty()) return ItemStack.EMPTY;
+        int firstOccupied = -1;
+        for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
+            if (!inputBuffer.getStackInSlot(slot).isEmpty()) {
+                firstOccupied = slot;
+                break;
+            }
+        }
+        if (firstOccupied < 0) return ItemStack.EMPTY;
+
+        ItemStack first = inputBuffer.getStackInSlot(firstOccupied);
         ItemStack next = first.copyWithCount(1);
         first.shrink(1);
-        inputBuffer.setStackInSlot(0, first);
+        inputBuffer.setStackInSlot(firstOccupied, first);
         if (first.isEmpty()) {
-            for (int slot = 1; slot < inputBuffer.getSlots(); slot++) {
+            for (int slot = firstOccupied + 1; slot < inputBuffer.getSlots(); slot++) {
                 inputBuffer.setStackInSlot(slot - 1, inputBuffer.getStackInSlot(slot).copy());
             }
             inputBuffer.setStackInSlot(inputBuffer.getSlots() - 1, ItemStack.EMPTY);
