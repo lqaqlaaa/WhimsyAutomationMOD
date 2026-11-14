@@ -268,7 +268,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private RecipeHolder<?> getPreviewRecipe() {
-        if (syncedLocked) return getLockedRecipeHolder();
+        if (level.isClientSide ? syncedLocked : machine != null && !machine.getLockedRecipe().isEmpty()) return getLockedRecipeHolder();
         List<RecipeHolder<?>> found = candidates();
         if (found.isEmpty()) return null;
         int index = level.isClientSide ? syncedRecipeIndex : getServerRecipeIndex();
@@ -296,9 +296,6 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (holder == null) return List.of();
         ItemStack target = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
         String recipeId = holder.id().toString();
-        if (recipeId.equals(cachedPreviewRecipeId) && ItemStack.matches(cachedPreviewInput, target)) {
-            return cachedPreviewStacks;
-        }
 
         // Preview and execution use the same server-registered Recipe ingredients.
         // JEI display alternatives can be client-only or cycle through choices that
@@ -316,10 +313,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             recovered.add(selected);
         }
         List<ItemStack> result = List.copyOf(recovered);
-        cachedPreviewRecipeId = recipeId;
-        cachedPreviewInput = target.copy();
-        cachedPreviewStacks = result;
-        return cachedPreviewStacks;
+        return result;
     }
 
     private static List<ItemStack> mergeIdenticalStacks(List<ItemStack> source) {
