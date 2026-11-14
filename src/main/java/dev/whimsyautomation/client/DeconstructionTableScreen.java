@@ -158,10 +158,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         panel(graphics, x, y, 160, 66);
         String[] names = {"下", "上", "北", "南", "西", "东"};
         String[] modes = {"关", "入", "出"};
+        int[] colors = {0xFFE74C3C, 0xFF2ECC71, 0xFF3498DB, 0xFFF1C40F, 0xFF9B59B6, 0xFF1ABC9C};
         for (int i = 0; i < 6; i++) {
             int col = i % 3, row = i / 3;
+            int cellX = x + 8 + col * 52, cellY = y + 8 + row * 25;
+            graphics.fill(cellX, cellY + 1, cellX + 7, cellY + 8, colors[i]);
             String label = names[i] + ":" + modes[Math.min(2, menu.getSideMode(i))];
-            graphics.drawString(font, Component.literal(label), x + 8 + col * 52, y + 8 + row * 25, 0x404040, false);
+            graphics.drawString(font, Component.literal(label), cellX + 10, cellY, 0x404040, false);
         }
         graphics.drawString(font, Component.literal("点击切换：关闭 / 输入 / 输出"), x + 5, y + 54, 0x606060, false);
     }
@@ -177,7 +180,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             return true;
         }
         showSideConfig = false;
-        return false;
+        return true;
     }
 
     private int pickerX() { return leftPos + 190; }
