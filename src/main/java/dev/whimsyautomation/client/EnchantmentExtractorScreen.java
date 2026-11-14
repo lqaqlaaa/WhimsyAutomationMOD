@@ -107,40 +107,40 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 114, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 114, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(3); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.previous")))
-                .bounds(leftPos + 134, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 130, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.min(menu.getPageCount(), menu.getPage() + 2)));
         }).tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.next")))
-                .bounds(leftPos + 154, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 146, topPos + 55, 14, 14).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .bounds(leftPos + 184, topPos + 89, 78, 18).build();
+                .bounds(leftPos + 184, topPos + 90, 78, 15).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 184, topPos + 109, 78, 18).build();
+                .bounds(leftPos + 184, topPos + 110, 78, 15).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 264, topPos + 109, 80, 18).build();
+                .bounds(leftPos + 264, topPos + 110, 80, 15).build();
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
-                .bounds(leftPos + 264, topPos + 89, 80, 18).build());
+                .bounds(leftPos + 264, topPos + 90, 80, 15).build());
 
         bufferPageField = pageField(262, 153, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(bufferPageField, menu.getBufferPageCount(), 1))
-                .bounds(leftPos + 286, topPos + 153, 18, 18).build());
+                .bounds(leftPos + 286, topPos + 155, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(5); bufferPageField.setValue(Integer.toString(Math.max(1, menu.getBufferPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页缓冲物品")))
-                .bounds(leftPos + 306, topPos + 153, 18, 18).build());
+                .bounds(leftPos + 302, topPos + 155, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(6); bufferPageField.setValue(Integer.toString(Math.min(menu.getBufferPageCount(), menu.getBufferPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页缓冲物品")))
-                .bounds(leftPos + 326, topPos + 153, 18, 18).build());
+                .bounds(leftPos + 318, topPos + 155, 14, 14).build());
     }
 
     @Override
