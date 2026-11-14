@@ -95,17 +95,11 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
 
             @Override public int getSlotLimit(int slot) {
-                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return 64;
-                int actual = actualSlot(slot);
-                return actual < machine.getInventory().getSlots()
-                        ? machine.getInventory().getSlotLimit(actual) : 64;
+                return 64;
             }
 
             @Override public boolean isItemValid(int slot, ItemStack stack) {
-                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return false;
-                int actual = actualSlot(slot);
-                machine.ensureOutputInventorySize(actual + 1);
-                return machine.getInventory().isItemValid(actual, stack);
+                return false;
             }
         };
 
