@@ -22,8 +22,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 352;
-        imageHeight = 286;
-        inventoryLabelY = 198;
+        imageHeight = 222;
+        inventoryLabelY = 130;
         titleLabelY = 60;
     }
 
@@ -95,9 +95,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private void drawPlayerSlots(GuiGraphics g) {
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                drawSlot(g, leftPos + 8 + col * 18, topPos + 210 + row * 18);
+                drawSlot(g, leftPos + 8 + col * 18, topPos + 139 + row * 18);
         for (int col = 0; col < 9; col++)
-            drawSlot(g, leftPos + 8 + col * 18, topPos + 268);
+            drawSlot(g, leftPos + 8 + col * 18, topPos + 197);
     }
 
     @Override
@@ -117,37 +117,37 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 .bounds(leftPos + 156, topPos + 55, 14, 14).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(0))
-                .bounds(leftPos + 184, topPos + 96, 160, 18).build();
+                .bounds(leftPos + 184, topPos + 107, 160, 14).build();
         addRenderableWidget(autoButton);
         processButton = Button.builder(Component.translatable("screen.whimsy_automation.process"), b -> send(1))
-                .bounds(leftPos + 184, topPos + 120, 76, 18).build();
+                .bounds(leftPos + 204, topPos + 124, 68, 14).build();
         addRenderableWidget(processButton);
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
-                .bounds(leftPos + 264, topPos + 120, 80, 18).build();
+                .bounds(leftPos + 274, topPos + 124, 70, 14).build();
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
-                .bounds(leftPos + 184, topPos + 144, 160, 16).build());
+                .bounds(leftPos + 184, topPos + 124, 18, 14).build());
 
-        bufferPageField = pageField(262, 160, menu.getBufferPage() + 1);
+        bufferPageField = pageField(262, 55, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(bufferPageField, menu.getBufferPageCount(), 1))
-                .bounds(leftPos + 292, topPos + 160, 18, 14).build());
+                .bounds(leftPos + 292, topPos + 55, 18, 14).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(5); bufferPageField.setValue(Integer.toString(Math.max(1, menu.getBufferPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页缓冲物品")))
-                .bounds(leftPos + 312, topPos + 160, 14, 14).build());
+                .bounds(leftPos + 312, topPos + 55, 14, 14).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(6); bufferPageField.setValue(Integer.toString(Math.min(menu.getBufferPageCount(), menu.getBufferPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页缓冲物品")))
-                .bounds(leftPos + 328, topPos + 160, 14, 14).build());
+                .bounds(leftPos + 328, topPos + 55, 14, 14).build());
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         // renderBg uses screen coordinates; the menu owns its independent
         // GUI-local slot positions. Do not mix the two coordinate spaces.
-        panel(graphics, leftPos, topPos + 54, 176, 156);
-        panel(graphics, leftPos + 176, topPos + 54, 176, 156);
+        panel(graphics, leftPos, topPos + 54, 176, 76);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 76);
 
         // Exactly 27 stored-output slots, one machine input slot, and the
         // player's single native 36-slot inventory. No decorative fake slots.
@@ -172,7 +172,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 202, 75, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("输入缓冲区"), 184, 163, 0x404040, false);
+        graphics.drawString(font, Component.literal("缓冲"), 184, 59, 0x404040, false);
         if (bufferPageField != null && !bufferPageField.isFocused())
             bufferPageField.setValue(Integer.toString(menu.getBufferPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
@@ -186,8 +186,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         int x = 176, y = 54;
         // The direction editor occupies only the upper control region.
         // The expandable input buffer remains visible and interactive below it.
-        panel(graphics, x, y, 176, 108);
-        graphics.fill(x + 2, y + 2, x + 174, y + 106, 0xFFE0E0E0);
+        panel(graphics, x, y, 176, 76);
+        graphics.fill(x + 2, y + 2, x + 174, y + 74, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
         graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
@@ -195,12 +195,12 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         int[] colors = {0xFF993333, 0xFF7FCC19, 0xFF334CB2, 0xFFE5E533, 0xFF7F3FB2, 0xFF4C7F99};
         for (int i = 0; i < 6; i++) {
             int col = i % 3, row = i / 3;
-            int cellX = x + 8 + col * 55, cellY = y + 34 + row * 25;
+            int cellX = x + 8 + col * 55, cellY = y + 28 + row * 20;
             graphics.fill(cellX, cellY + 1, cellX + 8, cellY + 9, colors[i]);
             graphics.drawString(font, Component.literal(names[i] + "：" + modes[Math.min(2, menu.getSideMode(i))]),
                     cellX + 12, cellY, 0xFF303030, false);
         }
-        graphics.drawString(font, Component.literal("点击方向切换输入/输出/关闭"), x + 8, y + 91, 0xFF606060, false);
+        graphics.drawString(font, Component.literal("点击切换输入/输出/关闭"), x + 8, y + 68, 0xFF606060, false);
     }
 
     @Override
@@ -213,15 +213,15 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 showSideConfig = false;
                 return true;
             }
-            if (mouseX >= x + 5 && mouseX < x + 171 && mouseY >= y + 28 && mouseY < y + 82) {
+            if (mouseX >= x + 5 && mouseX < x + 171 && mouseY >= y + 24 && mouseY < y + 66) {
                 int col = Math.min(2, Math.max(0, (int) ((mouseX - (x + 8)) / 55)));
-                int row = mouseY < y + 59 ? 0 : 1;
+                int row = mouseY < y + 45 ? 0 : 1;
                 send(10 + row * 3 + col);
                 return true;
             }
             // Leave the buffer slots and their page controls usable while the
             // six-direction editor is open.
-            if (mouseX < leftPos + 176 || mouseY >= topPos + 162)
+            if (mouseX < leftPos + 176 || mouseY >= topPos + 130)
                 return super.mouseClicked(mouseX, mouseY, button);
             showSideConfig = false;
             return true;
@@ -251,7 +251,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         mouseX = virtualMouseX(mouseX);
         mouseY = virtualMouseY(mouseY);
         boolean overBuffer = mouseX >= leftPos + 180 && mouseX < leftPos + 352
-                && mouseY >= topPos + 170 && mouseY < topPos + 208;
+                && mouseY >= topPos + 70 && mouseY < topPos + 108;
         if (overBuffer && menu.getBufferPageCount() > 1) {
             send(deltaY < 0 ? 6 : 5);
             return true;
