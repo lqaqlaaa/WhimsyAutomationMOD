@@ -294,7 +294,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack source = slot.getItem();
         ItemStack copy = source.copy();
-        if (index >= OUTPUT_MENU_START && index < MACHINE_SLOT_COUNT) {
+        if (index >= OUTPUT_MENU_START && index < BUFFER_MENU_START) {
             int actualOutputSlot = getActualOutputSlot(index);
             int requested = quickMoveSingle ? 1 : source.getCount();
             ItemStack moving = source.copyWithCount(Math.min(requested, source.getCount()));
