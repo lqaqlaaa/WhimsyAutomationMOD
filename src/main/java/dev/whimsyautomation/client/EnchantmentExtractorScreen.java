@@ -14,6 +14,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private Button autoButton;
     private Button processButton;
     private Button outputModeButton;
+    private boolean showSideConfig;
 
     public EnchantmentExtractorScreen(EnchantmentExtractorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -80,6 +81,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
                 .bounds(leftPos + 264, topPos + 120, 80, 18).build();
         addRenderableWidget(outputModeButton);
+        addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
+                .bounds(leftPos + 184, topPos + 144, 160, 16).build());
     }
 
     @Override
@@ -109,10 +112,44 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         if (outputModeButton != null) outputModeButton.setMessage(outputModeLabel());
     }
 
+    private void renderSideConfig(GuiGraphics graphics) {
+        if (!showSideConfig) return;
+        int x = leftPos + 184, y = topPos + 72;
+        panel(graphics, x, y, 160, 68);
+        String[] names = {"下", "上", "北", "南", "西", "东"};
+        String[] modes = {"关", "入", "出"};
+        int[] colors = {0xFFE74C3C, 0xFF2ECC71, 0xFF3498DB, 0xFFF1C40F, 0xFF9B59B6, 0xFF1ABC9C};
+        for (int i = 0; i < 6; i++) {
+            int col = i % 3, row = i / 3;
+            int cellX = x + 8 + col * 52, cellY = y + 8 + row * 25;
+            graphics.fill(cellX, cellY + 1, cellX + 7, cellY + 8, colors[i]);
+            graphics.drawString(font, Component.literal(names[i] + ":" + modes[Math.min(2, menu.getSideMode(i))]),
+                    cellX + 10, cellY, 0x404040, false);
+        }
+        graphics.drawString(font, Component.literal("点击切换：关闭 / 输入 / 输出"), x + 5, y + 54, 0x606060, false);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (showSideConfig) {
+            int x = leftPos + 184, y = topPos + 72;
+            if (mouseX >= x + 4 && mouseX < x + 160 && mouseY >= y + 4 && mouseY < y + 52) {
+                int col = Math.min(2, Math.max(0, (int) ((mouseX - (x + 4)) / 52)));
+                int row = mouseY < y + 32 ? 0 : 1;
+                send(10 + row * 3 + col);
+                return true;
+            }
+            showSideConfig = false;
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderSideConfig(graphics);
         renderTooltip(graphics, mouseX, mouseY);
     }
 }
