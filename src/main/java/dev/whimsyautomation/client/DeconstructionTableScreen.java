@@ -113,11 +113,11 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 130, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 134, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(5); outputPageField.setValue(Integer.toString(Math.min(menu.getPageCount(), menu.getPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 150, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 154, topPos + 53, 18, 18).build());
 
         previewPageField = pageField(262, 53, menu.getPreviewPage() + 1);
         addRenderableWidget(previewPageField);
