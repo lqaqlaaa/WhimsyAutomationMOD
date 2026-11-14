@@ -444,7 +444,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     public int getPage() { return Math.min(syncedPage, getPageCount() - 1); }
     public int getPageCount() {
-        int slotsCount = machine == null ? syncedOutputSlotCount : machine.getInventory().getSlots();
+        int slotsCount = machine == null || level.isClientSide
+                ? syncedOutputSlotCount : machine.getInventory().getSlots();
         return Math.max(1, (int) (((long) Math.max(PAGE_SIZE, slotsCount - OUTPUT_START) + PAGE_SIZE - 1L) / PAGE_SIZE));
     }
     public boolean isAutoMode() { return syncedAutoMode; }
