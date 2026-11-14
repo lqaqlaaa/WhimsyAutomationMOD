@@ -211,12 +211,31 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             return cachedCandidateRecipes;
         }
         List<RecipeHolder<?>> found = new ArrayList<>();
-        for (RecipeHolder<?> holder : allRecipes()) {
-            Recipe<?> recipe = holder.value();
-            if (dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe).isEmpty()) continue;
-            ItemStack result = recipe.getResultItem(level.registryAccess());
-            if (!matchesRecipeOutput(result, input)) continue;
-            found.add(holder);
+        if (level.isClientSide && dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.isAvailable()) {
+            // Client-side discovery comes from JEI's OUTPUT-focus index. Map
+            // JEI recipe ids back to server-synchronized RecipeHolders; JEI-only
+            // display recipes without a server recipe are not executable.
+            java.util.Map<String, RecipeHolder<?>> registered = new java.util.HashMap<>();
+            for (RecipeHolder<?> holder : allRecipes()) registered.put(holder.id().toString(), holder);
+            java.util.Set<String> added = new java.util.HashSet<>();
+            for (var entry : dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.findByOutput(input)) {
+                RecipeHolder<?> holder = registered.get(entry.recipeId());
+                if (holder == null || !added.add(entry.recipeId())) continue;
+                Recipe<?> recipe = holder.value();
+                if (dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe).isEmpty()) continue;
+                if (!matchesRecipeOutput(recipe.getResultItem(level.registryAccess()), input)) continue;
+                found.add(holder);
+            }
+        } else {
+            // Dedicated servers have no JEI runtime. They independently
+            // validate against their authoritative synchronized recipe set.
+            for (RecipeHolder<?> holder : allRecipes()) {
+                Recipe<?> recipe = holder.value();
+                if (dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe).isEmpty()) continue;
+                ItemStack result = recipe.getResultItem(level.registryAccess());
+                if (!matchesRecipeOutput(result, input)) continue;
+                found.add(holder);
+            }
         }
         found.sort((a, b) -> a.id().compareTo(b.id()));
         cachedCandidateRecipes = List.copyOf(found);
