@@ -88,7 +88,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 if (level.isClientSide) return stack;
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
-                return machine.getInventory().insertItem(actual, stack, simulate);
+                ItemStack unbounded = stack.copy();
+                unbounded.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, Integer.MAX_VALUE);
+                return machine.getInventory().insertItem(actual, unbounded, simulate);
             }
             @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
