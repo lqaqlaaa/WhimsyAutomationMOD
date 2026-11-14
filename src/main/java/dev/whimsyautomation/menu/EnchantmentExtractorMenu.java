@@ -109,9 +109,9 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
 
         addSlot(new net.neoforged.neoforge.items.SlotItemHandler(
                 machine != null ? machine.getInventory() : new net.neoforged.neoforge.items.ItemStackHandler(1),
-                0, 184, 17));
+                0, 184, 71));
         for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
-        addPlayerInventory(playerInventory, 8, 84);
+        addPlayerInventory(playerInventory, 8, 138);
 
         addDataSlot(new DataSlot() {
             @Override public int get() { return syncedPage; }
