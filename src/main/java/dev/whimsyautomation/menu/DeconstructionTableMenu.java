@@ -121,12 +121,13 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             addSlot(new Slot(new net.minecraft.world.SimpleContainer(1), 0, 184, 17));
         }
         for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
-        addPlayerInventory(playerInventory, 8, 138);
+        addPlayerInventory(playerInventory, 8, 182);
         addDataSlot(new DataSlot() {
             @Override public int get() { return getServerRecipeIndex(); }
             @Override public void set(int value) { syncedRecipeIndex = value; }
         });
         addIntDataSlots(() -> syncedPage, value -> syncedPage = Math.max(0, value));
+        addIntDataSlots(() -> syncedPreviewPage, value -> syncedPreviewPage = Math.max(0, value));
         addIntDataSlots(
                 () -> machine == null ? OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES : machine.getInventory().getSlots(),
                 value -> syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES, value));
@@ -453,6 +454,13 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
         if (machine == null || player.level().isClientSide) return false;
+        if (buttonId < 0) {
+            int encoded = -buttonId - 1;
+            int targetPage = encoded >>> 1;
+            if ((encoded & 1) == 0) syncedPage = Math.max(0, Math.min(getPageCount() - 1, targetPage));
+            else syncedPreviewPage = Math.max(0, Math.min(getPreviewPageCount() - 1, targetPage));
+            return true;
+        }
         if (buttonId >= 10 && buttonId <= 15) { machine.cycleSideMode(Direction.values()[buttonId - 10]); return true; }
         if (buttonId >= 1000) {
             int encoded = buttonId - 1000;
