@@ -69,10 +69,6 @@ public final class UiLayoutEditor {
             return true;
         }
         String hit = null;
-        graphics.fill(originX, originY + 20, originX + 240, originY + 34, 0xCC202020);
-        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font,
-                Component.literal("拖动移动 · 右下角缩放 · E导出JSON · R恢复默认 · 点击“布局”退出"),
-                originX + 3, originY + 23, 0xFFFFFFFF, false);
         for (Map.Entry<String, UiLayoutProfile.Element> entry : profile.elements().entrySet()) {
             UiLayoutProfile.Element e = entry.getValue();
             double x = originX + e.x, y = originY + e.y;
@@ -121,6 +117,11 @@ public final class UiLayoutEditor {
 
     public void render(GuiGraphics graphics, int originX, int originY) {
         if (!enabled) return;
+        graphics.fill(originX, originY + 20, originX + 240, originY + 34, 0xCC202020);
+        graphics.drawString(net.minecraft.client.Minecraft.getInstance().font,
+                Component.literal("拖动移动 · 右下角缩放 · E导出JSON · R恢复默认 · 点击“布局”退出"),
+                originX + 3, originY + 23, 0xFFFFFFFF, false);
+
         for (Map.Entry<String, UiLayoutProfile.Element> entry : profile.elements().entrySet()) {
             UiLayoutProfile.Element e = entry.getValue();
             int x = originX + e.x, y = originY + e.y;
