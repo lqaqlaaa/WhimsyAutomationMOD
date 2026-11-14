@@ -53,10 +53,10 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private boolean autoMode = false;
     private final Map<String, List<Integer>> ingredientVariants = new HashMap<>();
     // 0=disabled, 1=input, 2=output; Direction ordinal order (DOWN, UP, NORTH, SOUTH, WEST, EAST).
-    private final int[] sideModes = new int[] {2, 1, 1, 1, 1, 1};
+    private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
-        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : Integer.MAX_VALUE; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 64 : Integer.MAX_VALUE; }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
@@ -79,6 +79,10 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
     private static class DynamicItemStackHandler extends ItemStackHandler {
         private DynamicItemStackHandler(int size) { super(size); }
+
+        @Override protected int getStackLimit(int slot, ItemStack stack) {
+            return slot == 0 ? 64 : super.getStackLimit(slot, stack);
+        }
 
         private void resize(int size) {
             int targetSize = Math.max(OUTPUT_START + PAGE_SIZE * 10, size);
