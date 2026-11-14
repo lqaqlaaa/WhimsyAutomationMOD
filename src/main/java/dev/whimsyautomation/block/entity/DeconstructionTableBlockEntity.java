@@ -58,6 +58,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             if (stack.isEmpty()) return false;
             // Output storage accepts manual returns. Input accepts any item; a locked recipe
             // is enforced by processOneItem rather than preventing recovery from accidental removal.
+            return true;
         }
 
         @Override protected void onContentsChanged(int slot) {
