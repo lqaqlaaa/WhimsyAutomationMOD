@@ -172,7 +172,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (showSideConfig && keyCode == 256) { showSideConfig = false; return true; }
+        if (showSideConfig) {
+            if (keyCode == 256) showSideConfig = false;
+            return true;
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
