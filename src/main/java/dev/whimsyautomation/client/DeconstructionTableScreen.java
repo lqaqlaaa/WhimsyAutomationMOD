@@ -33,13 +33,29 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         titleLabelY = 60;
     }
 
+    private double uiScale() {
+        double horizontal = (width - 8.0) / imageWidth;
+        double vertical = (height - 8.0) / imageHeight;
+        return Math.max(0.05, Math.min(1.0, Math.min(horizontal, vertical)));
+    }
+
+    private double virtualMouseX(double x) {
+        double scale = uiScale();
+        return width / 2.0 + (x - width / 2.0) / scale;
+    }
+
+    private double virtualMouseY(double y) {
+        double scale = uiScale();
+        return height / 2.0 + (y - height / 2.0) / scale;
+    }
+
     private void send(int id) {
         if (minecraft != null && minecraft.gameMode != null)
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
     }
 
     private EditBox pageField(int x, int y, int initialPage) {
-        EditBox field = new EditBox(font, leftPos + x, topPos + y, 28, 14, Component.literal("页码"));
+        EditBox field = new EditBox(font, leftPos + x, topPos + y, 28, 18, Component.literal("页码"));
         field.setMaxLength(10);
         field.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         field.setValue(Integer.toString(initialPage));
@@ -89,57 +105,58 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     @Override
     protected void init() {
         super.init();
+        topPos -= 27;
         outputPageField = pageField(90, 55, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 120, topPos + 55, 18, 14).build());
+                .bounds(leftPos + 120, topPos + 55, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 140, topPos + 55, 14, 14).build());
+                .bounds(leftPos + 140, topPos + 55, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             send(5); outputPageField.setValue(Integer.toString(Math.min(menu.getPageCount(), menu.getPage() + 2)));
         }).tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 156, topPos + 55, 14, 14).build());
+                .bounds(leftPos + 158, topPos + 55, 18, 18).build());
 
-        previewPageField = pageField(270, 55, menu.getPreviewPage() + 1);
+        previewPageField = pageField(250, 55, menu.getPreviewPage() + 1);
         addRenderableWidget(previewPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(previewPageField, menu.getPreviewPageCount(), 1))
-                .bounds(leftPos + 300, topPos + 55, 18, 14).build());
+                .bounds(leftPos + 280, topPos + 55, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             int page = Math.max(0, menu.getPreviewPage() - 1);
             send(-((page * 2 + 1) + 1));
             previewPageField.setValue(Integer.toString(page + 1));
         }).tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 320, topPos + 55, 14, 14).build());
+                .bounds(leftPos + 298, topPos + 55, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> {
             int page = Math.min(menu.getPreviewPageCount() - 1, menu.getPreviewPage() + 1);
             send(-((page * 2 + 1) + 1));
             previewPageField.setValue(Integer.toString(page + 1));
         }).tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 336, topPos + 55, 14, 14).build());
+                .bounds(leftPos + 316, topPos + 55, 18, 18).build());
 
         autoButton = Button.builder(autoLabel(), b -> send(2))
                 .tooltip(Tooltip.create(autoLabel()))
-                .bounds(leftPos + 184, topPos + 151, 78, 20).build();
+                .bounds(leftPos + 184, topPos + 151, 78, 18).build();
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
-                .bounds(leftPos + 264, topPos + 151, 88, 20).build());
+                .bounds(leftPos + 264, topPos + 151, 80, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> { menu.cyclePreview(-1); send(0); })
                 .tooltip(Tooltip.create(Component.literal("上一个匹配配方")))
-                .bounds(leftPos + 184, topPos + 175, 24, 20).build());
+                .bounds(leftPos + 184, topPos + 175, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> { menu.cyclePreview(1); send(1); })
                 .tooltip(Tooltip.create(Component.literal("下一个匹配配方")))
-                .bounds(leftPos + 210, topPos + 175, 24, 20).build());
+                .bounds(leftPos + 202, topPos + 175, 18, 18).build());
         lockButton = Button.builder(Component.literal(menu.isLocked() ? "解锁" : "锁定"), b -> send(6))
-                .bounds(leftPos + 236, topPos + 175, 48, 20).build();
+                .bounds(leftPos + 220, topPos + 175, 54, 18).build();
         addRenderableWidget(lockButton);
         addRenderableWidget(Button.builder(Component.literal("拆解"), b -> send(3))
                 .tooltip(Tooltip.create(Component.translatable("screen.whimsy_automation.process")))
-                .bounds(leftPos + 286, topPos + 175, 66, 20).build());
+                .bounds(leftPos + 274, topPos + 175, 70, 18).build());
     }
 
     @Override
@@ -177,13 +194,14 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"),
                 8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("产物 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 42, 0x404040, false);
+        graphics.drawString(font, Component.literal("保存区 " + (menu.getPage() + 1) + "/" + Math.max(1, menu.getPageCount()) + "页"), 8, 42, 0x404040, false);
         if (outputPageField != null && !outputPageField.isFocused())
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("输入"), 184, 60, 0x404040, false);
         graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 58, 0x404040, false);
+        graphics.drawString(font, Component.literal("输入"), 202, 75, 0x404040, false);
+        graphics.drawString(font, Component.literal("配方 " + menu.getSelectedRecipePosition() + "/" + menu.getCandidateCount()), 184, 130, 0x404040, false);
         if (previewPageField != null && !previewPageField.isFocused())
             previewPageField.setValue(Integer.toString(menu.getPreviewPage() + 1));
         if (autoButton != null) autoButton.setMessage(autoLabel());
@@ -272,6 +290,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        mouseX = virtualMouseX(mouseX);
+        mouseY = virtualMouseY(mouseY);
         if (showSideConfig) return true;
         if (selectedIngredientGroup >= 0) {
             int x = pickerHitX(), y = pickerHitY();
@@ -288,6 +308,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        mouseX = virtualMouseX(mouseX);
+        mouseY = virtualMouseY(mouseY);
         if (selectedIngredientGroup >= 0) {
             int x = pickerHitX(), y = pickerHitY();
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
@@ -326,6 +348,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        mouseX = virtualMouseX(mouseX);
+        mouseY = virtualMouseY(mouseY);
+        double scale = uiScale();
         if (selectedIngredientGroup >= 0) {
             int y = pickerHitY();
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
@@ -339,11 +364,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             return true;
         }
         if (showSideConfig) return true;
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(mouseX, mouseY, button, dragX / scale, dragY / scale);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        mouseX = virtualMouseX(mouseX);
+        mouseY = virtualMouseY(mouseY);
         pickerDragging = false;
         if (selectedIngredientGroup >= 0 || showSideConfig) return true;
         return super.mouseReleased(mouseX, mouseY, button);
@@ -373,6 +400,11 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        double scale = uiScale();
+        double virtualX = virtualMouseX(mouseX), virtualY = virtualMouseY(mouseY);
+        graphics.pose().pushPose();
+        graphics.pose().translate(width / 2.0 * (1.0 - scale), height / 2.0 * (1.0 - scale), 0.0);
+        graphics.pose().scale((float) scale, (float) scale, 1.0F);
         if (showSideConfig || selectedIngredientGroup >= 0) {
             // Keep the left output storage and player inventory visible. The
             // opaque dialog replaces only the right-hand machine controls.
@@ -387,13 +419,15 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             graphics.pose().pushPose();
             graphics.pose().translate(leftPos, topPos, 500.0F);
             if (showSideConfig) renderSideConfig(graphics);
-            else renderIngredientPicker(graphics, mouseX, mouseY);
+            else renderIngredientPicker(graphics, (int) virtualX, (int) virtualY);
             // Submit the modal while its elevated Z transform is still active.
             graphics.flush();
             graphics.pose().popPose();
+            graphics.pose().popPose();
             return;
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
+        super.render(graphics, (int) virtualX, (int) virtualY, partialTick);
+        renderTooltip(graphics, (int) virtualX, (int) virtualY);
+        graphics.pose().popPose();
     }
 }
