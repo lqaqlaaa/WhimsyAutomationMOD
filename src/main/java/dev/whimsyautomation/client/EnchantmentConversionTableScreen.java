@@ -19,7 +19,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         g.fill(x+5,y+5,x+imageWidth-5,y+22,0xFF604021);
         for(int i=0;i<4;i++){int sx=x+35+i*36,sy=y+52;g.blitSprite(SLOT_SPRITE,sx,sy,16,16);}
         for(int i=0;i<27;i++){int sx=x+8+(i%9)*18,sy=y+112+(i/9)*18;g.blitSprite(SLOT_SPRITE,sx,sy,16,16);}
-        for(int i=0;i<9;i++){int sx=x+8+i*18,sy=y+170;g.fill(sx-1,sy-1,sx+17,sy+17,0xFF17100C);}
+        for(int i=0;i<9;i++){int sx=x+8+i*18,sy=y+170;g.blitSprite(SLOT_SPRITE,sx,sy,16,16);}
     }
     @Override protected void renderLabels(GuiGraphics g,int mouseX,int mouseY) {
         g.drawString(font,Component.translatable("screen.whimsy_automation.conversion_table"),8,7,0xFFFFD27C,false);
