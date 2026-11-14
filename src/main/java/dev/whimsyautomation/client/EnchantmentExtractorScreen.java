@@ -149,7 +149,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         // GUI-local slot positions. Do not mix the two coordinate spaces.
         // Keep the machine area and player inventory on one continuous
         // vanilla-style container background, without a fake middle divider.
-        panel(graphics, leftPos, topPos + 54, imageWidth, imageHeight - 56);
+        panel(graphics, leftPos, topPos + 36, imageWidth, imageHeight - 38);
 
         // Exactly 27 stored-output slots, one machine input slot, and the
         // player's single native 36-slot inventory. No decorative fake slots.
