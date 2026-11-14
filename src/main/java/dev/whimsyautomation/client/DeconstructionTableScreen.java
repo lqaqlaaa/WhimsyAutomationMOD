@@ -196,6 +196,15 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         if (options.length > visible) graphics.drawString(font, Component.literal((start + 1) + "-" + (start + visible) + "/" + options.length), x + 112, y + 4, 0x606060, false);
     }
 
+    @Override public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (selectedIngredientGroup >= 0) {
+            ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
+            int max = Math.max(0, options.length - 8);
+            ingredientPickerScroll = Math.max(0, Math.min(max, ingredientPickerScroll + (delta < 0 ? 1 : -1)));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
     @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (clickSideConfig(mouseX, mouseY)) return true;
         if (selectedIngredientGroup >= 0) {
