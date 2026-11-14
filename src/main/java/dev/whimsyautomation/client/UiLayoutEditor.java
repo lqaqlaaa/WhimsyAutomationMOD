@@ -40,7 +40,7 @@ public final class UiLayoutEditor {
         for (GuiEventListener child : children) {
             if (!(child instanceof AbstractWidget widget)) continue;
             String label = widget.getMessage().getString().replaceAll("[^a-zA-Z0-9]+", "_");
-            if (widget.getMessage().getString().equals("布局")) continue;
+            if (java.util.Set.of("布局", "导出", "复位").contains(widget.getMessage().getString())) continue;
             String id = "widget_" + index++;
             UiLayoutProfile.Element e = profile.element(id, "widget:" + label,
                     widget.getX() - originX, widget.getY() - originY,
