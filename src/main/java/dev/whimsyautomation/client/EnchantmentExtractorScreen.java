@@ -190,5 +190,4 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
     }
-}}
 }
