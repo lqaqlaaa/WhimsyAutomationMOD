@@ -36,6 +36,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final Level level;
     private final IItemHandler pageHandler;
+    private final ItemStack[] clientPageStacks = new ItemStack[PAGE_SIZE];
     private int syncedOutputSlotCount = 1 + PAGE_SIZE * MIN_OUTPUT_PAGES;
     private int syncedRecipeIndex = -1;
     private int syncedPage;
@@ -59,29 +60,43 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         this.level = playerInventory.player.level();
         this.machine = level.getBlockEntity(pos) instanceof DeconstructionTableBlockEntity be ? be : null;
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
+        java.util.Arrays.fill(clientPageStacks, ItemStack.EMPTY);
         this.pageHandler = new IItemHandlerModifiable() {
             private int actualSlot(int pageSlot) { return OUTPUT_START + syncedPage * PAGE_SIZE + pageSlot; }
             @Override public int getSlots() { return PAGE_SIZE; }
             @Override public void setStackInSlot(int slot, ItemStack stack) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return;
+                if (level.isClientSide) {
+                    clientPageStacks[slot] = stack.copy();
+                    return;
+                }
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
                 machine.getInventory().setStackInSlot(actual, stack);
             }
             @Override public ItemStack getStackInSlot(int slot) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                if (level.isClientSide) return clientPageStacks[slot];
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
                 return machine.getInventory().getStackInSlot(actual);
             }
             @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return stack;
+                if (level.isClientSide) return stack;
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
                 return machine.getInventory().insertItem(actual, stack, simulate);
             }
             @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
                 if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                if (level.isClientSide) {
+                    ItemStack cached = clientPageStacks[slot];
+                    if (cached.isEmpty()) return ItemStack.EMPTY;
+                    ItemStack extracted = cached.split(amount);
+                    if (cached.isEmpty()) clientPageStacks[slot] = ItemStack.EMPTY;
+                    return extracted;
+                }
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
                 return machine.getInventory().extractItem(actual, amount, simulate);
