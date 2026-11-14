@@ -48,6 +48,10 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
     private final IItemHandler[] sidedHandlers = new IItemHandler[6];
 
+    private final DynamicInputBuffer inputBuffer = new DynamicInputBuffer(18) {
+        @Override protected void onContentsChanged(int slot) { setChanged(); }
+    };
+
     private boolean internalInventoryUpdate;
     private boolean extractingGeneratedOutput;
 
@@ -84,11 +88,17 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             Containers.dropItemStack(level, worldPosition.getX() + 0.5,
                     worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, input);
         }
+        for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
+            ItemStack queued = inputBuffer.getStackInSlot(slot);
+            if (!queued.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5,
+                    worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, queued);
+        }
         internalInventoryUpdate = true;
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
             inventory.setStackInSlot(slot, ItemStack.EMPTY);
         }
         internalInventoryUpdate = false;
+        for (int slot = 0; slot < inputBuffer.getSlots(); slot++) inputBuffer.setStackInSlot(slot, ItemStack.EMPTY);
     }
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
@@ -169,7 +179,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
     }
 
-    private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, OUTPUT_START, true, true,
+    private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, inputBuffer,
+            OUTPUT_START, true, true,
             () -> getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
 
     public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
@@ -186,6 +197,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     public ItemStackHandler getInventory() { return inventory; }
+    public ItemStackHandler getInputBuffer() { return inputBuffer; }
 
     /** Grows the dynamic output inventory without moving or replacing existing stacks. */
     public void ensureOutputInventorySize(int size) {
@@ -216,7 +228,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         int index = side.ordinal();
         if (sidedHandlers[index] == null) {
             int mode = sideModes[index];
-            sidedHandlers[index] = new SidedMachineItemHandler(inventory, OUTPUT_START,
+            sidedHandlers[index] = new SidedMachineItemHandler(inventory, inputBuffer, OUTPUT_START,
                     mode == 1, mode == 2,
                     () -> mode == 2 && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode);
         }
@@ -225,8 +237,60 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, EnchantmentExtractorBlockEntity machine) {
         if (level.isClientSide) return;
+        // The automation input queue feeds the single authoritative processing slot.
+        // Keep the queue FIFO and never merge queued items into the active item.
+        if (machine.autoMode && machine.inventory.getStackInSlot(0).isEmpty()) {
+            ItemStack next = machine.takeNextBufferedItem();
+            if (!next.isEmpty()) machine.inventory.setStackInSlot(0, next);
+        }
         // Generated output is derived when the input or output mode changes.
         // Rebuilding it on a timer would refill deliberately emptied output slots.
+    }
+
+    private ItemStack takeNextBufferedItem() {
+        if (inputBuffer.getSlots() == 0) return ItemStack.EMPTY;
+        ItemStack first = inputBuffer.getStackInSlot(0);
+        if (first.isEmpty()) return ItemStack.EMPTY;
+        ItemStack next = first.copyWithCount(1);
+        first.shrink(1);
+        inputBuffer.setStackInSlot(0, first);
+        if (first.isEmpty()) {
+            for (int slot = 1; slot < inputBuffer.getSlots(); slot++) {
+                inputBuffer.setStackInSlot(slot - 1, inputBuffer.getStackInSlot(slot).copy());
+            }
+            inputBuffer.setStackInSlot(inputBuffer.getSlots() - 1, ItemStack.EMPTY);
+        }
+        return next;
+    }
+
+    private static final class DynamicInputBuffer extends ItemStackHandler {
+        private DynamicInputBuffer(int size) { super(size); }
+
+        @Override public int getSlotLimit(int slot) { return 64; }
+        @Override protected int getStackLimit(int slot, ItemStack stack) {
+            return Math.min(64, stack.getMaxStackSize());
+        }
+        @Override public boolean isItemValid(int slot, ItemStack stack) {
+            return slot >= 0 && slot < getSlots() && !stack.isEmpty();
+        }
+        @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (stack.isEmpty() || slot < 0 || slot >= getSlots()) return stack;
+            ItemStack remainder = super.insertItem(slot, stack, simulate);
+            if (!remainder.isEmpty() && slot == getSlots() - 1) {
+                int oldSize = getSlots();
+                if (!simulate) {
+                    resize(oldSize + 18);
+                    return super.insertItem(oldSize, remainder, false);
+                }
+            }
+            return remainder;
+        }
+        private void resize(int size) {
+            if (size <= stacks.size()) return;
+            NonNullList<ItemStack> resized = NonNullList.withSize(size, ItemStack.EMPTY);
+            for (int i = 0; i < stacks.size(); i++) resized.set(i, stacks.get(i));
+            stacks = resized;
+        }
     }
 
     public boolean canApplyBook(ItemStack item, ItemStack book) {
@@ -452,6 +516,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Inventory", inventory.serializeNBT(registries));
+        tag.put("InputBuffer", inputBuffer.serializeNBT(registries));
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
         tag.putBoolean("SplitLevels", splitLevels);
@@ -464,6 +529,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        if (tag.contains("InputBuffer")) inputBuffer.deserializeNBT(registries, tag.getCompound("InputBuffer"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
