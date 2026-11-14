@@ -258,6 +258,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
+        if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.release();
         if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 162)
             return true;
         return super.mouseReleased(x, y, button);
