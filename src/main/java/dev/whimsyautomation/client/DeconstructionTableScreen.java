@@ -44,18 +44,18 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
         // The top row follows the vanilla container title area. Material-preview
         // paging is kept separate from the actual output-inventory paging.
-        addRenderableWidget(Button.builder(Component.literal("‹"), b -> menu.cyclePreviewPage(-1))
+        addRenderableWidget(Button.builder(Component.literal("材‹"), b -> menu.cyclePreviewPage(-1))
                 .tooltip(Tooltip.create(Component.literal("上一页材料预览")))
-                .bounds(leftPos + 100, topPos + 5, 16, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("›"), b -> menu.cyclePreviewPage(1))
+                .bounds(leftPos + 72, topPos + 5, 16, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("材›"), b -> menu.cyclePreviewPage(1))
                 .tooltip(Tooltip.create(Component.literal("下一页材料预览")))
-                .bounds(leftPos + 118, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 90, topPos + 5, 16, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> send(4))
                 .tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
-                .bounds(leftPos + 140, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 136, topPos + 5, 16, 18).build());
         addRenderableWidget(Button.builder(Component.literal("›"), b -> send(5))
                 .tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
-                .bounds(leftPos + 158, topPos + 5, 16, 18).build());
+                .bounds(leftPos + 154, topPos + 5, 16, 18).build());
 
         // The sixth machine row is reserved for controls; the input slot remains
         // a real menu slot at the far left and never shares a button hitbox.
@@ -99,6 +99,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, Component.translatable("screen.whimsy_automation.deconstruction"),
                 8, titleLabelY, 0x404040, false);
+        graphics.drawString(font, Component.literal((menu.getPage() + 1) + "/" + menu.getPageCount()),
+                108, titleLabelY, 0x404040, false);
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
 
