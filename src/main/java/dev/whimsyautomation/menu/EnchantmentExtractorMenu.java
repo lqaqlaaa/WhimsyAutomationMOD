@@ -171,7 +171,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
         for (int i = 0; i < BUFFER_PAGE_SIZE; i++) {
             int x = 184 + (i % 9) * 18;
-            int y = 151 + (i / 9) * 18;
+            int y = 179 + (i / 9) * 18;
             addSlot(new SlotItemHandler(bufferPageHandler, i, x, y));
         }
         addPlayerInventory(playerInventory, 8, 139);
