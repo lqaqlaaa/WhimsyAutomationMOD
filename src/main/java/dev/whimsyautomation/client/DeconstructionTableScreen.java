@@ -57,13 +57,12 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     private void drawPlayerSlots(GuiGraphics g) {
-        // Slot coordinates are GUI-local in AbstractContainerMenu. The painted
-        // backgrounds must use the same leftPos/topPos transform as real slots.
+        // renderBg uses screen coordinates; real menu slots are positioned separately.
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                drawSlot(g, 8 + col * 18, 138 + row * 18);
+                drawSlot(g, leftPos + 8 + col * 18, topPos + 138 + row * 18);
         for (int col = 0; col < 9; col++)
-            drawSlot(g, 8 + col * 18, 196);
+            drawSlot(g, leftPos + 8 + col * 18, topPos + 196);
     }
 
     @Override
@@ -108,22 +107,21 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        // AbstractContainerScreen already translates the pose by leftPos/topPos
-        // before invoking renderBg. Keep every background coordinate GUI-local,
-        // matching the real menu Slot coordinates.
-        panel(graphics, 0, 54, 176, 166);
-        panel(graphics, 176, 54, 176, 166);
+        // renderBg is not translated to GUI-local coordinates in 1.21.1.
+        // Background art must use screen coordinates; menu slots remain local.
+        panel(graphics, leftPos, topPos + 54, 176, 166);
+        panel(graphics, leftPos + 176, topPos + 54, 176, 166);
 
         // Exactly 27 real machine output slots.
         for (int i = 0; i < 27; i++)
-            drawSlot(graphics, 8 + (i % 9) * 18, 71 + (i / 9) * 18);
+            drawSlot(graphics, leftPos + 8 + (i % 9) * 18, topPos + 71 + (i / 9) * 18);
 
         // One real input slot, followed by exactly 18 non-interactive preview slots.
-        drawSlot(graphics, 184, 71);
+        drawSlot(graphics, leftPos + 184, topPos + 71);
         List<ItemStack> preview = menu.getPreviewStacks();
         for (int i = 0; i < 18; i++) {
-            int x = 202 + (i % 6) * 18;
-            int y = 71 + (i / 6) * 18;
+            int x = leftPos + 202 + (i % 6) * 18;
+            int y = topPos + 71 + (i / 6) * 18;
             drawSlot(graphics, x, y);
             if (i < preview.size()) {
                 ItemStack stack = preview.get(i);
@@ -155,11 +153,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (lockButton != null) lockButton.setMessage(Component.literal(menu.isLocked() ? "解锁" : "锁定"));
 
-        // Draw modal content in renderLabels, where AbstractContainerScreen has
-        // already translated the pose to leftPos/topPos. This keeps the dialog
-        // aligned with the right machine pane and above its slots/widgets.
-        if (showSideConfig) renderSideConfig(graphics);
-        else if (selectedIngredientGroup >= 0) renderIngredientPicker(graphics, mouseX, mouseY);
     }
 
     private void renderSideConfig(GuiGraphics graphics) {
@@ -204,8 +197,12 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         return true;
     }
 
-    private int pickerX() { return leftPos + 176; }
-    private int pickerY() { return topPos + 54; }
+    // Modal rendering runs under an explicit GUI-origin pose. Input hit tests
+    // stay in absolute screen coordinates, so these are intentionally separate.
+    private int pickerX() { return 176; }
+    private int pickerY() { return 54; }
+    private int pickerHitX() { return leftPos + 176; }
+    private int pickerHitY() { return topPos + 54; }
     private int pickerHeight() { return 166; }
 
     private void renderIngredientPicker(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -241,7 +238,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         if (showSideConfig) return true;
         if (selectedIngredientGroup >= 0) {
-            int x = pickerX(), y = pickerY();
+            int x = pickerHitX(), y = pickerHitY();
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
             if (mouseX >= x && mouseX < x + 176 && mouseY >= y + 25 && mouseY < y + 151) {
                 int max = Math.max(0, options.length - PICKER_VISIBLE_ROWS);
@@ -256,7 +253,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (selectedIngredientGroup >= 0) {
-            int x = pickerX(), y = pickerY();
+            int x = pickerHitX(), y = pickerHitY();
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
             int visible = Math.min(PICKER_VISIBLE_ROWS, options.length);
             if (mouseX >= x + 150 && mouseX < x + 176 && mouseY >= y && mouseY < y + 24) {
@@ -294,7 +291,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (selectedIngredientGroup >= 0) {
-            int y = pickerY();
+            int y = pickerHitY();
             ItemStack[] options = menu.getIngredientOptions(selectedIngredientGroup);
             if (pickerDragging && options.length > PICKER_VISIBLE_ROWS) {
                 int trackTop = y + 25, trackHeight = PICKER_VISIBLE_ROWS * 18;
@@ -337,6 +334,11 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             // real slot contents, and widgets exactly once. A second explicit
             // renderBackground call was darkening the world a second time.
             super.render(graphics, -10000, -10000, partialTick);
+            graphics.pose().pushPose();
+            graphics.pose().translate(leftPos, topPos, 0);
+            if (showSideConfig) renderSideConfig(graphics);
+            else renderIngredientPicker(graphics, mouseX, mouseY);
+            graphics.pose().popPose();
             return;
         }
         super.render(graphics, mouseX, mouseY, partialTick);
