@@ -55,7 +55,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     private EditBox pageField(int x, int y, int initialPage) {
-        EditBox field = new EditBox(font, leftPos + x, topPos + y, 18, 18, Component.literal("页码"));
+        EditBox field = new EditBox(font, leftPos + x, topPos + y, 22, 18, Component.literal("页码"));
         field.setMaxLength(10);
         field.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         field.setValue(Integer.toString(initialPage));
@@ -109,7 +109,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         outputPageField = pageField(90, 53, menu.getPage() + 1);
         addRenderableWidget(outputPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(outputPageField, menu.getPageCount(), 0))
-                .bounds(leftPos + 110, topPos + 53, 18, 18).build());
+                .bounds(leftPos + 114, topPos + 53, 18, 18).build());
         addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
             send(4); outputPageField.setValue(Integer.toString(Math.max(1, menu.getPage())));
         }).tooltip(Tooltip.create(Component.literal("上一页拆解产物")))
@@ -119,7 +119,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         }).tooltip(Tooltip.create(Component.literal("下一页拆解产物")))
                 .bounds(leftPos + 150, topPos + 53, 18, 18).build());
 
-        previewPageField = pageField(266, 53, menu.getPreviewPage() + 1);
+        previewPageField = pageField(262, 53, menu.getPreviewPage() + 1);
         addRenderableWidget(previewPageField);
         addRenderableWidget(Button.builder(Component.literal("跳"), b -> jumpPage(previewPageField, menu.getPreviewPageCount(), 1))
                 .bounds(leftPos + 286, topPos + 53, 18, 18).build());
@@ -200,7 +200,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             outputPageField.setValue(Integer.toString(menu.getPage() + 1));
         graphics.drawString(font, Component.translatable("container.inventory"),
                 8, inventoryLabelY, 0x404040, false);
-        graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 60, 0x404040, false);
+        graphics.drawString(font, Component.literal("材料 " + (menu.getPreviewPage() + 1) + "/" + Math.max(1, menu.getPreviewPageCount()) + "页"), 184, 151, 0x404040, false);
         graphics.drawString(font, Component.literal("输入"), 202, 57, 0x404040, false);
         graphics.drawString(font, Component.literal("配方 " + menu.getSelectedRecipePosition() + "/" + menu.getCandidateCount()), 184, 130, 0x404040, false);
         if (previewPageField != null && !previewPageField.isFocused())
@@ -333,10 +333,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             return true;
         }
         if (clickSideConfig(mouseX, mouseY)) return true;
-        int gridX = leftPos + 184, gridY = topPos + 89;
-        if (mouseX >= gridX && mouseX < gridX + 162 && mouseY >= gridY && mouseY < gridY + 36) {
+        int gridX = leftPos + 184, gridY = topPos + 71;
+        if (mouseX >= gridX && mouseX < gridX + 162 && mouseY >= gridY && mouseY < gridY + 54) {
             int col = (int) ((mouseX - gridX) / 18), row = (int) ((mouseY - gridY) / 18);
-            int group = menu.getPreviewPage() * 18 + row * 9 + col;
+            int group = menu.getPreviewPage() * 27 + row * 9 + col;
             if (menu.getIngredientOptions(group).length > 1) {
                 selectedIngredientGroup = group;
                 ingredientPickerScroll = 0;
