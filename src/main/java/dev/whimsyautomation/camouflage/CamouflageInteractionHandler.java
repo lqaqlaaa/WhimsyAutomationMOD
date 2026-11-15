@@ -6,7 +6,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -14,8 +13,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
  * Shared sneak-right-click interaction for every camouflage-capable machine.
- * Block entities are deliberately excluded: camouflage never copies another
- * machine's inventory or runtime data.
+ * Block-entity blocks are accepted as visual states; only their baked block
+ * model is used by the generic renderer (their runtime data is never copied).
  */
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class CamouflageInteractionHandler {
@@ -33,10 +32,8 @@ public final class CamouflageInteractionHandler {
         if (!held.isEmpty()) {
             if (!(held.getItem() instanceof BlockItem blockItem)) return;
             Block block = blockItem.getBlock();
-            if (block instanceof EntityBlock) return;
             BlockState camouflage = block.defaultBlockState();
-            if (camouflage.isAir() || camouflage.hasBlockEntity()) return;
-            if (!current.isAir()) return;
+            if (camouflage.isAir() || !current.isAir()) return;
 
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide));
