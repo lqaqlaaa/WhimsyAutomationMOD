@@ -86,7 +86,7 @@ public record DeconstructionRecipeSnapshotPayload(
             }
             if (registered == null) return;
             ItemStack registeredOutput = registered.value().getResultItem(player.level().registryAccess());
-            if (!ItemStack.isSameItemSameComponents(registeredOutput, payload.output())) return;
+            if (!dev.whimsyautomation.util.RecipeOutputMatcher.matches(registeredOutput, payload.output())) return;
 
             ItemStack input = machine.getInventory().getStackInSlot(0);
             if (input.isEmpty() || !dev.whimsyautomation.util.RecipeOutputMatcher.matches(payload.output(), input)) return;
