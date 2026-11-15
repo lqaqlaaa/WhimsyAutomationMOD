@@ -108,11 +108,11 @@ public final class WhimsyJeiPlugin implements IModPlugin {
                     // it flattens ingredients and loses recipe-slot boundaries.
                     // The drawable layout exposes each JEI slot and all of its
                     // alternatives, matching what JEI actually displays.
-                    var layout = manager.createRecipeLayoutDrawable(
-                            category, recipe, active.getJeiHelpers().getFocusFactory().getEmptyFocusGroup());
-                    if (layout.isEmpty()) return;
+                    IRecipeLayoutDrawable layout = (IRecipeLayoutDrawable) manager.createRecipeLayoutDrawable(
+                            category, recipe, active.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).orElse(null);
+                    if (layout == null) return;
 
-                    for (IRecipeSlotView slot : layout.get().getRecipeSlotsView().getSlotViews()) {
+                    for (IRecipeSlotView slot : layout.getRecipeSlotsView().getSlotViews()) {
                         List<ItemStack> stacks = slot.getItemStacks()
                                 .filter(stack -> !stack.isEmpty())
                                 .map(ItemStack::copy)
