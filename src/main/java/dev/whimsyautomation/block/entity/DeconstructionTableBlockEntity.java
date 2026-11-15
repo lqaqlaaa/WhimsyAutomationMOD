@@ -254,7 +254,17 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             for (RecipeHolder<?> candidate : level.getRecipeManager().getRecipes()) {
                 if (matchesRecipeOutput(candidate.value().getResultItem(level.registryAccess()), input)) matches.add(candidate);
             }
-            matches.sort((a, b) -> a.id().compareTo(b.id()));
+            matches.sort((a, b) -> {
+                boolean aHasJeiInputs = !getJeiRecipeSnapshot(a.id().toString()).isEmpty();
+                boolean bHasJeiInputs = !getJeiRecipeSnapshot(b.id().toString()).isEmpty();
+                if (aHasJeiInputs != bHasJeiInputs) return aHasJeiInputs ? -1 : 1;
+                boolean aHasNativeInputs = !dev.whimsyautomation.util.RecipeIngredientResolver
+                        .getGroups(a.value()).isEmpty();
+                boolean bHasNativeInputs = !dev.whimsyautomation.util.RecipeIngredientResolver
+                        .getGroups(b.value()).isEmpty();
+                if (aHasNativeInputs != bHasNativeInputs) return aHasNativeInputs ? -1 : 1;
+                return a.id().compareTo(b.id());
+            });
             if (!matches.isEmpty()) {
                 selected = matches.get(0);
                 selectedRecipe = selected.id().toString();
