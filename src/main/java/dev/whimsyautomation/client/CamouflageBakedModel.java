@@ -1,9 +1,7 @@
 package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.camouflage.CamouflageModelData;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
@@ -17,19 +15,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Re-routes the machine's body quads to the stored camouflage block model.
- *
- * The machine's own model is deliberately only the frame/directional trim.
- * With no camouflage, a separate baked fallback model supplies the normal
- * machine body. With camouflage, the target's baked quads are emitted first
- * and the machine frame last, so the machine's directional trim remains visible.
+ * Keeps the machine frame in the chunk model. The camouflage block itself is
+ * rendered by CamouflageBlockEntityRenderer so its own BlockState, ModelData,
+ * render layers and biome tint handlers are evaluated by Minecraft's renderer.
  */
 public final class CamouflageBakedModel extends BakedModelWrapper<BakedModel> {
     private final BakedModel fallbackModel;
+    private final BakedModel insetFillModel;
 
-    public CamouflageBakedModel(BakedModel frameModel, BakedModel fallbackModel) {
+    public CamouflageBakedModel(BakedModel frameModel, BakedModel fallbackModel, BakedModel insetFillModel) {
         super(frameModel);
         this.fallbackModel = fallbackModel;
+        this.insetFillModel = insetFillModel;
     }
 
     @Override
@@ -40,16 +37,8 @@ public final class CamouflageBakedModel extends BakedModelWrapper<BakedModel> {
                                     @Nullable RenderType renderType) {
         BlockState camouflage = modelData.get(CamouflageModelData.CAMOUFLAGE_STATE);
         List<BakedQuad> result = new ArrayList<>();
-
-        if (camouflage == null || camouflage.isAir()) {
-            result.addAll(fallbackModel.getQuads(machineState, side, random, ModelData.EMPTY, renderType));
-        } else {
-            BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
-            BakedModel targetModel = dispatcher.getBlockModel(camouflage);
-            result.addAll(targetModel.getQuads(camouflage, side, random, ModelData.EMPTY, renderType));
-        }
-
-        // Keep the machine's edge frame and six-direction markings as the top layer.
+        BakedModel body = camouflage == null || camouflage.isAir() ? fallbackModel : insetFillModel;
+        result.addAll(body.getQuads(machineState, side, random, ModelData.EMPTY, renderType));
         result.addAll(super.getQuads(machineState, side, random, modelData, renderType));
         return result;
     }
@@ -60,11 +49,8 @@ public final class CamouflageBakedModel extends BakedModelWrapper<BakedModel> {
                                              ModelData modelData) {
         ChunkRenderTypeSet frameTypes = super.getRenderTypes(machineState, random, modelData);
         BlockState camouflage = modelData.get(CamouflageModelData.CAMOUFLAGE_STATE);
-        BakedModel bodyModel = camouflage == null || camouflage.isAir()
-                ? fallbackModel
-                : Minecraft.getInstance().getBlockRenderer().getBlockModel(camouflage);
-        BlockState bodyState = camouflage == null || camouflage.isAir() ? machineState : camouflage;
-        ChunkRenderTypeSet bodyTypes = bodyModel.getRenderTypes(bodyState, random, ModelData.EMPTY);
+        BakedModel body = camouflage == null || camouflage.isAir() ? fallbackModel : insetFillModel;
+        ChunkRenderTypeSet bodyTypes = body.getRenderTypes(machineState, random, ModelData.EMPTY);
         return ChunkRenderTypeSet.union(bodyTypes, frameTypes);
     }
 }
