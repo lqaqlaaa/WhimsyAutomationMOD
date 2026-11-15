@@ -755,6 +755,12 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         camouflageState = tag.contains("CamouflageState")
                 ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState"))
                 : Blocks.AIR.defaultBlockState();
+        // The server's ModelData is not transferred as part of the BE update packet.
+        // Rebuild the client-side model data after applying the synchronized state.
+        requestModelDataUpdate();
+        if (level != null && level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     @Override public void onDataPacket(Connection connection, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
