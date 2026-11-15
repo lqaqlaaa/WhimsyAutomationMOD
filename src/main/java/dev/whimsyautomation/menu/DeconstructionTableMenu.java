@@ -202,6 +202,12 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) addSlot(new Slot(inventory, col, x + col * 18, y + 58));
     }
 
+    public void invalidateCandidateCache() {
+        cachedCandidateInput = ItemStack.EMPTY;
+        cachedCandidateRecipes = List.of();
+        cachedJeiEntries = List.of();
+    }
+
     private static boolean matchesRecipeOutput(ItemStack recipeResult, ItemStack input) {
         return dev.whimsyautomation.util.RecipeOutputMatcher.matches(recipeResult, input);
     }
@@ -225,7 +231,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             if (machine != null) {
                 for (var snapshot : machine.getJeiRecipeOutputs().entrySet()) {
                     List<List<ItemStack>> groups = machine.getJeiRecipeSnapshot(snapshot.getKey());
-                    if (!groups.isEmpty() && matchesRecipeOutput(snapshot.getValue(), input))
+                    if (!groups.isEmpty())
                         found.put(snapshot.getKey(), new Candidate(snapshot.getKey(), snapshot.getValue(), groups, null));
                 }
             }
