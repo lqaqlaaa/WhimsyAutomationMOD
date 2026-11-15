@@ -263,7 +263,17 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return -1;
     }
     private Candidate getLockedRecipeHolder() {
-        for (Candidate candidate : candidates()) if (candidate.id().equals(machine == null ? "" : machine.getLockedRecipe())) return candidate;
+        List<Candidate> found = candidates();
+        if (level.isClientSide) {
+            // The client has no BlockEntity reference. Resolve the server-synced
+            // locked candidate index instead of comparing against an empty ID.
+            int index = syncedLockedRecipeIndex;
+            return index >= 0 && index < found.size() ? found.get(index) : null;
+        }
+        String lockedId = machine == null ? "" : machine.getLockedRecipe();
+        for (Candidate candidate : found) {
+            if (candidate.id().equals(lockedId)) return candidate;
+        }
         return null;
     }
 
@@ -542,7 +552,17 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             }
             return true;
         }
-        if (buttonId == 2) { machine.setAutoMode(!machine.isAutoMode()); return true; }
+        if (buttonId == 2) {
+            boolean enabling = !machine.isAutoMode();
+            if (enabling && machine.getLockedRecipe().isEmpty()) {
+                // Bind automation to the exact recipe currently shown by the
+                // preview, rather than an arbitrary cached snapshot.
+                Candidate preview = getPreviewRecipe();
+                if (preview != null) machine.setSelectedRecipeId(preview.id());
+            }
+            machine.setAutoMode(enabling);
+            return true;
+        }
         if (buttonId == 3) {
             // The preview defaults to the first matching recipe even before
             // the player cycles the recipe buttons. Commit that exact recipe
