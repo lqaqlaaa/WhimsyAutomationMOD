@@ -316,56 +316,84 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return null;
     }
 
-    private List<ItemStack> getAllPreviewStacks() {
+    private record PreviewEntry(ItemStack stack, List<Integer> groupIndices) {}
+
+    /**
+     * Builds the visual ingredient grid while retaining the logical ingredient
+     * group IDs. Repeated identical ingredients occupy one slot and aggregate
+     * their real recipe count; their alternative selector still addresses all
+     * equivalent logical groups.
+     */
+    private List<PreviewEntry> getPreviewEntries() {
         RecipeHolder<?> holder = getPreviewRecipe();
         if (holder == null) return List.of();
 
-        // When JEI supplied this candidate, its actual displayed slot groups
-        // are the source of truth for the preview. Do not reconstruct them from
-        // Recipe#getIngredients(), which loses JEI's slot grouping/alternatives.
+        List<PreviewEntry> merged = new ArrayList<>();
         var jeiEntry = getJeiPreviewEntry();
         if (jeiEntry != null) {
-            List<ItemStack> stacks = new ArrayList<>();
             for (int groupIndex = 0; groupIndex < jeiEntry.inputGroups().size(); groupIndex++) {
                 List<ItemStack> options = jeiEntry.inputGroups().get(groupIndex);
                 if (options.isEmpty()) continue;
                 int variant = Math.floorMod(getSelectedIngredientVariant(groupIndex), options.size());
-                stacks.add(options.get(variant).copy());
+                addPreviewEntry(merged, options.get(variant).copy(), groupIndex);
             }
-            return List.copyOf(stacks);
+        } else {
+            List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
+                    dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(holder.value());
+            for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+                var group = groups.get(groupIndex);
+                ItemStack[] choices = group.ingredient().getItems();
+                if (choices.length == 0) continue;
+                int variant = getSelectedIngredientVariant(groupIndex);
+                ItemStack selected = choices[Math.min(variant, choices.length - 1)].copy();
+                selected.setCount(group.count());
+                addPreviewEntry(merged, selected, groupIndex);
+            }
         }
-
-        List<ItemStack> recovered = new ArrayList<>();
-        List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
-                dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(holder.value());
-        for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
-            var group = groups.get(groupIndex);
-            ItemStack[] choices = group.ingredient().getItems();
-            if (choices.length == 0) continue;
-            int variant = getSelectedIngredientVariant(groupIndex);
-            ItemStack selected = choices[Math.min(variant, choices.length - 1)].copy();
-            selected.setCount(group.count());
-            recovered.add(selected);
-        }
-        return List.copyOf(recovered);
+        return List.copyOf(merged);
     }
 
-    private static List<ItemStack> mergeIdenticalStacks(List<ItemStack> source) {
-        List<ItemStack> merged = new ArrayList<>();
-        for (ItemStack candidate : source) {
-            if (candidate.isEmpty()) continue;
-            ItemStack existingMatch = null;
-            for (ItemStack existing : merged) {
-                if (ItemStack.isSameItemSameComponents(existing, candidate)) {
-                    existingMatch = existing;
-                    break;
-                }
+    private static void addPreviewEntry(List<PreviewEntry> entries, ItemStack candidate, int groupIndex) {
+        if (candidate.isEmpty()) return;
+        for (int i = 0; i < entries.size(); i++) {
+            PreviewEntry existing = entries.get(i);
+            if (ItemStack.isSameItemSameComponents(existing.stack(), candidate)) {
+                ItemStack combined = existing.stack().copy();
+                combined.grow(candidate.getCount());
+                List<Integer> groups = new ArrayList<>(existing.groupIndices());
+                groups.add(groupIndex);
+                entries.set(i, new PreviewEntry(combined, List.copyOf(groups)));
+                return;
             }
-            if (existingMatch == null) merged.add(candidate.copy());
-            else existingMatch.grow(candidate.getCount());
         }
-        // Preview-only stacks keep their aggregate count even above normal stack limits.
-        return List.copyOf(merged);
+        entries.add(new PreviewEntry(candidate.copy(), List.of(groupIndex)));
+    }
+
+    private List<ItemStack> getAllPreviewStacks() {
+        return getPreviewEntries().stream().map(entry -> entry.stack().copy()).toList();
+    }
+
+    /** Maps a visible grid slot back to the underlying recipe ingredient group. */
+    public int getPreviewGroupIndex(int displayIndex) {
+        List<PreviewEntry> entries = getPreviewEntries();
+        return displayIndex < 0 || displayIndex >= entries.size()
+                ? -1 : entries.get(displayIndex).groupIndices().get(0);
+    }
+
+    public boolean previewHasAlternatives(int displayIndex) {
+        List<PreviewEntry> entries = getPreviewEntries();
+        if (displayIndex < 0 || displayIndex >= entries.size()) return false;
+        for (int group : entries.get(displayIndex).groupIndices()) {
+            if (getIngredientOptions(group).length > 1) return true;
+        }
+        return false;
+    }
+
+    private List<Integer> getPreviewGroupIndices(int groupIndex) {
+        for (PreviewEntry entry : getPreviewEntries()) {
+            if (entry.groupIndices().contains(groupIndex)) return entry.groupIndices();
+        }
+        return List.of(groupIndex);
     }
 
     public List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> getPreviewIngredientGroups() {
