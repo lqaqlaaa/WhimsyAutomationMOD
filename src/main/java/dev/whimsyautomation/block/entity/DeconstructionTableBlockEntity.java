@@ -55,6 +55,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private final Map<String, List<Integer>> ingredientVariants = new HashMap<>();
     private final Map<String, List<List<ItemStack>>> jeiRecipeSnapshots = new HashMap<>();
     private final Map<String, ItemStack> jeiRecipeOutputs = new HashMap<>();
+    private ItemStack jeiSnapshotInput = ItemStack.EMPTY;
     // 0=disabled, 1=input, 2=output; Direction ordinal order (DOWN, UP, NORTH, SOUTH, WEST, EAST).
     private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
 
@@ -124,9 +125,14 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         return values == null || group < 0 || group >= values.size() ? 0 : values.get(group);
     }
 
-    public void cacheJeiRecipeSnapshot(String recipeId, ItemStack output, List<List<ItemStack>> groups) {
+    public void cacheJeiRecipeSnapshot(String recipeId, ItemStack output, List<List<ItemStack>> groups, ItemStack forInput) {
         if (recipeId == null || recipeId.isBlank() || output == null || output.isEmpty()
-                || groups == null || groups.isEmpty() || groups.size() > 64) return;
+                || groups == null || groups.isEmpty() || groups.size() > 64 || forInput == null || forInput.isEmpty()) return;
+        if (jeiSnapshotInput.isEmpty() || !ItemStack.isSameItemSameComponents(jeiSnapshotInput, forInput)) {
+            jeiRecipeSnapshots.clear();
+            jeiRecipeOutputs.clear();
+            jeiSnapshotInput = forInput.copyWithCount(1);
+        }
         List<List<ItemStack>> copy = groups.stream()
                 .map(group -> group.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList())
                 .toList();
@@ -272,13 +278,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (recipeResult.isEmpty() && selected != null) {
             recipeResult = selected.value().getResultItem(level.registryAccess());
         }
-        if (!recipeResult.isEmpty() && !matchesRecipeOutput(recipeResult, input)) {
-            if (!lockedRecipe.isEmpty()) return;
-            selected = null;
-            chosenId = "";
-            jeiGroups = List.of();
-            recipeResult = ItemStack.EMPTY;
-        }
         if (selected == null && jeiGroups.isEmpty() && lockedRecipe.isEmpty()) {
             for (var entry : jeiRecipeOutputs.entrySet()) {
                 if (matchesRecipeOutput(entry.getValue(), input)
@@ -308,7 +307,6 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             if (automatic && lockedRecipe.isEmpty()) passThroughInput(input);
             return;
         }
-        if (recipeResult.isEmpty() || !matchesRecipeOutput(recipeResult, input)) return;
 
         int processedItems = Math.min(input.getCount(), 64);
         if (processedItems <= 0) return;
@@ -533,6 +531,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             jeiSnapshots.put(entry.getKey(), groups);
         }
         tag.put("JeiRecipeSnapshots", jeiSnapshots);
+        if (!jeiSnapshotInput.isEmpty()) tag.put("JeiSnapshotInput", jeiSnapshotInput.save(registries));
         CompoundTag jeiOutputs = new CompoundTag();
         for (var entry : jeiRecipeOutputs.entrySet()) jeiOutputs.put(entry.getKey(), entry.getValue().save(registries));
         tag.put("JeiRecipeOutputs", jeiOutputs);
@@ -558,6 +557,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         ingredientVariants.clear();
         jeiRecipeSnapshots.clear();
         jeiRecipeOutputs.clear();
+        jeiSnapshotInput = tag.contains("JeiSnapshotInput")
+                ? ItemStack.parse(registries, tag.getCompound("JeiSnapshotInput")).orElse(ItemStack.EMPTY)
+                : ItemStack.EMPTY;
         if (tag.contains("JeiRecipeOutputs")) {
             CompoundTag savedOutputs = tag.getCompound("JeiRecipeOutputs");
             for (String recipeId : savedOutputs.getAllKeys())
