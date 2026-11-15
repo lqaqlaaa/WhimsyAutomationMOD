@@ -30,8 +30,10 @@ public final class EnchantmentConversionTableBlock extends BaseEntityBlock {
         return InteractionResult.SUCCESS;
     }
     @Override protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof EnchantmentConversionTableBlockEntity machine) machine.dropCamouflage();
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof EnchantmentConversionTableBlockEntity machine) {
+            machine.dropCamouflage();
             machine.dropAllContents();
+        }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }
