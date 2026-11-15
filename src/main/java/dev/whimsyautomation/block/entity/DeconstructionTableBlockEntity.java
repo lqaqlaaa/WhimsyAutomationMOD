@@ -271,15 +271,17 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         String chosenId = !lockedRecipe.isEmpty() ? lockedRecipe : selectedRecipe;
         List<List<ItemStack>> jeiGroups = getJeiRecipeSnapshot(chosenId);
 
-        // Automatic mode may start before a recipe was manually selected.
-        // Use the first cached preview snapshot associated with the current input.
-        if (jeiGroups.isEmpty() && !jeiRecipeSnapshots.isEmpty()) {
-            for (var entry : jeiRecipeSnapshots.entrySet()) {
-                if (entry.getValue() == null || entry.getValue().isEmpty()) continue;
-                chosenId = entry.getKey();
-                jeiGroups = entry.getValue();
+        // If no recipe has ever been selected, use the same deterministic
+        // first recipe order as the menu (recipe IDs are sorted there).
+        // Never depend on HashMap iteration order: it can disagree with the
+        // recipe currently shown in the preview.
+        if (jeiGroups.isEmpty() && !jeiRecipeSnapshots.isEmpty()
+                && (chosenId.isEmpty() || !jeiRecipeSnapshots.containsKey(chosenId))) {
+            String firstId = jeiRecipeSnapshots.keySet().stream().sorted().findFirst().orElse("");
+            if (!firstId.isEmpty()) {
+                chosenId = firstId;
+                jeiGroups = jeiRecipeSnapshots.getOrDefault(firstId, List.of());
                 if (lockedRecipe.isEmpty()) selectedRecipe = chosenId;
-                break;
             }
         }
         if (jeiGroups.isEmpty()) return;
