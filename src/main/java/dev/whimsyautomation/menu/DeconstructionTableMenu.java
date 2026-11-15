@@ -382,8 +382,14 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     /** Maps a visible grid slot back to the underlying recipe ingredient group. */
     public int getPreviewGroupIndex(int displayIndex) {
         List<PreviewEntry> entries = getPreviewEntries();
-        return displayIndex < 0 || displayIndex >= entries.size()
-                ? -1 : entries.get(displayIndex).groupIndices().get(0);
+        if (displayIndex < 0 || displayIndex >= entries.size()) return -1;
+        // A merged display slot can represent several logical ingredient
+        // groups. Open the picker for an actually replaceable group, not
+        // blindly the first group (which may have only one option).
+        for (int group : entries.get(displayIndex).groupIndices()) {
+            if (getIngredientOptions(group).length > 1) return group;
+        }
+        return entries.get(displayIndex).groupIndices().get(0);
     }
 
     public boolean previewHasAlternatives(int displayIndex) {
@@ -551,7 +557,16 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             return true;
         }
         if (buttonId == 2) { machine.setAutoMode(!machine.isAutoMode()); return true; }
-        if (buttonId == 3) { machine.processOnce(); return true; }
+        if (buttonId == 3) {
+            // The preview defaults to the first matching recipe even before
+            // the player cycles the recipe buttons. Commit that exact recipe
+            // before processing; otherwise the block entity may independently
+            // choose a different same-output recipe with no cached JEI inputs.
+            RecipeHolder<?> selected = getPreviewRecipe();
+            if (selected != null) machine.setSelectedRecipe(selected.id());
+            machine.processOnce();
+            return true;
+        }
         if (buttonId == 4) { syncedPage = Math.max(0, syncedPage - 1); return true; }
         if (buttonId == 5) { syncedPage = Math.min(getPageCount() - 1, syncedPage + 1); return true; }
         if (buttonId == 6) {
