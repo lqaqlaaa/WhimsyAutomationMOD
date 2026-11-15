@@ -222,8 +222,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 RecipeHolder<?> holder = registered.get(entry.recipeId());
                 if (holder == null || !added.add(entry.recipeId())) continue;
                 Recipe<?> recipe = holder.value();
-                if (dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe).isEmpty()) continue;
-                if (!matchesRecipeOutput(recipe.getResultItem(level.registryAccess()), input)) continue;
+                // JEI has already matched this recipe against the exact OUTPUT focus.
+                // Do not run the old vanilla output matcher again: it can reject
+                // valid JEI subtype/component matches after JEI found them.
                 found.add(holder);
             }
         } else {
