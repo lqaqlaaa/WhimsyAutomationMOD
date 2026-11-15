@@ -1,5 +1,8 @@
 package dev.whimsyautomation.block.entity;
 
+import dev.whimsyautomation.camouflage.CamouflageModelData;
+import net.neoforged.neoforge.client.model.data.ModelData;
+
 import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import io.netty.buffer.Unpooled;
@@ -35,7 +38,13 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     @Override public void setCamouflageState(BlockState state) {
         camouflageState = state == null ? Blocks.AIR.defaultBlockState() : state;
         setChanged();
+        requestModelDataUpdate();
         if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
+    @Override
+    public ModelData getModelData() {
+        return ModelData.of(CamouflageModelData.CAMOUFLAGE_STATE, camouflageState);
     }
 
     public static final int BOOK_SLOT = 0, PAYMENT_SLOT = 1, TEMPLATE_SLOT = 2, RESULT_SLOT = 3, SLOT_COUNT = 4;
