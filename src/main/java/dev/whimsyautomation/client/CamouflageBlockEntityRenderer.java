@@ -6,8 +6,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.block.entity.BlockEntityRenderer;
-import net.minecraft.client.renderer.block.entity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -15,10 +15,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * Draws the camouflage state as a real world block model, with the actual
- * state, world position, tint context, model data and render layers.
+ * Draws the camouflage state through Minecraft's normal block-model renderer.
+ * The renderer is generic over BlockEntity so NeoForge can infer each concrete
+ * registered block-entity type; camouflage capability is checked at runtime.
  */
-public final class CamouflageBlockEntityRenderer<T extends BlockEntity & CamouflageableBlockEntity>
+public final class CamouflageBlockEntityRenderer<T extends BlockEntity>
         implements BlockEntityRenderer<T> {
 
     public CamouflageBlockEntityRenderer(BlockEntityRendererProvider.Context context) {}
@@ -26,8 +27,10 @@ public final class CamouflageBlockEntityRenderer<T extends BlockEntity & Camoufl
     @Override
     public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        if (!(blockEntity instanceof CamouflageableBlockEntity camouflageable)) return;
         if (blockEntity.getLevel() == null) return;
-        BlockState camouflage = blockEntity.getCamouflageState();
+
+        BlockState camouflage = camouflageable.getCamouflageState();
         if (camouflage == null || camouflage.isAir()) return;
 
         BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
