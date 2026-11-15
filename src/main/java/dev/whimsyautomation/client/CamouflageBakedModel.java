@@ -63,7 +63,8 @@ public final class CamouflageBakedModel extends BakedModelWrapper<BakedModel> {
         BakedModel bodyModel = camouflage == null || camouflage.isAir()
                 ? fallbackModel
                 : Minecraft.getInstance().getBlockRenderer().getBlockModel(camouflage);
-        ChunkRenderTypeSet bodyTypes = bodyModel.getRenderTypes(camouflage, random, ModelData.EMPTY);
+        BlockState bodyState = camouflage == null || camouflage.isAir() ? machineState : camouflage;
+        ChunkRenderTypeSet bodyTypes = bodyModel.getRenderTypes(bodyState, random, ModelData.EMPTY);
         return ChunkRenderTypeSet.union(bodyTypes, frameTypes);
     }
 }
