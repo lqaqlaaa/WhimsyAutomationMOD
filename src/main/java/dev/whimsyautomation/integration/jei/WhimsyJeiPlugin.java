@@ -3,7 +3,8 @@ package dev.whimsyautomation.integration.jei;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.ingredients.IIngredientSupplier;
+import mezz.jei.api.gui.IRecipeLayoutDrawable;
+import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.recipe.IFocus;
 import mezz.jei.api.recipe.IRecipeManager;
 import mezz.jei.api.recipe.RecipeIngredientRole;
@@ -19,9 +20,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Queries JEI's own recipe index for the item currently being dismantled.
- * JEI is the discovery source; the server RecipeManager remains authoritative
- * for executing a dismantling operation.
+ * Reads the same JEI recipe index used by the R-key recipe browser.
+ *
+ * Inputs are retained as JEI recipe slots (one group per displayed slot), not
+ * flattened into a single list. A slot may contain several interchangeable
+ * ItemStacks, and those alternatives must remain together.
  */
 @JeiPlugin
 public final class WhimsyJeiPlugin implements IModPlugin {
@@ -31,10 +34,17 @@ public final class WhimsyJeiPlugin implements IModPlugin {
     private static volatile List<IRecipeCategory<?>> categories = List.of();
 
     public record Entry(String recipeId, String categoryId, Component categoryTitle,
-                        ItemStack output, List<ItemStack> inputs) {
+                        ItemStack output, List<List<ItemStack>> inputGroups) {
         public Entry {
             output = output.copy();
-            inputs = inputs.stream().map(ItemStack::copy).toList();
+            inputGroups = inputGroups.stream()
+                    .map(group -> group.stream().map(ItemStack::copy).toList())
+                    .toList();
+        }
+
+        /** Flattened compatibility view; consumers needing alternatives use inputGroups(). */
+        public List<ItemStack> inputs() {
+            return inputGroups.stream().flatMap(List::stream).map(ItemStack::copy).toList();
         }
     }
 
@@ -63,10 +73,8 @@ public final class WhimsyJeiPlugin implements IModPlugin {
     }
 
     /**
-     * Uses the exact item stack supplied by the player as an OUTPUT focus.
-     * JEI's item subtype helpers may distinguish stacks by data components;
-     * stripping those components here makes the query differ from pressing R
-     * on the actual stack (notably for modded items with per-item state).
+     * Queries JEI with the complete input stack as OUTPUT focus. In particular,
+     * data components are retained for JEI subtype matching.
      */
     public static List<Entry> findByOutput(ItemStack target) {
         IJeiRuntime active = runtime;
@@ -79,41 +87,52 @@ public final class WhimsyJeiPlugin implements IModPlugin {
         Map<String, Entry> found = new LinkedHashMap<>();
 
         for (IRecipeCategory<?> category : categories) {
-            collectFocusedMatches(manager, category, focus, found);
+            collectFocusedMatches(active, manager, category, focus, found);
         }
         return List.copyOf(found.values());
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static void collectFocusedMatches(IRecipeManager manager, IRecipeCategory category,
-                                              IFocus<ItemStack> focus, Map<String, Entry> found) {
+    private static void collectFocusedMatches(IJeiRuntime active, IRecipeManager manager,
+                                              IRecipeCategory category, IFocus<ItemStack> focus,
+                                              Map<String, Entry> found) {
         manager.createRecipeLookup(category.getRecipeType())
                 .limitFocus(List.of(focus))
                 .includeHidden()
                 .get()
                 .forEach(recipe -> {
-                    IIngredientSupplier ingredients = manager.getRecipeIngredients(category, recipe);
-                    List<ItemStack> outputs = ingredients.getIngredients(RecipeIngredientRole.OUTPUT).stream()
-                            .map(typed -> typed.getIngredient(VanillaTypes.ITEM_STACK).orElse(ItemStack.EMPTY))
-                            .filter(stack -> !stack.isEmpty())
-                            .map(ItemStack::copy)
-                            .toList();
-                    List<ItemStack> inputs = ingredients.getIngredients(RecipeIngredientRole.INPUT).stream()
-                            .map(typed -> typed.getIngredient(VanillaTypes.ITEM_STACK).orElse(ItemStack.EMPTY))
-                            .filter(stack -> !stack.isEmpty())
-                            .map(ItemStack::copy)
-                            .toList();
-                    if (outputs.isEmpty() || inputs.isEmpty()) return;
+                    ItemStack output = null;
+                    List<List<ItemStack>> inputGroups = new ArrayList<>();
+
+                    // The ingredient supplier is intentionally not used here:
+                    // it flattens ingredients and loses recipe-slot boundaries.
+                    // The drawable layout exposes each JEI slot and all of its
+                    // alternatives, matching what JEI actually displays.
+                    var layout = manager.createRecipeLayoutDrawable(
+                            category, recipe, active.getJeiHelpers().getFocusFactory().getEmptyFocusGroup());
+                    if (layout.isEmpty()) return;
+
+                    for (IRecipeSlotView slot : layout.get().getRecipeSlotsView().getSlotViews()) {
+                        List<ItemStack> stacks = slot.getItemStacks()
+                                .filter(stack -> !stack.isEmpty())
+                                .map(ItemStack::copy)
+                                .toList();
+                        if (stacks.isEmpty()) continue;
+                        if (slot.getRole() == RecipeIngredientRole.OUTPUT) {
+                            if (output == null) output = stacks.get(0);
+                        } else if (slot.getRole() == RecipeIngredientRole.INPUT) {
+                            inputGroups.add(stacks);
+                        }
+                    }
+                    if (output == null || inputGroups.isEmpty()) return;
 
                     ResourceLocation sourceId = category.getRegistryName(recipe);
                     String id = sourceId == null
                             ? category.getRecipeType().getUid() + "/jei/" + Integer.toUnsignedString(recipe.hashCode())
                             : sourceId.toString();
                     String categoryId = category.getRecipeType().getUid().toString();
-                    for (ItemStack output : outputs) {
-                        String key = id + "|" + output.getItem() + "|" + output.getComponents().hashCode();
-                        found.putIfAbsent(key, new Entry(id, categoryId, category.getTitle(), output, inputs));
-                    }
+                    String key = id + "|" + output.getItem() + "|" + output.getComponents().hashCode();
+                    found.putIfAbsent(key, new Entry(id, categoryId, category.getTitle(), output, inputGroups));
                 });
     }
 }
