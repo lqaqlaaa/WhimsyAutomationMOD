@@ -528,7 +528,20 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             if (holder == null || group < 0 || group >= 32) return false;
             ItemStack[] options = getIngredientOptions(group);
             if (variant < 0 || variant >= options.length) return false;
-            machine.setIngredientVariant(holder.id().toString(), group, variant);
+            // A merged visual slot can represent several repeated recipe
+            // positions. Keep their selected alternative synchronized.
+            for (int groupedIndex : getPreviewGroupIndices(group)) {
+                ItemStack[] groupedOptions = getIngredientOptions(groupedIndex);
+                if (groupedOptions.length != options.length) continue;
+                boolean sameOptions = true;
+                for (int optionIndex = 0; optionIndex < options.length; optionIndex++) {
+                    if (!ItemStack.isSameItemSameComponents(groupedOptions[optionIndex], options[optionIndex])) {
+                        sameOptions = false;
+                        break;
+                    }
+                }
+                if (sameOptions) machine.setIngredientVariant(holder.id().toString(), groupedIndex, variant);
+            }
             return true;
         }
         if (buttonId == 2) { machine.setAutoMode(!machine.isAutoMode()); return true; }
