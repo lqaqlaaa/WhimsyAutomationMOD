@@ -49,7 +49,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private boolean syncedLocked;
     private int syncedLockedRecipeIndex = -1;
     private ItemStack cachedCandidateInput = ItemStack.EMPTY;
-    private List<RecipeHolder<?>> cachedCandidateRecipes = List.of();
+    private List<Candidate> cachedCandidateRecipes = List.of();
     private List<dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.Entry> cachedJeiEntries = List.of();
     private List<RecipeHolder<?>> cachedAllRecipes;
     private ItemStack cachedPreviewInput = ItemStack.EMPTY;
@@ -151,9 +151,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             final int groupIndex = group;
             addDataSlot(new DataSlot() {
                 @Override public int get() {
-                    RecipeHolder<?> recipe = getPreviewRecipe();
+                    Candidate recipe = getPreviewRecipe();
                     return machine == null || recipe == null ? 0
-                            : machine.getIngredientVariant(recipe.id().toString(), groupIndex);
+                            : machine.getIngredientVariant(recipe.id(), groupIndex);
                 }
                 @Override public void set(int value) { syncedIngredientVariants[groupIndex] = Math.max(0, value); }
             });
@@ -206,64 +206,38 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         return dev.whimsyautomation.util.RecipeOutputMatcher.matches(recipeResult, input);
     }
 
-    private List<RecipeHolder<?>> candidates() {
+    private List<Candidate> candidates() {
         ItemStack input = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
         if (ItemStack.matches(cachedCandidateInput, input)) return cachedCandidateRecipes;
         cachedCandidateInput = input.copy();
-        if (input.isEmpty()) {
-            cachedJeiEntries = List.of();
-            cachedCandidateRecipes = List.of();
-            return cachedCandidateRecipes;
-        }
-        List<RecipeHolder<?>> found = new ArrayList<>();
+        if (input.isEmpty()) { cachedJeiEntries = List.of(); cachedCandidateRecipes = List.of(); return cachedCandidateRecipes; }
+        java.util.Map<String, Candidate> found = new java.util.LinkedHashMap<>();
         if (level.isClientSide && dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.isAvailable()) {
-            // Client-side discovery comes from JEI's OUTPUT-focus index. Map
-            // JEI recipe ids back to server-synchronized RecipeHolders; JEI-only
-            // display recipes without a server recipe are not executable.
-            java.util.Map<String, RecipeHolder<?>> registered = new java.util.HashMap<>();
-            for (RecipeHolder<?> holder : allRecipes()) registered.put(holder.id().toString(), holder);
             cachedJeiEntries = dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.findByOutput(input);
-            java.util.Set<String> added = new java.util.HashSet<>();
             for (var entry : cachedJeiEntries) {
-                RecipeHolder<?> holder = registered.get(entry.recipeId());
-                if (holder == null || !added.add(entry.recipeId())) continue;
-                Recipe<?> recipe = holder.value();
-                // JEI has already matched this recipe against the exact OUTPUT focus.
-                // Ship its displayed ingredient groups to the server: custom RecipeInput
-                // implementations often expose no vanilla Ingredient list at all.
-                if (!entry.inputGroups().isEmpty()) {
-                    DeconstructionRecipeSnapshotPayload.send(containerId, machinePos, entry.recipeId(),
-                            entry.output(), entry.inputGroups());
-                }
-                found.add(holder);
+                if (entry.output().isEmpty() || entry.inputGroups().isEmpty()) continue;
+                Candidate candidate = new Candidate(entry.recipeId(), entry.output(), entry.inputGroups(), null);
+                found.putIfAbsent(candidate.id(), candidate);
+                DeconstructionRecipeSnapshotPayload.send(containerId, machinePos, entry.recipeId(), entry.output(), entry.inputGroups());
             }
         } else {
             cachedJeiEntries = List.of();
-            // The client has already matched these outputs through JEI. Reuse
-            // the server-validated snapshots before consulting static recipe
-            // results, which may be empty or generic for dynamic mod recipes.
             if (machine != null) {
                 for (var snapshot : machine.getJeiRecipeOutputs().entrySet()) {
-                    if (!matchesRecipeOutput(snapshot.getValue(), input)) continue;
-                    for (RecipeHolder<?> holder : allRecipes()) {
-                        if (holder.id().toString().equals(snapshot.getKey())) {
-                            found.add(holder);
-                            break;
-                        }
-                    }
+                    List<List<ItemStack>> groups = machine.getJeiRecipeSnapshot(snapshot.getKey());
+                    if (!groups.isEmpty() && matchesRecipeOutput(snapshot.getValue(), input))
+                        found.put(snapshot.getKey(), new Candidate(snapshot.getKey(), snapshot.getValue(), groups, null));
                 }
             }
-            // Dedicated servers have no JEI runtime. They also retain the
-            // native recipe fallback for recipes without a captured snapshot.
             for (RecipeHolder<?> holder : allRecipes()) {
-                Recipe<?> recipe = holder.value();
-                ItemStack result = recipe.getResultItem(level.registryAccess());
-                if (!matchesRecipeOutput(result, input)) continue;
-                found.add(holder);
+                ItemStack output = holder.value().getResultItem(level.registryAccess());
+                if (matchesRecipeOutput(output, input))
+                    found.putIfAbsent(holder.id(), new Candidate(holder.id(), output, List.of(), holder));
             }
         }
-        found.sort((a, b) -> a.id().compareTo(b.id()));
-        cachedCandidateRecipes = List.copyOf(found);
+        List<Candidate> sorted = new ArrayList<>(found.values());
+        sorted.sort((a,b) -> a.id().compareTo(b.id()));
+        cachedCandidateRecipes = List.copyOf(sorted);
         return cachedCandidateRecipes;
     }
 
@@ -278,33 +252,26 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     private int getServerLockedRecipeIndex() {
         if (machine == null || machine.getLockedRecipe().isEmpty()) return -1;
-        List<RecipeHolder<?>> all = allRecipes();
-        for (int i = 0; i < all.size(); i++) {
-            if (all.get(i).id().toString().equals(machine.getLockedRecipe())) return i;
-        }
+        List<Candidate> all = candidates();
+        for (int i = 0; i < all.size(); i++) if (all.get(i).id().equals(machine.getLockedRecipe())) return i;
         return -1;
     }
-
-    private RecipeHolder<?> getLockedRecipeHolder() {
-        List<RecipeHolder<?>> all = allRecipes();
-        int index = level.isClientSide ? syncedLockedRecipeIndex : getServerLockedRecipeIndex();
-        return index >= 0 && index < all.size() ? all.get(index) : null;
+    private Candidate getLockedRecipeHolder() {
+        for (Candidate candidate : candidates()) if (candidate.id().equals(machine == null ? "" : machine.getLockedRecipe())) return candidate;
+        return null;
     }
 
     private int getServerRecipeIndex() {
         if (machine == null) return -1;
-        List<RecipeHolder<?>> found = candidates();
+        List<Candidate> found = candidates();
         if (found.isEmpty()) return -1;
         if (machine.getSelectedRecipe().isEmpty()) return 0;
-        for (int i = 0; i < found.size(); i++) {
-            if (found.get(i).id().toString().equals(machine.getSelectedRecipe())) return i;
-        }
+        for (int i = 0; i < found.size(); i++) if (found.get(i).id().equals(machine.getSelectedRecipe())) return i;
         return -1;
     }
-
-    private RecipeHolder<?> getPreviewRecipe() {
+    private Candidate getPreviewRecipe() {
         if (level.isClientSide ? syncedLocked : machine != null && !machine.getLockedRecipe().isEmpty()) return getLockedRecipeHolder();
-        List<RecipeHolder<?>> found = candidates();
+        List<Candidate> found = candidates();
         if (found.isEmpty()) return null;
         int index = level.isClientSide ? syncedRecipeIndex : getServerRecipeIndex();
         if (index < 0 || index >= found.size()) index = 0;
@@ -313,7 +280,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     /** Updates the client preview immediately; the server selection remains authoritative. */
     public void cyclePreview(int delta) {
-        List<RecipeHolder<?>> found = candidates();
+        List<Candidate> found = candidates();
         if (found.isEmpty()) {
             syncedRecipeIndex = -1;
             return;
@@ -327,15 +294,14 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     private dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.Entry getJeiPreviewEntry() {
-        RecipeHolder<?> holder = getPreviewRecipe();
-        if (holder == null) return null;
-        String id = holder.id().toString();
-        for (var entry : cachedJeiEntries) {
-            if (entry.recipeId().equals(id)) return entry;
-        }
-        return null;
+        Candidate candidate = getPreviewRecipe();
+        if (candidate == null || candidate.inputGroups().isEmpty()) return null;
+        for (var entry : cachedJeiEntries) if (entry.recipeId().equals(candidate.id())) return entry;
+        return new dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.Entry(candidate.id(), "", Component.empty(), candidate.output(), candidate.inputGroups());
     }
-
+    private record Candidate(String id, ItemStack output, List<List<ItemStack>> inputGroups, RecipeHolder<?> holder) {
+        private Candidate { output = output.copy(); inputGroups = inputGroups.stream().map(g -> g.stream().map(ItemStack::copy).toList()).toList(); }
+    }
     private record PreviewEntry(ItemStack stack, List<Integer> groupIndices) {}
 
     /**
@@ -345,8 +311,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
      * equivalent logical groups.
      */
     private List<PreviewEntry> getPreviewEntries() {
-        RecipeHolder<?> holder = getPreviewRecipe();
-        if (holder == null) return List.of();
+        Candidate candidate = getPreviewRecipe();
+        if (candidate == null) return List.of();
 
         List<PreviewEntry> merged = new ArrayList<>();
         var jeiEntry = getJeiPreviewEntry();
@@ -357,9 +323,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 int variant = Math.floorMod(getSelectedIngredientVariant(groupIndex), options.size());
                 addPreviewEntry(merged, options.get(variant).copy(), groupIndex);
             }
-        } else {
+        } else if (candidate.holder() != null) {
             List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
-                    dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(holder.value());
+                    dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(candidate.holder().value());
             for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
                 var group = groups.get(groupIndex);
                 ItemStack[] choices = group.ingredient().getItems();
@@ -423,8 +389,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     public List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> getPreviewIngredientGroups() {
-        RecipeHolder<?> holder = getPreviewRecipe();
-        return holder == null ? List.of() : dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(holder.value());
+        Candidate candidate = getPreviewRecipe();
+        return candidate == null || candidate.holder() == null ? List.of() : dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(candidate.holder().value());
     }
 
     public ItemStack[] getIngredientOptions(int groupIndex) {
@@ -445,8 +411,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     public void chooseIngredientVariant(int groupIndex, int variant) {
         if (minecraftServerSide() && machine != null) {
-            RecipeHolder<?> holder = getPreviewRecipe();
-            if (holder != null) machine.setIngredientVariant(holder.id().toString(), groupIndex, variant);
+            Candidate holder = getPreviewRecipe();
+            if (holder != null) machine.setIngredientVariant(holder.id(), groupIndex, variant);
         }
     }
 
@@ -479,8 +445,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     public ItemStack getPreviewResult() {
         var jeiEntry = getJeiPreviewEntry();
         if (jeiEntry != null) return jeiEntry.output().copy();
-        RecipeHolder<?> recipe = getPreviewRecipe();
-        return recipe == null ? ItemStack.EMPTY : recipe.value().getResultItem(level.registryAccess()).copy();
+        Candidate recipe = getPreviewRecipe();
+        return recipe == null ? ItemStack.EMPTY : recipe.output().copy();
     }
 
     public int getCandidateCount() {
@@ -489,10 +455,10 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     /** One-based position of the currently displayed recipe among switchable candidates. */
     public int getSelectedRecipePosition() {
-        List<RecipeHolder<?>> found = candidates();
+        List<Candidate> found = candidates();
         if (found.isEmpty()) return 0;
         if (syncedLocked) {
-            RecipeHolder<?> locked = getLockedRecipeHolder();
+            Candidate locked = getLockedRecipeHolder();
             if (locked != null) {
                 for (int i = 0; i < found.size(); i++) {
                     if (found.get(i).id().equals(locked.id())) return i + 1;
@@ -505,21 +471,21 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     public String getPreviewRecipeId() {
-        RecipeHolder<?> recipe = getPreviewRecipe();
-        return recipe == null ? "" : recipe.id().toString();
+        Candidate recipe = getPreviewRecipe();
+        return recipe == null ? "" : recipe.id();
     }
 
     public String getRecipeStatus() {
         if (syncedLocked) {
-            RecipeHolder<?> locked = getLockedRecipeHolder();
+            Candidate locked = getLockedRecipeHolder();
             if (locked == null) return Component.translatable("screen.whimsy_automation.recipe_locked_missing").getString();
             ItemStack input = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
-            if (!input.isEmpty() && !matchesRecipeOutput(locked.value().getResultItem(level.registryAccess()), input)) {
+            if (!input.isEmpty() && !matchesRecipeOutput(locked.output(), input)) {
                 return Component.translatable("screen.whimsy_automation.recipe_locked_count", candidates().size()).getString();
             }
             return Component.translatable("screen.whimsy_automation.recipe_locked_count", candidates().size()).getString();
         }
-        List<RecipeHolder<?>> found = candidates();
+        List<Candidate> found = candidates();
         if (found.isEmpty()) return Component.translatable("screen.whimsy_automation.recipe_none").getString();
         if (getPreviewRecipe() == null) return Component.translatable("screen.whimsy_automation.recipe_count", found.size()).getString();
         return Component.translatable("screen.whimsy_automation.recipe_count", found.size()).getString();
@@ -550,7 +516,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             int encoded = buttonId - 1000;
             int group = encoded / 32768;
             int variant = encoded % 32768;
-            RecipeHolder<?> holder = getPreviewRecipe();
+            Candidate holder = getPreviewRecipe();
             if (holder == null || group < 0 || group >= 32) return false;
             ItemStack[] options = getIngredientOptions(group);
             if (variant < 0 || variant >= options.length) return false;
@@ -566,7 +532,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                         break;
                     }
                 }
-                if (sameOptions) machine.setIngredientVariant(holder.id().toString(), groupedIndex, variant);
+                if (sameOptions) machine.setIngredientVariant(holder.id(), groupedIndex, variant);
             }
             return true;
         }
@@ -576,8 +542,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             // the player cycles the recipe buttons. Commit that exact recipe
             // before processing; otherwise the block entity may independently
             // choose a different same-output recipe with no cached JEI inputs.
-            RecipeHolder<?> selected = getPreviewRecipe();
-            if (selected != null) machine.setSelectedRecipe(selected.id());
+            Candidate selected = getPreviewRecipe();
+            if (selected != null) machine.setSelectedRecipeId(selected.id());
             machine.processOnce();
             return true;
         }
@@ -587,19 +553,19 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             if (!machine.getLockedRecipe().isEmpty()) {
                 machine.setLockedRecipe(null);
             } else {
-                RecipeHolder<?> selected = getPreviewRecipe();
+                Candidate selected = getPreviewRecipe();
                 if (selected == null) return false;
-                machine.setLockedRecipe(selected.id());
+                machine.setLockedRecipeId(selected.id());
             }
             return true;
         }
         if (buttonId != 0 && buttonId != 1) return false;
-        List<RecipeHolder<?>> found = candidates();
+        List<Candidate> found = candidates();
         if (found.isEmpty()) return false;
         int index = getServerRecipeIndex();
         if (index < 0) index = buttonId == 0 ? found.size() - 1 : 0;
         else index = Math.floorMod(index + (buttonId == 0 ? -1 : 1), found.size());
-        machine.setSelectedRecipe(found.get(index).id());
+        machine.setSelectedRecipeId(found.get(index).id());
         syncedPreviewPage = 0;
         return true;
     }
