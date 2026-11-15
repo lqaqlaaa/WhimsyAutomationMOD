@@ -4,6 +4,7 @@ import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -49,10 +50,16 @@ public record DeconstructionRecipeSnapshotPayload(
         BlockPos pos = buf.readBlockPos();
         String recipeId = buf.readUtf(256);
         ItemStack output = ItemStack.STREAM_CODEC.decode(buf);
-        int groupCount = Math.max(0, Math.min(64, buf.readVarInt()));
+        int groupCount = buf.readVarInt();
+        if (groupCount < 0 || groupCount > 4096) {
+            throw new DecoderException("Invalid deconstruction snapshot group count: " + groupCount);
+        }
         List<List<ItemStack>> groups = new ArrayList<>(groupCount);
         for (int i = 0; i < groupCount; i++) {
-            int optionCount = Math.max(0, Math.min(128, buf.readVarInt()));
+            int optionCount = buf.readVarInt();
+            if (optionCount < 0 || optionCount > 4096) {
+                throw new DecoderException("Invalid deconstruction snapshot option count: " + optionCount);
+            }
             List<ItemStack> options = new ArrayList<>(optionCount);
             for (int j = 0; j < optionCount; j++) options.add(ItemStack.STREAM_CODEC.decode(buf));
             groups.add(List.copyOf(options));
@@ -72,7 +79,7 @@ public record DeconstructionRecipeSnapshotPayload(
                     || menu.containerId != payload.containerId()) return;
             if (!menu.stillValid(player) || !menu.matchesMachinePosition(payload.pos())) return;
             if (payload.recipeId().isBlank() || payload.output().isEmpty()
-                    || payload.inputGroups().isEmpty() || payload.inputGroups().size() > 64) return;
+                    || payload.inputGroups().isEmpty()) return;
 
             DeconstructionTableBlockEntity machine = menu.machine();
             if (machine == null || player.level().getBlockEntity(payload.pos()) != machine) return;
@@ -83,7 +90,7 @@ public record DeconstructionRecipeSnapshotPayload(
             if (input.isEmpty()) return;
 
             for (List<ItemStack> group : payload.inputGroups()) {
-                if (group.isEmpty() || group.size() > 128) return;
+                if (group.isEmpty()) return;
                 for (ItemStack stack : group) if (stack.isEmpty()) return;
             }
             machine.cacheJeiRecipeSnapshot(payload.recipeId(), payload.output(), payload.inputGroups(), input);
