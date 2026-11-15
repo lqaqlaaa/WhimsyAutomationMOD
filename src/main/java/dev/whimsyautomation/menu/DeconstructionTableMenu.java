@@ -581,6 +581,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             } else {
                 Candidate selected = getPreviewRecipe();
                 if (selected == null) return false;
+                // Keep the ordinary selection aligned with the recipe being
+                // locked, so unlocking returns to the same visible preview.
+                machine.setSelectedRecipeId(selected.id());
                 machine.setLockedRecipeId(selected.id());
             }
             return true;
