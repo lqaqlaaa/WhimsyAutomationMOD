@@ -243,7 +243,6 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             // validate against their authoritative synchronized recipe set.
             for (RecipeHolder<?> holder : allRecipes()) {
                 Recipe<?> recipe = holder.value();
-                if (dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(recipe).isEmpty()) continue;
                 ItemStack result = recipe.getResultItem(level.registryAccess());
                 if (!matchesRecipeOutput(result, input)) continue;
                 found.add(holder);
