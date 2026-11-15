@@ -1,6 +1,7 @@
 package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.WhimsyAutomation;
+import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
 import net.minecraft.client.renderer.block.BlockModelShaper;
@@ -11,6 +12,7 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
@@ -25,38 +27,44 @@ public final class ClientModEvents {
         event.register(ModMenus.ENCHANTMENT_CONVERSION_TABLE.get(), EnchantmentConversionTableScreen::new);
     }
 
-    /**
-     * Ensure the original machine body is baked as a fallback, independently
-     * from the open-center frame model used by the dynamic camouflage model.
-     */
     @SubscribeEvent
-    public static void registerCamouflageFallbackModels(ModelEvent.RegisterAdditional event) {
-        registerFallback(event, "deconstruction_table_fallback");
-        registerFallback(event, "enchantment_extractor_fallback");
-        registerFallback(event, "enchantment_conversion_table_fallback");
+    public static void registerBlockEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.DECONSTRUCTION_TABLE.get(), CamouflageBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), CamouflageBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_CONVERSION_TABLE.get(), CamouflageBlockEntityRenderer::new);
     }
 
-    private static void registerFallback(ModelEvent.RegisterAdditional event, String path) {
+    @SubscribeEvent
+    public static void registerCamouflageModels(ModelEvent.RegisterAdditional event) {
+        registerModel(event, "deconstruction_table_fallback");
+        registerModel(event, "enchantment_extractor_fallback");
+        registerModel(event, "enchantment_conversion_table_fallback");
+        registerModel(event, "deconstruction_table_inset_fill");
+        registerModel(event, "enchantment_extractor_inset_fill");
+        registerModel(event, "enchantment_conversion_table_inset_fill");
+    }
+
+    private static void registerModel(ModelEvent.RegisterAdditional event, String path) {
         event.register(ModelResourceLocation.standalone(
                 ResourceLocation.fromNamespaceAndPath(WhimsyAutomation.MOD_ID, "block/" + path)));
     }
 
     @SubscribeEvent
     public static void modifyCamouflageModels(ModelEvent.ModifyBakingResult event) {
-        wrapMachineModel(event, ModBlocks.DECONSTRUCTION_TABLE.get(), "deconstruction_table_fallback");
-        wrapMachineModel(event, ModBlocks.ENCHANTMENT_EXTRACTOR.get(), "enchantment_extractor_fallback");
-        wrapMachineModel(event, ModBlocks.ENCHANTMENT_CONVERSION_TABLE.get(), "enchantment_conversion_table_fallback");
+        wrapMachineModel(event, ModBlocks.DECONSTRUCTION_TABLE.get(), "deconstruction_table_fallback", "deconstruction_table_inset_fill");
+        wrapMachineModel(event, ModBlocks.ENCHANTMENT_EXTRACTOR.get(), "enchantment_extractor_fallback", "enchantment_extractor_inset_fill");
+        wrapMachineModel(event, ModBlocks.ENCHANTMENT_CONVERSION_TABLE.get(), "enchantment_conversion_table_fallback", "enchantment_conversion_table_inset_fill");
     }
 
-    private static void wrapMachineModel(ModelEvent.ModifyBakingResult event, Block block, String fallbackPath) {
+    private static void wrapMachineModel(ModelEvent.ModifyBakingResult event, Block block,
+                                         String fallbackPath, String insetFillPath) {
         ModelResourceLocation machineLocation = BlockModelShaper.stateToModelLocation(block.defaultBlockState());
-        ModelResourceLocation fallbackLocation = ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath(WhimsyAutomation.MOD_ID, "block/" + fallbackPath));
-        BakedModel fallback = event.getModels().get(fallbackLocation);
-        if (fallback == null) {
-            return;
-        }
+        BakedModel fallback = event.getModels().get(ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath(WhimsyAutomation.MOD_ID, "block/" + fallbackPath)));
+        BakedModel insetFill = event.getModels().get(ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath(WhimsyAutomation.MOD_ID, "block/" + insetFillPath)));
+        if (fallback == null || insetFill == null) return;
         event.getModels().computeIfPresent(machineLocation,
-                (location, frameModel) -> new CamouflageBakedModel(frameModel, fallback));
+                (location, frameModel) -> new CamouflageBakedModel(frameModel, fallback, insetFill));
     }
 }
