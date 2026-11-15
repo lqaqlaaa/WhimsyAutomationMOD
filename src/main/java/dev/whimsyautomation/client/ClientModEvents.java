@@ -54,7 +54,6 @@ public final class ClientModEvents {
                 ResourceLocation.fromNamespaceAndPath(WhimsyAutomation.MOD_ID, "block/" + fallbackPath));
         BakedModel fallback = event.getModels().get(fallbackLocation);
         if (fallback == null) {
-            WhimsyAutomation.LOGGER.error("Missing camouflage fallback model: {}", fallbackLocation);
             return;
         }
         event.getModels().computeIfPresent(machineLocation,
