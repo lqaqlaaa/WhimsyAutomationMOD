@@ -6,6 +6,9 @@ import dev.whimsyautomation.util.SidedMachineItemHandler;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -34,7 +37,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
-public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
+public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider, dev.whimsyautomation.camouflage.CamouflageableBlockEntity {
+    private BlockState camouflageState = Blocks.AIR.defaultBlockState();
+
+    @Override public BlockState getCamouflageState() { return camouflageState; }
+    @Override public void setCamouflageState(BlockState state) {
+        camouflageState = state == null ? Blocks.AIR.defaultBlockState() : state;
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
     public static final int OUTPUT_START = 1;
     private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_STACK_LIMIT = Integer.MAX_VALUE;
@@ -676,6 +688,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        if (!camouflageState.isAir()) tag.put("CamouflageState", NbtUtils.writeBlockState(camouflageState));
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.put("InputBuffer", inputBuffer.serializeNBT(registries));
         tag.putInt("WorkTicks", workTicks);
@@ -690,6 +703,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        camouflageState = tag.contains("CamouflageState") ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState")) : Blocks.AIR.defaultBlockState();
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         if (tag.contains("InputBuffer")) inputBuffer.deserializeNBT(registries, tag.getCompound("InputBuffer"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");

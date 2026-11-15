@@ -4,6 +4,9 @@ import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -21,7 +24,16 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
-public final class EnchantmentConversionTableBlockEntity extends BlockEntity implements MenuProvider {
+public final class EnchantmentConversionTableBlockEntity extends BlockEntity implements MenuProvider, dev.whimsyautomation.camouflage.CamouflageableBlockEntity {
+    private BlockState camouflageState = Blocks.AIR.defaultBlockState();
+
+    @Override public BlockState getCamouflageState() { return camouflageState; }
+    @Override public void setCamouflageState(BlockState state) {
+        camouflageState = state == null ? Blocks.AIR.defaultBlockState() : state;
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
     public static final int BOOK_SLOT = 0, PAYMENT_SLOT = 1, TEMPLATE_SLOT = 2, RESULT_SLOT = 3, SLOT_COUNT = 4;
     private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
         @Override public int getSlotLimit(int slot) { return slot == TEMPLATE_SLOT || slot == RESULT_SLOT ? 1 : 64; }
@@ -78,6 +90,6 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     @Override public AbstractContainerMenu createMenu(int id, Inventory playerInventory, Player player) {
         return new EnchantmentConversionTableMenu(id, playerInventory, new FriendlyByteBuf(Unpooled.buffer()).writeBlockPos(worldPosition));
     }
-    @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) { super.saveAdditional(tag,registries); tag.put("Inventory",inventory.serializeNBT(registries)); }
-    @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) { super.loadAdditional(tag,registries); if(tag.contains("Inventory")) inventory.deserializeNBT(registries,tag.getCompound("Inventory")); }
+    @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) { super.saveAdditional(tag,registries); if (!camouflageState.isAir()) tag.put("CamouflageState", NbtUtils.writeBlockState(camouflageState)); tag.put("Inventory",inventory.serializeNBT(registries)); }
+    @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) { super.loadAdditional(tag,registries); camouflageState = tag.contains("CamouflageState") ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState")) : Blocks.AIR.defaultBlockState(); if(tag.contains("Inventory")) inventory.deserializeNBT(registries,tag.getCompound("Inventory")); }
 }

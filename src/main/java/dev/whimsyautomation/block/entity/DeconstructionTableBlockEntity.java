@@ -5,6 +5,9 @@ import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
@@ -44,7 +47,16 @@ import java.util.Map;
  * Reverse-processes supported registered recipes. Recipe preview, recipe lock and
  * automation are deliberately separate states.
  */
-public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider {
+public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider, dev.whimsyautomation.camouflage.CamouflageableBlockEntity {
+    private BlockState camouflageState = Blocks.AIR.defaultBlockState();
+
+    @Override public BlockState getCamouflageState() { return camouflageState; }
+    @Override public void setCamouflageState(BlockState state) {
+        camouflageState = state == null ? Blocks.AIR.defaultBlockState() : state;
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
     public static final int OUTPUT_START = 1;
     private static final int PAGE_SIZE = 27;
 
@@ -467,6 +479,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        if (!camouflageState.isAir()) tag.put("CamouflageState", NbtUtils.writeBlockState(camouflageState));
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.putString("SelectedRecipe", selectedRecipe);
         tag.putString("LockedRecipe", lockedRecipe);
@@ -499,6 +512,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        camouflageState = tag.contains("CamouflageState") ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState")) : Blocks.AIR.defaultBlockState();
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         int requiredOutputSize = OUTPUT_START + PAGE_SIZE * 10;
         for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
