@@ -48,6 +48,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private int syncedLockedRecipeIndex = -1;
     private ItemStack cachedCandidateInput = ItemStack.EMPTY;
     private List<RecipeHolder<?>> cachedCandidateRecipes = List.of();
+    private List<dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.Entry> cachedJeiEntries = List.of();
     private List<RecipeHolder<?>> cachedAllRecipes;
     private ItemStack cachedPreviewInput = ItemStack.EMPTY;
     private String cachedPreviewRecipeId = "";
@@ -207,6 +208,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (ItemStack.matches(cachedCandidateInput, input)) return cachedCandidateRecipes;
         cachedCandidateInput = input.copy();
         if (input.isEmpty()) {
+            cachedJeiEntries = List.of();
             cachedCandidateRecipes = List.of();
             return cachedCandidateRecipes;
         }
@@ -217,8 +219,9 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             // display recipes without a server recipe are not executable.
             java.util.Map<String, RecipeHolder<?>> registered = new java.util.HashMap<>();
             for (RecipeHolder<?> holder : allRecipes()) registered.put(holder.id().toString(), holder);
+            cachedJeiEntries = dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.findByOutput(input);
             java.util.Set<String> added = new java.util.HashSet<>();
-            for (var entry : dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.findByOutput(input)) {
+            for (var entry : cachedJeiEntries) {
                 RecipeHolder<?> holder = registered.get(entry.recipeId());
                 if (holder == null || !added.add(entry.recipeId())) continue;
                 Recipe<?> recipe = holder.value();
@@ -228,6 +231,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 found.add(holder);
             }
         } else {
+            cachedJeiEntries = List.of();
             // Dedicated servers have no JEI runtime. They independently
             // validate against their authoritative synchronized recipe set.
             for (RecipeHolder<?> holder : allRecipes()) {
@@ -302,15 +306,35 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         syncedPreviewPage = 0;
     }
 
+    private dev.whimsyautomation.integration.jei.WhimsyJeiPlugin.Entry getJeiPreviewEntry() {
+        RecipeHolder<?> holder = getPreviewRecipe();
+        if (holder == null) return null;
+        String id = holder.id().toString();
+        for (var entry : cachedJeiEntries) {
+            if (entry.recipeId().equals(id)) return entry;
+        }
+        return null;
+    }
+
     private List<ItemStack> getAllPreviewStacks() {
         RecipeHolder<?> holder = getPreviewRecipe();
         if (holder == null) return List.of();
-        ItemStack target = slots.isEmpty() ? ItemStack.EMPTY : slots.get(0).getItem();
-        String recipeId = holder.id().toString();
 
-        // Preview and execution use the same server-registered Recipe ingredients.
-        // JEI display alternatives can be client-only or cycle through choices that
-        // the actual recipe does not consume, so they must not override this list.
+        // When JEI supplied this candidate, its actual displayed slot groups
+        // are the source of truth for the preview. Do not reconstruct them from
+        // Recipe#getIngredients(), which loses JEI's slot grouping/alternatives.
+        var jeiEntry = getJeiPreviewEntry();
+        if (jeiEntry != null) {
+            List<ItemStack> stacks = new ArrayList<>();
+            for (int groupIndex = 0; groupIndex < jeiEntry.inputGroups().size(); groupIndex++) {
+                List<ItemStack> options = jeiEntry.inputGroups().get(groupIndex);
+                if (options.isEmpty()) continue;
+                int variant = Math.floorMod(getSelectedIngredientVariant(groupIndex), options.size());
+                stacks.add(options.get(variant).copy());
+            }
+            return List.copyOf(stacks);
+        }
+
         List<ItemStack> recovered = new ArrayList<>();
         List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
                 dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(holder.value());
@@ -323,8 +347,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             selected.setCount(group.count());
             recovered.add(selected);
         }
-        List<ItemStack> result = List.copyOf(recovered);
-        return result;
+        return List.copyOf(recovered);
     }
 
     private static List<ItemStack> mergeIdenticalStacks(List<ItemStack> source) {
@@ -351,6 +374,11 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     public ItemStack[] getIngredientOptions(int groupIndex) {
+        var jeiEntry = getJeiPreviewEntry();
+        if (jeiEntry != null) {
+            if (groupIndex < 0 || groupIndex >= jeiEntry.inputGroups().size()) return new ItemStack[0];
+            return jeiEntry.inputGroups().get(groupIndex).stream().map(ItemStack::copy).toArray(ItemStack[]::new);
+        }
         List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups = getPreviewIngredientGroups();
         if (groupIndex < 0 || groupIndex >= groups.size()) return new ItemStack[0];
         return groups.get(groupIndex).ingredient().getItems();
@@ -395,6 +423,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     }
 
     public ItemStack getPreviewResult() {
+        var jeiEntry = getJeiPreviewEntry();
+        if (jeiEntry != null) return jeiEntry.output().copy();
         RecipeHolder<?> recipe = getPreviewRecipe();
         return recipe == null ? ItemStack.EMPTY : recipe.value().getResultItem(level.registryAccess()).copy();
     }
