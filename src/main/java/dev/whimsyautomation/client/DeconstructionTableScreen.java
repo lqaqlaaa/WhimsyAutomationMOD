@@ -497,6 +497,23 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
+    /** Render the normal item tooltip for manually rendered preview stacks. */
+    private void renderPreviewItemTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (layoutEditor == null || layoutEditor.enabled() || selectedIngredientGroup >= 0 || showSideConfig) return;
+        List<ItemStack> preview = menu.getPreviewStacks();
+        for (int i = 0; i < Math.min(27, preview.size()); i++) {
+            UiLayoutProfile.Element cell = layoutEditor.element("preview_slot_" + i, "preview_slot",
+                    184 + (i % 9) * 18, 71 + (i / 9) * 18, 16, 16);
+            int x = leftPos + cell.x, y = topPos + cell.y;
+            if (mouseX >= x && mouseX < x + cell.width
+                    && mouseY >= y && mouseY < y + cell.height) {
+                ItemStack stack = preview.get(i);
+                if (!stack.isEmpty()) graphics.renderTooltip(font, stack, mouseX, mouseY);
+                return;
+            }
+        }
+    }
+
     private Component alternativeTooltip(double mouseX, double mouseY) {
         if (layoutEditor == null || selectedIngredientGroup >= 0 || showSideConfig) return null;
         for (int i = 0; i < 27; i++) {
@@ -572,6 +589,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.pose().popPose();
         if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, (int) virtualX, (int) virtualY);
+        renderPreviewItemTooltip(graphics, (int) virtualX, (int) virtualY);
         Component alternativeHint = alternativeTooltip(virtualX, virtualY);
         if (alternativeHint != null) {
             graphics.renderTooltip(font, alternativeHint, (int) virtualX, (int) virtualY);
