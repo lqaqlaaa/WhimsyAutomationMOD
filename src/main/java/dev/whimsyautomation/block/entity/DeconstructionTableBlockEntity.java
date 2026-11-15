@@ -127,7 +127,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
     public void cacheJeiRecipeSnapshot(String recipeId, ItemStack output, List<List<ItemStack>> groups, ItemStack forInput) {
         if (recipeId == null || recipeId.isBlank() || output == null || output.isEmpty()
-                || groups == null || groups.isEmpty() || groups.size() > 64 || forInput == null || forInput.isEmpty()) return;
+                || groups == null || groups.isEmpty() || forInput == null || forInput.isEmpty()) return;
         if (jeiSnapshotInput.isEmpty() || !ItemStack.isSameItemSameComponents(jeiSnapshotInput, forInput)) {
             jeiRecipeSnapshots.clear();
             jeiRecipeOutputs.clear();
