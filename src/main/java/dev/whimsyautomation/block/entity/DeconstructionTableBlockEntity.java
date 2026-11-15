@@ -156,19 +156,21 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     public void setSelectedRecipe(@Nullable ResourceLocation recipeId) {
-        setSelectedRecipe(recipeId == null ? "" : recipeId.toString());
+        selectedRecipe = recipeId == null ? "" : recipeId.toString();
+        setChanged();
     }
 
-    public void setSelectedRecipe(String recipeId) {
+    public void setSelectedRecipeId(String recipeId) {
         selectedRecipe = recipeId == null ? "" : recipeId;
         setChanged();
     }
 
     public void setLockedRecipe(@Nullable ResourceLocation recipeId) {
-        setLockedRecipe(recipeId == null ? "" : recipeId.toString());
+        lockedRecipe = recipeId == null ? "" : recipeId.toString();
+        setChanged();
     }
 
-    public void setLockedRecipe(String recipeId) {
+    public void setLockedRecipeId(String recipeId) {
         lockedRecipe = recipeId == null ? "" : recipeId;
         setChanged();
     }
@@ -327,36 +329,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             }
         }
 
-        // Reverse dismantling is item-based, not craft-batch-based. A recipe
-        // that outputs four planks must still accept a single plank; requiring
-        // the full output count here strands valid items in the input slot.
-        // Each input item independently yields the recipe's recovered ingredient
-        // set, matching the table's unrestricted dismantling behavior.
-        int processedItems = Math.min(input.getCount(), 64);
-        if (processedItems <= 0) return;
-
-        List<ItemStack> recoveredPerBatch = new ArrayList<>();
-        List<List<ItemStack>> jeiGroups = getJeiRecipeSnapshot(selected.id().toString());
-        if (!jeiGroups.isEmpty()) {
-            for (int groupIndex = 0; groupIndex < jeiGroups.size(); groupIndex++) {
-                List<ItemStack> options = jeiGroups.get(groupIndex);
-                if (options.isEmpty()) return;
-                int variant = Math.floorMod(getIngredientVariant(selected.id().toString(), groupIndex), options.size());
-                recoveredPerBatch.add(options.get(variant).copy());
-            }
-        } else {
-            List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
-                    dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(recipe);
-            for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
-                var group = groups.get(groupIndex);
-                ItemStack[] options = group.ingredient().getItems();
-                if (options.length == 0) return;
-                int variant = Math.min(getIngredientVariant(selected.id().toString(), groupIndex), options.length - 1);
-                ItemStack recovered = options[variant].copy();
-                recovered.setCount(group.count());
-                recoveredPerBatch.add(recovered);
-            }
-        }
+        // Each dismantled item independently yields the captured ingredient set.
 
         // Enchantments travel with each dismantled item and are returned as books.
         ItemEnchantments itemEnchantments = input.is(Items.ENCHANTED_BOOK)

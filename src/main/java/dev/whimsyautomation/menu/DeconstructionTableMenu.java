@@ -239,8 +239,22 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             }
         } else {
             cachedJeiEntries = List.of();
-            // Dedicated servers have no JEI runtime. They independently
-            // validate against their authoritative synchronized recipe set.
+            // The client has already matched these outputs through JEI. Reuse
+            // the server-validated snapshots before consulting static recipe
+            // results, which may be empty or generic for dynamic mod recipes.
+            if (machine != null) {
+                for (var snapshot : machine.getJeiRecipeOutputs().entrySet()) {
+                    if (!matchesRecipeOutput(snapshot.getValue(), input)) continue;
+                    for (RecipeHolder<?> holder : allRecipes()) {
+                        if (holder.id().toString().equals(snapshot.getKey())) {
+                            found.add(holder);
+                            break;
+                        }
+                    }
+                }
+            }
+            // Dedicated servers have no JEI runtime. They also retain the
+            // native recipe fallback for recipes without a captured snapshot.
             for (RecipeHolder<?> holder : allRecipes()) {
                 Recipe<?> recipe = holder.value();
                 ItemStack result = recipe.getResultItem(level.registryAccess());
