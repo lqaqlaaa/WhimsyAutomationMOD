@@ -208,24 +208,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        // Draw alternative markers after the container's item/slot pass so
-        // item sprites and stack decorations can never cover the badge.
-        List<ItemStack> preview = menu.getPreviewStacks();
-        for (int i = 0; i < Math.min(27, preview.size()); i++) {
-            int displayIndex = menu.getPreviewPage() * 27 + i;
-            if (!menu.previewHasAlternatives(displayIndex)) continue;
-            UiLayoutProfile.Element slot = layoutEditor.element("preview_slot_" + i, "preview_slot",
-                    184 + (i % 9) * 18, 71 + (i / 9) * 18, 16, 16);
-            int x = leftPos + slot.x + slot.width - 8;
-            int y = topPos + slot.y;
-            graphics.fill(x, y, x + 8, y + 8, 0xFF344F70);
-            graphics.drawString(font, "#", x + 2, y, 0xFFFFFFFF, false);
-        }
-    }
-
-    @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         // renderBg is not translated to GUI-local coordinates in 1.21.1.
         // Background art must use screen coordinates; menu slots remain local.
@@ -530,6 +512,20 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         return null;
     }
 
+    private void renderAlternativeBadges(GuiGraphics graphics) {
+        List<ItemStack> preview = menu.getPreviewStacks();
+        for (int i = 0; i < Math.min(27, preview.size()); i++) {
+            int displayIndex = menu.getPreviewPage() * 27 + i;
+            if (!menu.previewHasAlternatives(displayIndex)) continue;
+            UiLayoutProfile.Element slot = layoutEditor.element("preview_slot_" + i, "preview_slot",
+                    184 + (i % 9) * 18, 71 + (i / 9) * 18, 16, 16);
+            int x = leftPos + slot.x + slot.width - 8;
+            int y = topPos + slot.y;
+            graphics.fill(x, y, x + 8, y + 8, 0xFF344F70);
+            graphics.drawString(font, "#", x + 2, y, 0xFFFFFFFF, false);
+        }
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         double scale = uiScale();
@@ -544,6 +540,12 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             // real slot contents, and widgets exactly once. A second explicit
             // renderBackground call was darkening the world a second time.
             super.render(graphics, -10000, -10000, partialTick);
+            graphics.flush();
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0F, 0.0F, 300.0F);
+            renderAlternativeBadges(graphics);
+            graphics.flush();
+            graphics.pose().popPose();
             // Finish the base container pass before drawing the modal. Item
             // stacks use a positive GUI Z offset, so a later fill at Z=0 is
             // not guaranteed to cover them when depth testing is active.
@@ -561,6 +563,12 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         if (layoutExportButton != null) layoutExportButton.visible = layoutEditor != null && layoutEditor.enabled();
         if (layoutResetButton != null) layoutResetButton.visible = layoutEditor != null && layoutEditor.enabled();
         super.render(graphics, (int) virtualX, (int) virtualY, partialTick);
+        graphics.flush();
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, 300.0F);
+        renderAlternativeBadges(graphics);
+        graphics.flush();
+        graphics.pose().popPose();
         if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, (int) virtualX, (int) virtualY);
         Component alternativeHint = alternativeTooltip(virtualX, virtualY);
