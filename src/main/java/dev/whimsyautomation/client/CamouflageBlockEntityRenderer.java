@@ -2,8 +2,8 @@ package dev.whimsyautomation.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.whimsyautomation.camouflage.CamouflageableBlockEntity;
-import net.minecraft.client.renderer.BlockRenderDispatcher;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.level.block.Blocks;
