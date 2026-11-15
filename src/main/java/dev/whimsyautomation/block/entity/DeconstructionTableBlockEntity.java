@@ -266,74 +266,35 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         ItemStack input = inventory.getStackInSlot(0);
         if (input.isEmpty()) return;
 
-        // A recipe must be explicitly selected. A locked recipe always takes
-        // priority, and a mismatch is a hard stop: never fall back to another recipe.
+        // The JEI material preview is the sole source of dismantling results.
+        // No RecipeManager lookup or output/input matching is performed here.
         String chosenId = !lockedRecipe.isEmpty() ? lockedRecipe : selectedRecipe;
         List<List<ItemStack>> jeiGroups = getJeiRecipeSnapshot(chosenId);
-        ItemStack recipeResult = getJeiRecipeOutput(chosenId);
-        RecipeHolder<?> selected = chosenId.isEmpty() ? null : findRecipe(chosenId);
 
-        // JEI's captured output is authoritative for modded recipes whose
-        // Recipe#getResultItem() is empty, generic, or dynamically calculated.
-        if (recipeResult.isEmpty() && selected != null) {
-            recipeResult = selected.value().getResultItem(level.registryAccess());
-        }
-        if (selected == null && jeiGroups.isEmpty() && lockedRecipe.isEmpty()) {
-            for (var entry : jeiRecipeOutputs.entrySet()) {
-                if (matchesRecipeOutput(entry.getValue(), input)
-                        && !getJeiRecipeSnapshot(entry.getKey()).isEmpty()) {
-                    chosenId = entry.getKey();
-                    selectedRecipe = chosenId;
-                    jeiGroups = getJeiRecipeSnapshot(chosenId);
-                    recipeResult = entry.getValue().copy();
-                    break;
-                }
+        // Automatic mode may start before a recipe was manually selected.
+        // Use the first cached preview snapshot associated with the current input.
+        if (jeiGroups.isEmpty() && !jeiRecipeSnapshots.isEmpty()) {
+            for (var entry : jeiRecipeSnapshots.entrySet()) {
+                if (entry.getValue() == null || entry.getValue().isEmpty()) continue;
+                chosenId = entry.getKey();
+                jeiGroups = entry.getValue();
+                if (lockedRecipe.isEmpty()) selectedRecipe = chosenId;
+                break;
             }
         }
-        if (selected == null && jeiGroups.isEmpty() && lockedRecipe.isEmpty()) {
-            List<RecipeHolder<?>> matches = new ArrayList<>();
-            for (RecipeHolder<?> candidate : level.getRecipeManager().getRecipes()) {
-                if (matchesRecipeOutput(candidate.value().getResultItem(level.registryAccess()), input)) matches.add(candidate);
-            }
-            matches.sort((a, b) -> a.id().compareTo(b.id()));
-            if (!matches.isEmpty()) {
-                selected = matches.get(0);
-                selectedRecipe = selected.id().toString();
-                chosenId = selectedRecipe;
-                recipeResult = selected.value().getResultItem(level.registryAccess());
-            }
-        }
-        if (selected == null && jeiGroups.isEmpty()) {
-            if (automatic && lockedRecipe.isEmpty()) passThroughInput(input);
-            return;
-        }
+        if (jeiGroups.isEmpty()) return;
 
         int processedItems = Math.min(input.getCount(), 64);
         if (processedItems <= 0) return;
 
         List<ItemStack> recoveredPerBatch = new ArrayList<>();
-        if (!jeiGroups.isEmpty()) {
-            for (int groupIndex = 0; groupIndex < jeiGroups.size(); groupIndex++) {
-                List<ItemStack> options = jeiGroups.get(groupIndex);
-                if (options.isEmpty()) return;
-                int variant = Math.floorMod(getIngredientVariant(chosenId, groupIndex), options.size());
-                recoveredPerBatch.add(options.get(variant).copy());
-            }
-        } else if (selected != null) {
-            List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
-                    dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(selected.value());
-            for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
-                var group = groups.get(groupIndex);
-                ItemStack[] options = group.ingredient().getItems();
-                if (options.length == 0) return;
-                int variant = Math.min(getIngredientVariant(chosenId, groupIndex), options.length - 1);
-                ItemStack recovered = options[variant].copy();
-                recovered.setCount(group.count());
-                recoveredPerBatch.add(recovered);
-            }
+        for (int groupIndex = 0; groupIndex < jeiGroups.size(); groupIndex++) {
+            List<ItemStack> options = jeiGroups.get(groupIndex);
+            if (options.isEmpty()) continue;
+            int variant = Math.floorMod(getIngredientVariant(chosenId, groupIndex), options.size());
+            ItemStack displayed = options.get(variant).copy();
+            if (!displayed.isEmpty()) recoveredPerBatch.add(displayed);
         }
-
-        // Each dismantled item independently yields the captured ingredient set.
 
         // Enchantments travel with each dismantled item and are returned as books.
         ItemEnchantments itemEnchantments = input.is(Items.ENCHANTED_BOOK)
@@ -354,13 +315,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
         normalizeOutputPlan(outputPlan);
 
-        // Scale the per-craft recovery list once, then insert each aggregated
-        // result. This avoids cloning the entire output inventory for every batch.
         for (ItemStack result : recoveredPerBatch) {
-            // ItemStack stores its count in a signed int. Multiplying a large
-            // modded ingredient count by the processed input amount must not
-            // overflow and crash the server tick; split the long total into
-            // representable chunks and let the output planner merge each chunk.
             long remaining = (long) result.getCount() * processedItems;
             insertCountIntoOutputPlan(outputPlan, result, remaining);
         }
@@ -375,6 +330,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
     }
+
     private void passThroughInput(ItemStack input) {
         if (input.isEmpty()) return;
 
