@@ -13,8 +13,8 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Renders the stored camouflage state as an inset block volume.
  *
- * The machine's baked model remains responsible for its frame, directional
- * markings and decorations. The inset leaves a one-pixel border on every side.
+ * The machine model must leave its center faces open; its edge elements retain
+ * the frame and directional markings. The inset leaves a one-pixel border.
  */
 public final class CamouflageBlockEntityRenderer<T extends BlockEntity & CamouflageableBlockEntity>
         implements BlockEntityRenderer<T> {
