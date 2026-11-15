@@ -3,6 +3,7 @@ package dev.whimsyautomation.block;
 import com.mojang.serialization.MapCodec;
 import dev.whimsyautomation.block.entity.EnchantmentConversionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlockEntities;
+import dev.whimsyautomation.camouflage.CamouflageableBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -29,7 +30,8 @@ public final class EnchantmentConversionTableBlock extends BaseEntityBlock {
         return InteractionResult.SUCCESS;
     }
     @Override protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof EnchantmentConversionTableBlockEntity machine) machine.dropAllContents();
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof EnchantmentConversionTableBlockEntity machine) machine.dropCamouflage();
+            machine.dropAllContents();
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }

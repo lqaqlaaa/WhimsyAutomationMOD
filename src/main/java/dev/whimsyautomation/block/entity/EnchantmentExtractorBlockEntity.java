@@ -8,6 +8,10 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -728,4 +732,24 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         // Rebuild only after mode flags have been restored from disk.
         if (level != null && !level.isClientSide && !persistentOutputMode && !autoMode) refreshGeneratedSlots();
     }
+    @Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = new CompoundTag();
+        if (!camouflageState.isAir()) tag.put("CamouflageState", NbtUtils.writeBlockState(camouflageState));
+        return tag;
+    }
+
+    @Override public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        camouflageState = tag.contains("CamouflageState")
+                ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState"))
+                : Blocks.AIR.defaultBlockState();
+    }
+
+    @Override public void onDataPacket(Connection connection, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        handleUpdateTag(packet.getTag(), registries);
+    }
+
 }

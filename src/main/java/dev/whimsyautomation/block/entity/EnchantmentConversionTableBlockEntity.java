@@ -6,6 +6,10 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
@@ -92,4 +96,24 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     }
     @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) { super.saveAdditional(tag,registries); if (!camouflageState.isAir()) tag.put("CamouflageState", NbtUtils.writeBlockState(camouflageState)); tag.put("Inventory",inventory.serializeNBT(registries)); }
     @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) { super.loadAdditional(tag,registries); camouflageState = tag.contains("CamouflageState") ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState")) : Blocks.AIR.defaultBlockState(); if(tag.contains("Inventory")) inventory.deserializeNBT(registries,tag.getCompound("Inventory")); }
+    @Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = new CompoundTag();
+        if (!camouflageState.isAir()) tag.put("CamouflageState", NbtUtils.writeBlockState(camouflageState));
+        return tag;
+    }
+
+    @Override public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        camouflageState = tag.contains("CamouflageState")
+                ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState"))
+                : Blocks.AIR.defaultBlockState();
+    }
+
+    @Override public void onDataPacket(Connection connection, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        handleUpdateTag(packet.getTag(), registries);
+    }
+
 }

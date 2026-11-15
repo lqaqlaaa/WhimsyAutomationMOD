@@ -1,6 +1,10 @@
 package dev.whimsyautomation.camouflage;
 
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.Containers;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
  * Implemented by every machine that can display a camouflage block.
@@ -9,6 +13,16 @@ import net.minecraft.world.level.block.state.BlockState;
 public interface CamouflageableBlockEntity {
     BlockState getCamouflageState();
     void setCamouflageState(BlockState state);
+
+    default void dropCamouflage() {
+        if (!(this instanceof BlockEntity blockEntity) || blockEntity.getLevel() == null || blockEntity.getLevel().isClientSide) return;
+        BlockState state = getCamouflageState();
+        if (state == null || state.isAir()) return;
+        ItemStack stack = new ItemStack(state.getBlock().asItem());
+        if (!stack.isEmpty()) Containers.dropItemStack(blockEntity.getLevel(), blockEntity.getBlockPos().getX() + 0.5,
+                blockEntity.getBlockPos().getY() + 0.5, blockEntity.getBlockPos().getZ() + 0.5, stack);
+        setCamouflageState(Blocks.AIR.defaultBlockState());
+    }
 
     default boolean hasCamouflage() {
         BlockState state = getCamouflageState();
