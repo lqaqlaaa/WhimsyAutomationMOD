@@ -1,3 +1,3 @@
 {
-  "parent": "whimsy_automation:block/enchantment_extractor"
+  "parent": "whimsy_automation:block/enchantment_extractor_fallback"
 }
