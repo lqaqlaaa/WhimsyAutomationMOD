@@ -3,6 +3,7 @@ package dev.whimsyautomation.menu;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.network.DeconstructionRecipeSnapshotPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
@@ -35,6 +36,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     private static final int OUTPUT_START = 1;
     private static final int MACHINE_SLOT_COUNT = 1 + PAGE_SIZE;
     private final DeconstructionTableBlockEntity machine;
+    private final BlockPos machinePos;
     private final ContainerLevelAccess access;
     private final Level level;
     private final IItemHandler pageHandler;
@@ -64,6 +66,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
     public DeconstructionTableMenu(int id, Inventory playerInventory, BlockPos pos) {
         super(ModMenus.DECONSTRUCTION_TABLE.get(), id);
         this.level = playerInventory.player.level();
+        this.machinePos = pos.immutable();
         this.machine = level.getBlockEntity(pos) instanceof DeconstructionTableBlockEntity be ? be : null;
         this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
         java.util.Arrays.fill(clientPageStacks, ItemStack.EMPTY);
@@ -226,8 +229,12 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 if (holder == null || !added.add(entry.recipeId())) continue;
                 Recipe<?> recipe = holder.value();
                 // JEI has already matched this recipe against the exact OUTPUT focus.
-                // Do not run the old vanilla output matcher again: it can reject
-                // valid JEI subtype/component matches after JEI found them.
+                // Ship its displayed ingredient groups to the server: custom RecipeInput
+                // implementations often expose no vanilla Ingredient list at all.
+                if (!entry.inputGroups().isEmpty()) {
+                    DeconstructionRecipeSnapshotPayload.send(containerId, machinePos, entry.recipeId(),
+                            entry.output(), entry.inputGroups());
+                }
                 found.add(holder);
             }
         } else {
@@ -604,4 +611,5 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
 
     @Override public boolean stillValid(Player player) { return machine != null && stillValid(access, player, ModBlocks.DECONSTRUCTION_TABLE.get()); }
     public DeconstructionTableBlockEntity machine() { return machine; }
+    public boolean matchesMachinePosition(BlockPos pos) { return machinePos.equals(pos); }
 }
