@@ -502,8 +502,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         for (int i = 0; i < 27; i++) {
             UiLayoutProfile.Element cell = layoutEditor.element("preview_slot_" + i, "preview_slot",
                     184 + (i % 9) * 18, 71 + (i / 9) * 18, 16, 16);
-            int group = menu.getPreviewPage() * 27 + i;
-            if (menu.getIngredientOptions(group).length <= 1) continue;
+            int displayIndex = menu.getPreviewPage() * 27 + i;
+            int group = menu.getPreviewGroupIndex(displayIndex);
+            if (group < 0 || menu.getIngredientOptions(group).length <= 1) continue;
             int x = leftPos + cell.x, y = topPos + cell.y;
             if (mouseX >= x && mouseX < x + cell.width && mouseY >= y && mouseY < y + cell.height) {
                 return Component.literal("可替代材料：点击选择其他配方材料");
