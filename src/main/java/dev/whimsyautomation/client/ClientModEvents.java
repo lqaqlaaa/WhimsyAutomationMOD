@@ -1,15 +1,17 @@
 package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.WhimsyAutomation;
-import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
-import dev.whimsyautomation.block.entity.EnchantmentConversionTableBlockEntity;
-import dev.whimsyautomation.block.entity.EnchantmentExtractorBlockEntity;
-import dev.whimsyautomation.registry.ModBlockEntities;
+import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
+import net.minecraft.client.renderer.block.BlockModelShaper;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -23,13 +25,39 @@ public final class ClientModEvents {
         event.register(ModMenus.ENCHANTMENT_CONVERSION_TABLE.get(), EnchantmentConversionTableScreen::new);
     }
 
+    /**
+     * Ensure the original machine body is baked as a fallback, independently
+     * from the open-center frame model used by the dynamic camouflage model.
+     */
     @SubscribeEvent
-    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(),
-                context -> new CamouflageBlockEntityRenderer<EnchantmentExtractorBlockEntity>(context));
-        event.registerBlockEntityRenderer(ModBlockEntities.DECONSTRUCTION_TABLE.get(),
-                context -> new CamouflageBlockEntityRenderer<DeconstructionTableBlockEntity>(context));
-        event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_CONVERSION_TABLE.get(),
-                context -> new CamouflageBlockEntityRenderer<EnchantmentConversionTableBlockEntity>(context));
+    public static void registerCamouflageFallbackModels(ModelEvent.RegisterAdditional event) {
+        registerFallback(event, "deconstruction_table_fallback");
+        registerFallback(event, "enchantment_extractor_fallback");
+        registerFallback(event, "enchantment_conversion_table_fallback");
+    }
+
+    private static void registerFallback(ModelEvent.RegisterAdditional event, String path) {
+        event.register(ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath(WhimsyAutomation.MOD_ID, "block/" + path)));
+    }
+
+    @SubscribeEvent
+    public static void modifyCamouflageModels(ModelEvent.ModifyBakingResult event) {
+        wrapMachineModel(event, ModBlocks.DECONSTRUCTION_TABLE.get(), "deconstruction_table_fallback");
+        wrapMachineModel(event, ModBlocks.ENCHANTMENT_EXTRACTOR.get(), "enchantment_extractor_fallback");
+        wrapMachineModel(event, ModBlocks.ENCHANTMENT_CONVERSION_TABLE.get(), "enchantment_conversion_table_fallback");
+    }
+
+    private static void wrapMachineModel(ModelEvent.ModifyBakingResult event, Block block, String fallbackPath) {
+        ModelResourceLocation machineLocation = BlockModelShaper.stateToModelLocation(block.defaultBlockState());
+        ModelResourceLocation fallbackLocation = ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath(WhimsyAutomation.MOD_ID, "block/" + fallbackPath));
+        BakedModel fallback = event.getModels().get(fallbackLocation);
+        if (fallback == null) {
+            WhimsyAutomation.LOGGER.error("Missing camouflage fallback model: {}", fallbackLocation);
+            return;
+        }
+        event.getModels().computeIfPresent(machineLocation,
+                (location, frameModel) -> new CamouflageBakedModel(frameModel, fallback));
     }
 }
