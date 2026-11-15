@@ -11,6 +11,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -491,6 +492,17 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             variants.putIntArray(entry.getKey(), values);
         }
         tag.put("IngredientVariants", variants);
+        CompoundTag jeiSnapshots = new CompoundTag();
+        for (var entry : jeiRecipeSnapshots.entrySet()) {
+            ListTag groups = new ListTag();
+            for (List<ItemStack> options : entry.getValue()) {
+                ListTag optionList = new ListTag();
+                for (ItemStack stack : options) optionList.add(stack.save(registries));
+                groups.add(optionList);
+            }
+            jeiSnapshots.put(entry.getKey(), groups);
+        }
+        tag.put("JeiRecipeSnapshots", jeiSnapshots);
         tag.putIntArray("SideModes", sideModes);
     }
 
@@ -511,6 +523,23 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         workTicks = tag.getInt("WorkTicks");
         autoMode = tag.getBoolean("AutoMode");
         ingredientVariants.clear();
+        jeiRecipeSnapshots.clear();
+        if (tag.contains("JeiRecipeSnapshots")) {
+            CompoundTag savedSnapshots = tag.getCompound("JeiRecipeSnapshots");
+            for (String recipeId : savedSnapshots.getAllKeys()) {
+                ListTag savedGroups = savedSnapshots.getList(recipeId, 9);
+                List<List<ItemStack>> groups = new ArrayList<>();
+                for (int groupIndex = 0; groupIndex < savedGroups.size() && groupIndex < 64; groupIndex++) {
+                    ListTag savedOptions = savedGroups.getList(groupIndex);
+                    List<ItemStack> options = new ArrayList<>();
+                    for (int optionIndex = 0; optionIndex < savedOptions.size() && optionIndex < 128; optionIndex++) {
+                        ItemStack.parse(registries, savedOptions.getCompound(optionIndex)).ifPresent(options::add);
+                    }
+                    if (!options.isEmpty()) groups.add(List.copyOf(options));
+                }
+                if (!groups.isEmpty()) jeiRecipeSnapshots.put(recipeId, List.copyOf(groups));
+            }
+        }
         int[] savedSideModes = tag.getIntArray("SideModes");
         for (int i = 0; i < Math.min(savedSideModes.length, sideModes.length); i++) sideModes[i] = Math.max(0, Math.min(2, savedSideModes[i]));
         java.util.Arrays.fill(sidedHandlers, null);
