@@ -13,8 +13,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
  * Shared sneak-right-click interaction for every camouflage-capable machine.
- * Block-entity blocks are accepted as visual states; only their baked block
- * model is used by the generic renderer (their runtime data is never copied).
+ * Block-entity blocks are accepted as visual states. Their own runtime data is
+ * never copied; the client resolves only their baked model through ModelData.
  */
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class CamouflageInteractionHandler {
