@@ -63,16 +63,16 @@ public final class WhimsyJeiPlugin implements IModPlugin {
     }
 
     /**
-     * Uses an OUTPUT focus against JEI's recipe lookup for each registered
-     * category. The focus stack deliberately contains only the target item:
-     * mutable data on a real stack (durability, counters, custom state) must
-     * not prevent JEI from discovering recipes for that item type.
+     * Uses the exact item stack supplied by the player as an OUTPUT focus.
+     * JEI's item subtype helpers may distinguish stacks by data components;
+     * stripping those components here makes the query differ from pressing R
+     * on the actual stack (notably for modded items with per-item state).
      */
     public static List<Entry> findByOutput(ItemStack target) {
         IJeiRuntime active = runtime;
         if (active == null || target.isEmpty()) return List.of();
 
-        ItemStack focusStack = new ItemStack(target.getItem());
+        ItemStack focusStack = target.copyWithCount(1);
         IFocus<ItemStack> focus = active.getJeiHelpers().getFocusFactory()
                 .createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, focusStack);
         IRecipeManager manager = active.getRecipeManager();
