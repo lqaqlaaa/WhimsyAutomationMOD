@@ -52,6 +52,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private int workTicks;
     private boolean autoMode = false;
     private final Map<String, List<Integer>> ingredientVariants = new HashMap<>();
+    private final Map<String, List<List<ItemStack>>> jeiRecipeSnapshots = new HashMap<>();
     // 0=disabled, 1=input, 2=output; Direction ordinal order (DOWN, UP, NORTH, SOUTH, WEST, EAST).
     private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
 
@@ -119,6 +120,20 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     public int getIngredientVariant(String recipeId, int group) {
         List<Integer> values = ingredientVariants.get(recipeId);
         return values == null || group < 0 || group >= values.size() ? 0 : values.get(group);
+    }
+
+    public void cacheJeiRecipeSnapshot(String recipeId, List<List<ItemStack>> groups) {
+        if (recipeId == null || recipeId.isBlank() || groups == null || groups.isEmpty() || groups.size() > 64) return;
+        List<List<ItemStack>> copy = groups.stream()
+                .map(group -> group.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList())
+                .toList();
+        if (copy.stream().anyMatch(List::isEmpty)) return;
+        jeiRecipeSnapshots.put(recipeId, copy);
+        setChanged();
+    }
+
+    public List<List<ItemStack>> getJeiRecipeSnapshot(String recipeId) {
+        return jeiRecipeSnapshots.getOrDefault(recipeId, List.of());
     }
 
     public void setIngredientVariant(String recipeId, int group, int variant) {
@@ -270,16 +285,26 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (processedItems <= 0) return;
 
         List<ItemStack> recoveredPerBatch = new ArrayList<>();
-        List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
-                dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(recipe);
-        for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
-            var group = groups.get(groupIndex);
-            ItemStack[] options = group.ingredient().getItems();
-            if (options.length == 0) return;
-            int variant = Math.min(getIngredientVariant(selected.id().toString(), groupIndex), options.length - 1);
-            ItemStack recovered = options[variant].copy();
-            recovered.setCount(group.count());
-            recoveredPerBatch.add(recovered);
+        List<List<ItemStack>> jeiGroups = getJeiRecipeSnapshot(selected.id().toString());
+        if (!jeiGroups.isEmpty()) {
+            for (int groupIndex = 0; groupIndex < jeiGroups.size(); groupIndex++) {
+                List<ItemStack> options = jeiGroups.get(groupIndex);
+                if (options.isEmpty()) return;
+                int variant = Math.floorMod(getIngredientVariant(selected.id().toString(), groupIndex), options.size());
+                recoveredPerBatch.add(options.get(variant).copy());
+            }
+        } else {
+            List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
+                    dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(recipe);
+            for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+                var group = groups.get(groupIndex);
+                ItemStack[] options = group.ingredient().getItems();
+                if (options.length == 0) return;
+                int variant = Math.min(getIngredientVariant(selected.id().toString(), groupIndex), options.length - 1);
+                ItemStack recovered = options[variant].copy();
+                recovered.setCount(group.count());
+                recoveredPerBatch.add(recovered);
+            }
         }
 
         // Enchantments travel with each dismantled item and are returned as books.
