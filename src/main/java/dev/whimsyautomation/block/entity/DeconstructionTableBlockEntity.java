@@ -145,6 +145,12 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         return output == null ? ItemStack.EMPTY : output.copy();
     }
 
+    public Map<String, ItemStack> getJeiRecipeOutputs() {
+        Map<String, ItemStack> copy = new HashMap<>();
+        jeiRecipeOutputs.forEach((id, stack) -> copy.put(id, stack.copy()));
+        return Map.copyOf(copy);
+    }
+
     public void setIngredientVariant(String recipeId, int group, int variant) {
         if (recipeId == null || recipeId.isEmpty() || group < 0 || group >= 64 || variant < 0) return;
         List<Integer> values = new ArrayList<>(ingredientVariants.getOrDefault(recipeId, List.of()));
