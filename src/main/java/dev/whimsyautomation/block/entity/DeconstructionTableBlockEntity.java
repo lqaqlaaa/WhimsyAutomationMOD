@@ -251,8 +251,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         if (selected == null && lockedRecipe.isEmpty()) {
             List<RecipeHolder<?>> matches = new ArrayList<>();
             for (RecipeHolder<?> candidate : level.getRecipeManager().getRecipes()) {
-                if (matchesRecipeOutput(candidate.value().getResultItem(level.registryAccess()), input)
-                        && !dev.whimsyautomation.util.RecipeIngredientResolver.getIngredients(candidate.value()).isEmpty()) matches.add(candidate);
+                if (matchesRecipeOutput(candidate.value().getResultItem(level.registryAccess()), input)) matches.add(candidate);
             }
             matches.sort((a, b) -> a.id().compareTo(b.id()));
             if (!matches.isEmpty()) {
