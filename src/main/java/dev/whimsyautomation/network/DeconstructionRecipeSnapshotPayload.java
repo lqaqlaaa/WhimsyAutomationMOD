@@ -77,17 +77,8 @@ public record DeconstructionRecipeSnapshotPayload(
             DeconstructionTableBlockEntity machine = menu.machine();
             if (machine == null || player.level().getBlockEntity(payload.pos()) != machine) return;
 
-            RecipeHolder<?> registered = null;
-            for (RecipeHolder<?> holder : player.level().getRecipeManager().getRecipes()) {
-                if (holder.id().toString().equals(payload.recipeId())) {
-                    registered = holder;
-                    break;
-                }
-            }
-            if (registered == null) return;
-            ItemStack registeredOutput = registered.value().getResultItem(player.level().registryAccess());
-            if (!dev.whimsyautomation.util.RecipeOutputMatcher.matches(registeredOutput, payload.output())) return;
-
+            // Do not require RecipeHolder lookup or Recipe#getResultItem here:
+            // JEI may expose mod-specific managers and dynamically calculated outputs.
             ItemStack input = machine.getInventory().getStackInSlot(0);
             if (input.isEmpty() || !dev.whimsyautomation.util.RecipeOutputMatcher.matches(payload.output(), input)) return;
 
@@ -95,7 +86,7 @@ public record DeconstructionRecipeSnapshotPayload(
                 if (group.isEmpty() || group.size() > 128) return;
                 for (ItemStack stack : group) if (stack.isEmpty()) return;
             }
-            machine.cacheJeiRecipeSnapshot(payload.recipeId(), payload.inputGroups());
+            machine.cacheJeiRecipeSnapshot(payload.recipeId(), payload.output(), payload.inputGroups());
         });
     }
 

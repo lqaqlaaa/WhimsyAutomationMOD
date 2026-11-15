@@ -54,6 +54,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private boolean autoMode = false;
     private final Map<String, List<Integer>> ingredientVariants = new HashMap<>();
     private final Map<String, List<List<ItemStack>>> jeiRecipeSnapshots = new HashMap<>();
+    private final Map<String, ItemStack> jeiRecipeOutputs = new HashMap<>();
     // 0=disabled, 1=input, 2=output; Direction ordinal order (DOWN, UP, NORTH, SOUTH, WEST, EAST).
     private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
 
@@ -123,18 +124,25 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         return values == null || group < 0 || group >= values.size() ? 0 : values.get(group);
     }
 
-    public void cacheJeiRecipeSnapshot(String recipeId, List<List<ItemStack>> groups) {
-        if (recipeId == null || recipeId.isBlank() || groups == null || groups.isEmpty() || groups.size() > 64) return;
+    public void cacheJeiRecipeSnapshot(String recipeId, ItemStack output, List<List<ItemStack>> groups) {
+        if (recipeId == null || recipeId.isBlank() || output == null || output.isEmpty()
+                || groups == null || groups.isEmpty() || groups.size() > 64) return;
         List<List<ItemStack>> copy = groups.stream()
                 .map(group -> group.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList())
                 .toList();
         if (copy.stream().anyMatch(List::isEmpty)) return;
         jeiRecipeSnapshots.put(recipeId, copy);
+        jeiRecipeOutputs.put(recipeId, output.copyWithCount(1));
         setChanged();
     }
 
     public List<List<ItemStack>> getJeiRecipeSnapshot(String recipeId) {
         return jeiRecipeSnapshots.getOrDefault(recipeId, List.of());
+    }
+
+    public ItemStack getJeiRecipeOutput(String recipeId) {
+        ItemStack output = jeiRecipeOutputs.get(recipeId);
+        return output == null ? ItemStack.EMPTY : output.copy();
     }
 
     public void setIngredientVariant(String recipeId, int group, int variant) {
@@ -148,12 +156,20 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     public void setSelectedRecipe(@Nullable ResourceLocation recipeId) {
-        selectedRecipe = recipeId == null ? "" : recipeId.toString();
+        setSelectedRecipe(recipeId == null ? "" : recipeId.toString());
+    }
+
+    public void setSelectedRecipe(String recipeId) {
+        selectedRecipe = recipeId == null ? "" : recipeId;
         setChanged();
     }
 
     public void setLockedRecipe(@Nullable ResourceLocation recipeId) {
-        lockedRecipe = recipeId == null ? "" : recipeId.toString();
+        setLockedRecipe(recipeId == null ? "" : recipeId.toString());
+    }
+
+    public void setLockedRecipe(String recipeId) {
+        lockedRecipe = recipeId == null ? "" : recipeId;
         setChanged();
     }
 
@@ -239,52 +255,77 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         // A recipe must be explicitly selected. A locked recipe always takes
         // priority, and a mismatch is a hard stop: never fall back to another recipe.
         String chosenId = !lockedRecipe.isEmpty() ? lockedRecipe : selectedRecipe;
+        List<List<ItemStack>> jeiGroups = getJeiRecipeSnapshot(chosenId);
+        ItemStack recipeResult = getJeiRecipeOutput(chosenId);
         RecipeHolder<?> selected = chosenId.isEmpty() ? null : findRecipe(chosenId);
-        // A previously selected recipe can become stale when the player replaces
-        // the input stack. A locked recipe is intentionally strict; an unlocked
-        // selection must be re-resolved against the new input instead of silently
-        // leaving the machine stuck forever.
-        if (selected != null && !matchesRecipeOutput(
-                selected.value().getResultItem(level.registryAccess()), input)) {
+
+        // JEI's captured output is authoritative for modded recipes whose
+        // Recipe#getResultItem() is empty, generic, or dynamically calculated.
+        if (recipeResult.isEmpty() && selected != null) {
+            recipeResult = selected.value().getResultItem(level.registryAccess());
+        }
+        if (!recipeResult.isEmpty() && !matchesRecipeOutput(recipeResult, input)) {
             if (!lockedRecipe.isEmpty()) return;
             selected = null;
+            chosenId = "";
+            jeiGroups = List.of();
+            recipeResult = ItemStack.EMPTY;
         }
-        if (selected == null && lockedRecipe.isEmpty()) {
+        if (selected == null && jeiGroups.isEmpty() && lockedRecipe.isEmpty()) {
+            for (var entry : jeiRecipeOutputs.entrySet()) {
+                if (matchesRecipeOutput(entry.getValue(), input)
+                        && !getJeiRecipeSnapshot(entry.getKey()).isEmpty()) {
+                    chosenId = entry.getKey();
+                    selectedRecipe = chosenId;
+                    jeiGroups = getJeiRecipeSnapshot(chosenId);
+                    recipeResult = entry.getValue().copy();
+                    break;
+                }
+            }
+        }
+        if (selected == null && jeiGroups.isEmpty() && lockedRecipe.isEmpty()) {
             List<RecipeHolder<?>> matches = new ArrayList<>();
             for (RecipeHolder<?> candidate : level.getRecipeManager().getRecipes()) {
                 if (matchesRecipeOutput(candidate.value().getResultItem(level.registryAccess()), input)) matches.add(candidate);
             }
-            matches.sort((a, b) -> {
-                boolean aHasJeiInputs = !getJeiRecipeSnapshot(a.id().toString()).isEmpty();
-                boolean bHasJeiInputs = !getJeiRecipeSnapshot(b.id().toString()).isEmpty();
-                if (aHasJeiInputs != bHasJeiInputs) return aHasJeiInputs ? -1 : 1;
-                boolean aHasNativeInputs = !dev.whimsyautomation.util.RecipeIngredientResolver
-                        .getGroups(a.value()).isEmpty();
-                boolean bHasNativeInputs = !dev.whimsyautomation.util.RecipeIngredientResolver
-                        .getGroups(b.value()).isEmpty();
-                if (aHasNativeInputs != bHasNativeInputs) return aHasNativeInputs ? -1 : 1;
-                return a.id().compareTo(b.id());
-            });
+            matches.sort((a, b) -> a.id().compareTo(b.id()));
             if (!matches.isEmpty()) {
                 selected = matches.get(0);
                 selectedRecipe = selected.id().toString();
+                chosenId = selectedRecipe;
+                recipeResult = selected.value().getResultItem(level.registryAccess());
             }
         }
-        if (selected == null) {
-            // In automatic mode, an item with no dismantling recipe must not
-            // remain in the input slot and block an automation line. Pass the
-            // original stack through the normal output inventory unchanged.
-            // A locked recipe is intentionally excluded: its input filter
-            // already rejects unrelated items, and a missing locked recipe
-            // must never silently turn into a pass-through mode.
-            if (automatic && lockedRecipe.isEmpty()) {
-                passThroughInput(input);
-            }
+        if (selected == null && jeiGroups.isEmpty()) {
+            if (automatic && lockedRecipe.isEmpty()) passThroughInput(input);
             return;
         }
-        Recipe<?> recipe = selected.value();
-        ItemStack recipeResult = recipe.getResultItem(level.registryAccess());
-        if (!matchesRecipeOutput(recipeResult, input)) return;
+        if (recipeResult.isEmpty() || !matchesRecipeOutput(recipeResult, input)) return;
+
+        int processedItems = Math.min(input.getCount(), 64);
+        if (processedItems <= 0) return;
+
+        List<ItemStack> recoveredPerBatch = new ArrayList<>();
+        if (!jeiGroups.isEmpty()) {
+            for (int groupIndex = 0; groupIndex < jeiGroups.size(); groupIndex++) {
+                List<ItemStack> options = jeiGroups.get(groupIndex);
+                if (options.isEmpty()) return;
+                int variant = Math.floorMod(getIngredientVariant(chosenId, groupIndex), options.size());
+                recoveredPerBatch.add(options.get(variant).copy());
+            }
+        } else if (selected != null) {
+            List<dev.whimsyautomation.util.RecipeIngredientResolver.IngredientGroup> groups =
+                    dev.whimsyautomation.util.RecipeIngredientResolver.getGroups(selected.value());
+            for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+                var group = groups.get(groupIndex);
+                ItemStack[] options = group.ingredient().getItems();
+                if (options.length == 0) return;
+                int variant = Math.min(getIngredientVariant(chosenId, groupIndex), options.length - 1);
+                ItemStack recovered = options[variant].copy();
+                recovered.setCount(group.count());
+                recoveredPerBatch.add(recovered);
+            }
+        }
 
         // Reverse dismantling is item-based, not craft-batch-based. A recipe
         // that outputs four planks must still accept a single plank; requiring
@@ -513,6 +554,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             jeiSnapshots.put(entry.getKey(), groups);
         }
         tag.put("JeiRecipeSnapshots", jeiSnapshots);
+        CompoundTag jeiOutputs = new CompoundTag();
+        for (var entry : jeiRecipeOutputs.entrySet()) jeiOutputs.put(entry.getKey(), entry.getValue().save(registries));
+        tag.put("JeiRecipeOutputs", jeiOutputs);
         tag.putIntArray("SideModes", sideModes);
     }
 
@@ -534,6 +578,13 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         autoMode = tag.getBoolean("AutoMode");
         ingredientVariants.clear();
         jeiRecipeSnapshots.clear();
+        jeiRecipeOutputs.clear();
+        if (tag.contains("JeiRecipeOutputs")) {
+            CompoundTag savedOutputs = tag.getCompound("JeiRecipeOutputs");
+            for (String recipeId : savedOutputs.getAllKeys())
+                ItemStack.parse(registries, savedOutputs.getCompound(recipeId))
+                        .ifPresent(stack -> jeiRecipeOutputs.put(recipeId, stack));
+        }
         if (tag.contains("JeiRecipeSnapshots")) {
             CompoundTag savedSnapshots = tag.getCompound("JeiRecipeSnapshots");
             for (String recipeId : savedSnapshots.getAllKeys()) {
