@@ -1,5 +1,8 @@
 package dev.whimsyautomation.block.entity;
 
+import dev.whimsyautomation.camouflage.CamouflageModelData;
+import net.neoforged.neoforge.client.model.data.ModelData;
+
 import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
@@ -58,7 +61,13 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     @Override public void setCamouflageState(BlockState state) {
         camouflageState = state == null ? Blocks.AIR.defaultBlockState() : state;
         setChanged();
+        requestModelDataUpdate();
         if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
+    @Override
+    public ModelData getModelData() {
+        return ModelData.of(CamouflageModelData.CAMOUFLAGE_STATE, camouflageState);
     }
 
     public static final int OUTPUT_START = 1;
