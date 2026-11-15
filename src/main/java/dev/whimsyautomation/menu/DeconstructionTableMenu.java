@@ -232,7 +232,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
             for (RecipeHolder<?> holder : allRecipes()) {
                 ItemStack output = holder.value().getResultItem(level.registryAccess());
                 if (matchesRecipeOutput(output, input))
-                    found.putIfAbsent(holder.id(), new Candidate(holder.id(), output, List.of(), holder));
+                    found.putIfAbsent(holder.id(), new Candidate(holder.id().toString(), output, List.of(), holder));
             }
         }
         List<Candidate> sorted = new ArrayList<>(found.values());
