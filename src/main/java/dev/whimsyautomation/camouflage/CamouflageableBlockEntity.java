@@ -34,6 +34,10 @@ public interface CamouflageableBlockEntity {
             level.setBlock(blockEntity.getBlockPos(),
                     machineState.setValue(CamouflageMachineBlock.CAMOUFLAGE_SOLID, solid), 2);
         }
+
+        // The light engine caches opacity and sky-light propagation separately
+        // from chunk model data. Invalidate the disguise position explicitly.
+        level.getChunkSource().getLightEngine().checkBlock(blockEntity.getBlockPos());
     }
 
     default void dropCamouflage() {
