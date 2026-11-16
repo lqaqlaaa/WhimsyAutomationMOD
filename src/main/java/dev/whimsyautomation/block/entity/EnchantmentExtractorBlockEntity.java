@@ -1,21 +1,11 @@
 package dev.whimsyautomation.block.entity;
 
-import dev.whimsyautomation.camouflage.CamouflageModelData;
-import net.neoforged.neoforge.client.model.data.ModelData;
-
 import dev.whimsyautomation.menu.EnchantmentExtractorMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -44,23 +34,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
-public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider, dev.whimsyautomation.camouflage.CamouflageableBlockEntity {
-    private BlockState camouflageState = Blocks.AIR.defaultBlockState();
-
-    @Override public BlockState getCamouflageState() { return camouflageState; }
-    @Override public void setCamouflageState(BlockState state) {
-        camouflageState = state == null ? Blocks.AIR.defaultBlockState() : state;
-        syncCamouflageOcclusionProperty();
-        setChanged();
-        requestModelDataUpdate();
-        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-    }
-
-    @Override
-    public ModelData getModelData() {
-        return ModelData.of(CamouflageModelData.CAMOUFLAGE_STATE, camouflageState);
-    }
-
+public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
+        
+    
     public static final int OUTPUT_START = 1;
     private static final int PAGE_SIZE = 27;
     private static final int OUTPUT_STACK_LIMIT = Integer.MAX_VALUE;
@@ -702,7 +678,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        if (!camouflageState.isAir()) tag.put("CamouflageState", NbtUtils.writeBlockState(camouflageState));
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.put("InputBuffer", inputBuffer.serializeNBT(registries));
         tag.putInt("WorkTicks", workTicks);
@@ -717,7 +692,6 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        camouflageState = tag.contains("CamouflageState") ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState")) : Blocks.AIR.defaultBlockState();
         if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         if (tag.contains("InputBuffer")) inputBuffer.deserializeNBT(registries, tag.getCompound("InputBuffer"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
@@ -742,30 +716,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         // Rebuild only after mode flags have been restored from disk.
         if (level != null && !level.isClientSide && !persistentOutputMode && !autoMode) refreshGeneratedSlots();
     }
-    @Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        CompoundTag tag = new CompoundTag();
-        if (!camouflageState.isAir()) tag.put("CamouflageState", NbtUtils.writeBlockState(camouflageState));
-        return tag;
-    }
-
-    @Override public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        camouflageState = tag.contains("CamouflageState")
-                ? NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), tag.getCompound("CamouflageState"))
-                : Blocks.AIR.defaultBlockState();
-        // The server's ModelData is not transferred as part of the BE update packet.
-        // Rebuild the client-side model data after applying the synchronized state.
-        requestModelDataUpdate();
-        if (level != null && level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
-    }
-
-    @Override public void onDataPacket(Connection connection, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
-        handleUpdateTag(packet.getTag(), registries);
-    }
-
+    
+    
+    
+    
 }
