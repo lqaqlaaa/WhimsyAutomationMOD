@@ -99,11 +99,6 @@ public final class CamouflageBakedModel extends BakedModelWrapper<BakedModel> {
     }
 
     @Override
-    public boolean usesBlockLight() {
-        return super.usesBlockLight();
-    }
-
-    @Override
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon(ModelData data) {
         BlockState camouflage = data.get(CamouflageModelData.CAMOUFLAGE_STATE);
         if (camouflage != null && !camouflage.isAir()) {
