@@ -39,7 +39,7 @@ public final class EnchantmentConversionTableBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected BlockState getStateForPlacement(BlockPlaceContext context) {
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
         return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
