@@ -112,7 +112,7 @@ public final class CamouflageStateUpdater {
     private static Object defaultValue(Class<?> returnType) {
         if (!returnType.isPrimitive() || returnType == void.class) return null;
         if (returnType == boolean.class) return false;
-        if (returnType == char.class) return '\\0';
+        if (returnType == char.class) return '\0';
         if (returnType == byte.class) return (byte) 0;
         if (returnType == short.class) return (short) 0;
         if (returnType == int.class) return 0;
