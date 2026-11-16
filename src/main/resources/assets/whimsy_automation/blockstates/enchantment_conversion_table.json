@@ -1,1 +1,10 @@
-{"variants":{"":{"model":"whimsy_automation:block/enchantment_conversion_table"}}}
+{
+  "variants": {
+    "camouflage_solid=false": {
+      "model": "whimsy_automation:block/enchantment_conversion_table"
+    },
+    "camouflage_solid=true": {
+      "model": "whimsy_automation:block/enchantment_conversion_table"
+    }
+  }
+}

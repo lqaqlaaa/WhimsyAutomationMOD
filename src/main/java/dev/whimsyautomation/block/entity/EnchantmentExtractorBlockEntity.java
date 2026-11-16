@@ -50,6 +50,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     @Override public BlockState getCamouflageState() { return camouflageState; }
     @Override public void setCamouflageState(BlockState state) {
         camouflageState = state == null ? Blocks.AIR.defaultBlockState() : state;
+        syncCamouflageOcclusionProperty();
         setChanged();
         requestModelDataUpdate();
         if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);

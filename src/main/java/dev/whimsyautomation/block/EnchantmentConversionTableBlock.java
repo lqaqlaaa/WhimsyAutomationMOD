@@ -17,13 +17,14 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import dev.whimsyautomation.block.CamouflageMachineBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.phys.BlockHitResult;
 
-public final class EnchantmentConversionTableBlock extends BaseEntityBlock {
+public final class EnchantmentConversionTableBlock extends CamouflageMachineBlock {
     public static final MapCodec<EnchantmentConversionTableBlock> CODEC = MapCodec.unit(EnchantmentConversionTableBlock::new);
     public EnchantmentConversionTableBlock() { super(BlockBehaviour.Properties.of().strength(3.5F).requiresCorrectToolForDrops()); }
     @Override protected MapCodec<? extends BaseEntityBlock> codec() { return CODEC; }

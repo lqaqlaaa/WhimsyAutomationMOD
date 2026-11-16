@@ -1,5 +1,10 @@
 {
   "variants": {
-    "": { "model": "whimsy_automation:block/deconstruction_table" }
+    "camouflage_solid=false": {
+      "model": "whimsy_automation:block/deconstruction_table"
+    },
+    "camouflage_solid=true": {
+      "model": "whimsy_automation:block/deconstruction_table"
+    }
   }
 }

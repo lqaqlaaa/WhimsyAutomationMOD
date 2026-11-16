@@ -17,6 +17,7 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import dev.whimsyautomation.block.CamouflageMachineBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -25,7 +26,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.phys.BlockHitResult;
 
-public final class DeconstructionTableBlock extends BaseEntityBlock {
+public final class DeconstructionTableBlock extends CamouflageMachineBlock {
     public static final MapCodec<DeconstructionTableBlock> CODEC = MapCodec.unit(DeconstructionTableBlock::new);
     public DeconstructionTableBlock() { super(BlockBehaviour.Properties.of().strength(3.5F).requiresCorrectToolForDrops()); }
     @Override protected MapCodec<? extends BaseEntityBlock> codec() { return CODEC; }

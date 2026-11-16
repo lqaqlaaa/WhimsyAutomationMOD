@@ -49,12 +49,14 @@ public final class ClientModEvents {
     }
 
     private static void wrapMachineModel(ModelEvent.ModifyBakingResult event, Block block, String fallbackPath) {
-        ModelResourceLocation machineLocation = BlockModelShaper.stateToModelLocation(block.defaultBlockState());
         BakedModel fallback = event.getModels().get(ModelResourceLocation.standalone(
                 ResourceLocation.fromNamespaceAndPath(WhimsyAutomation.MOD_ID, "block/" + fallbackPath)));
         if (fallback == null) return;
-        event.getModels().computeIfPresent(machineLocation,
-                (location, frameModel) -> new CamouflageBakedModel(frameModel, fallback));
+        for (BlockState state : block.getStateDefinition().getPossibleStates()) {
+            ModelResourceLocation machineLocation = BlockModelShaper.stateToModelLocation(state);
+            event.getModels().computeIfPresent(machineLocation,
+                    (location, frameModel) -> new CamouflageBakedModel(frameModel, fallback));
+        }
     }
 
     @SubscribeEvent
