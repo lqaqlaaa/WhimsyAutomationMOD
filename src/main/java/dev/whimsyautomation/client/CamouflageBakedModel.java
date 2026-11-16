@@ -14,6 +14,7 @@ import net.neoforged.neoforge.client.ChunkRenderTypeSet;
 import net.neoforged.neoforge.client.model.BakedModelWrapper;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.client.model.data.ModelProperty;
+import net.neoforged.neoforge.common.util.TriState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -85,6 +86,21 @@ public final class CamouflageBakedModel extends BakedModelWrapper<BakedModel> {
                 ? body.getRenderTypes(machineState, random, modelData)
                 : body.getRenderTypes(camouflage, random, modelData);
         return ChunkRenderTypeSet.union(bodyTypes, frameTypes);
+    }
+
+    @Override
+    public TriState useAmbientOcclusion(BlockState state, ModelData data, RenderType renderType) {
+        BlockState camouflage = data.get(CamouflageModelData.CAMOUFLAGE_STATE);
+        if (camouflage != null && !camouflage.isAir()) {
+            return Minecraft.getInstance().getBlockRenderer().getBlockModel(camouflage)
+                    .useAmbientOcclusion(camouflage, data, renderType);
+        }
+        return super.useAmbientOcclusion(state, data, renderType);
+    }
+
+    @Override
+    public boolean usesBlockLight() {
+        return super.usesBlockLight();
     }
 
     @Override
