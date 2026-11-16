@@ -25,8 +25,7 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 public final class EnchantmentExtractorBlock extends BaseEntityBlock {
-    public static final MapCodec<EnchantmentExtractorBlock> CODEC =
-            MapCodec.unit(EnchantmentExtractorBlock::new);
+    public static final MapCodec<EnchantmentExtractorBlock> CODEC = MapCodec.unit(EnchantmentExtractorBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public EnchantmentExtractorBlock() {
@@ -35,9 +34,7 @@ public final class EnchantmentExtractorBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
+    protected MapCodec<? extends BaseEntityBlock> codec() { return CODEC; }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
@@ -65,9 +62,7 @@ public final class EnchantmentExtractorBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
+    protected RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,

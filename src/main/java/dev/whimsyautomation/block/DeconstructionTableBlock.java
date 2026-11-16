@@ -34,9 +34,7 @@ public final class DeconstructionTableBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
+    protected MapCodec<? extends BaseEntityBlock> codec() { return CODEC; }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
@@ -64,9 +62,7 @@ public final class DeconstructionTableBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
+    protected RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
