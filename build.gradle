@@ -22,9 +22,6 @@ repositories {
 neoForge {
     version = neo_version
 
-    // Explicitly register the access transformer used by CamouflageBlockState.
-    accessTransformers.from file("src/main/resources/META-INF/accesstransformer.cfg")
-    validateAccessTransformers = true
 
     runs {
         client { client() }
