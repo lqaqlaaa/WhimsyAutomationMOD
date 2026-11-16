@@ -17,8 +17,10 @@ import java.util.List;
 
 /**
  * State-level occlusion bridge for camouflage machines.
- * The target's face shape depends on per-block-entity data, so cached
- * BlockState-pair occlusion results must be discarded after each query.
+ *
+ * Position-dependent face shapes and destroy speed are delegated to the
+ * current camouflage state. The occlusion cache must not retain pair results
+ * because the effective face shape is stored in block-entity model data.
  */
 public final class CamouflageBlockState extends BlockState {
     private static final ThreadLocal<List<Block.BlockStatePairKey>> KEYS_TO_REMOVE =
@@ -46,10 +48,33 @@ public final class CamouflageBlockState extends BlockState {
     public VoxelShape getFaceOcclusionShape(BlockGetter level, BlockPos pos, Direction direction) {
         addOcclusionCacheKeysForRemoval(level, pos, direction);
         BlockState camouflage = CamouflageOcclusion.getCamouflageState(level, pos);
-        if (camouflage != null && !camouflage.isAir()) {
+        if (camouflage != null && !camouflage.isAir()
+                && !(camouflage.getBlock() instanceof CamouflageMachineBlock)) {
             return camouflage.getFaceOcclusionShape(CamouflageOcclusion.createView(level, pos, camouflage), pos, direction);
         }
         return super.getFaceOcclusionShape(level, pos, direction);
+    }
+
+    @Override
+    public float getDestroySpeed(BlockGetter level, BlockPos pos) {
+        BlockState camouflage = CamouflageOcclusion.getCamouflageState(level, pos);
+        if (camouflage == null || camouflage.isAir()
+                || camouflage.getBlock() instanceof CamouflageMachineBlock) {
+            return super.getDestroySpeed(level, pos);
+        }
+        float speed = camouflage.getDestroySpeed(CamouflageOcclusion.createView(level, pos, camouflage), pos);
+        // Keep normally unbreakable disguises from making the machine unbreakable.
+        return Math.max(0.5F, Math.min(5.0F, speed));
+    }
+
+    @Override
+    public boolean emissiveRendering(BlockGetter level, BlockPos pos) {
+        BlockState camouflage = CamouflageOcclusion.getCamouflageState(level, pos);
+        if (camouflage == null || camouflage.isAir()
+                || camouflage.getBlock() instanceof CamouflageMachineBlock) {
+            return super.emissiveRendering(level, pos);
+        }
+        return camouflage.emissiveRendering(CamouflageOcclusion.createView(level, pos, camouflage), pos);
     }
 
     @Override
