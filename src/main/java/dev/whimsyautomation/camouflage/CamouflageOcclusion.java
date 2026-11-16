@@ -2,7 +2,6 @@ package dev.whimsyautomation.camouflage;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -16,12 +15,12 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  */
 public final class CamouflageOcclusion {
     private static final VoxelShape FRAME = Shapes.or(
-            Block.box(0, 0, 0, 1, 16, 16),
-            Block.box(15, 0, 0, 16, 16, 16),
-            Block.box(1, 0, 0, 15, 16, 1),
-            Block.box(1, 0, 15, 15, 16, 16),
-            Block.box(1, 0, 1, 15, 1, 15),
-            Block.box(1, 15, 1, 15, 16, 15)
+            Shapes.box(0, 0, 0, 1.0 / 16.0, 1, 1),
+            Shapes.box(15.0 / 16.0, 0, 0, 1, 1, 1),
+            Shapes.box(1.0 / 16.0, 0, 0, 15.0 / 16.0, 1, 1.0 / 16.0),
+            Shapes.box(1.0 / 16.0, 0, 15.0 / 16.0, 15.0 / 16.0, 1, 1),
+            Shapes.box(1.0 / 16.0, 0, 1.0 / 16.0, 15.0 / 16.0, 1.0 / 16.0, 15.0 / 16.0),
+            Shapes.box(1.0 / 16.0, 15.0 / 16.0, 1.0 / 16.0, 15.0 / 16.0, 1, 15.0 / 16.0)
     );
 
     private CamouflageOcclusion() {}
