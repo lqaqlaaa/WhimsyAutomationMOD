@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * Runs the target block's neighbour-shape logic against a view where the
  * machine position reports the camouflage state.
  *
- * The view is deliberately read-through but write-protected at the disguised
- * position: neighbour logic must never replace or remove the real machine.
+ * The view is read-through. Writes at the disguised position update camouflage
+ * data or are rejected; they are never forwarded to the real machine.
  */
 public final class CamouflageStateUpdater {
     private static final ThreadLocal<Boolean> UPDATING = ThreadLocal.withInitial(() -> false);
@@ -36,7 +36,7 @@ public final class CamouflageStateUpdater {
             if (updatedCamouflage != camouflage) {
                 machine.setCamouflageState(updatedCamouflage);
                 camouflage = updatedCamouflage;
-                view = createView(level, pos, camouflage);
+                view = createView(level, pos, camouflage, machine);
             }
 
             BlockState updatedNeighbor = neighborState.updateShape(direction.getOpposite(), camouflage,
@@ -55,7 +55,7 @@ public final class CamouflageStateUpdater {
         if (camouflage == null || camouflage.isAir()) return;
         UPDATING.set(true);
         try {
-            camouflage.updateNeighbourShapes(createView(level, pos, camouflage), pos, 3);
+            camouflage.updateNeighbourShapes(createView(level, pos, camouflage, machine), pos, 3);
         } finally {
             UPDATING.set(false);
         }
