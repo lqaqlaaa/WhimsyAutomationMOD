@@ -66,7 +66,7 @@ public abstract class CamouflageMachineBlock extends BaseEntityBlock {
 
     @Override
     public float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
-        return delegate(level, pos, BlockState::getShadeBrightness,
+        return delegate(level, pos, (target, view) -> target.getShadeBrightness(view, pos),
                 () -> super.getShadeBrightness(state, level, pos));
     }
 
@@ -107,19 +107,19 @@ public abstract class CamouflageMachineBlock extends BaseEntityBlock {
 
     @Override
     public int getLightEmission(BlockState state, BlockGetter level, BlockPos pos) {
-        return delegate(level, pos, BlockState::getLightEmission,
+        return delegate(level, pos, (target, view) -> target.getLightEmission(view, pos),
                 () -> super.getLightEmission(state, level, pos));
     }
 
     @Override
     public int getLightBlock(BlockState state, BlockGetter level, BlockPos pos) {
-        return delegate(level, pos, BlockState::getLightBlock,
+        return delegate(level, pos, (target, view) -> target.getLightBlock(view, pos),
                 () -> super.getLightBlock(state, level, pos));
     }
 
     @Override
     public boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
-        return delegate(level, pos, BlockState::propagatesSkylightDown,
+        return delegate(level, pos, (target, view) -> target.propagatesSkylightDown(view, pos),
                 () -> super.propagatesSkylightDown(state, level, pos));
     }
 
