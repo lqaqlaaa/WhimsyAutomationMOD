@@ -1,7 +1,8 @@
 {
   "variants": {
-    "": {
-      "model": "whimsy_automation:block/enchantment_extractor"
-    }
+    "facing=north": {"model": "whimsy_automation:block/enchantment_extractor"},
+    "facing=east": {"model": "whimsy_automation:block/enchantment_extractor", "y": 90},
+    "facing=south": {"model": "whimsy_automation:block/enchantment_extractor", "y": 180},
+    "facing=west": {"model": "whimsy_automation:block/enchantment_extractor", "y": 270}
   }
 }
