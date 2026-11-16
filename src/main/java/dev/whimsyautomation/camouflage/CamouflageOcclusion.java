@@ -4,6 +4,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.Shapes;
+import dev.whimsyautomation.camouflage.CamouflageModelData;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.common.extensions.IBlockGetterExtension;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
@@ -26,11 +29,26 @@ public final class CamouflageOcclusion {
     private CamouflageOcclusion() {}
 
     public static VoxelShape getShape(BlockGetter level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof CamouflageableBlockEntity machine) {
-            BlockState camouflage = machine.getCamouflageState();
-            if (camouflage != null && !camouflage.isAir()) {
-                return Shapes.or(FRAME, camouflage.getOcclusionShape(level, pos));
-            }
+        BlockState camouflage = null;
+
+        /*
+         * Chunk meshing runs on worker threads. Reading a BlockEntity directly
+         * from those threads is not reliable; NeoForge exposes the immutable
+         * ModelData snapshot specifically for this kind of render-time query.
+         */
+        if (level instanceof IBlockGetterExtension extension) {
+            ModelData data = extension.getModelData(pos);
+            camouflage = data.get(CamouflageModelData.CAMOUFLAGE_STATE);
+        }
+
+        // Server-side shape queries are not performed by the chunk mesher and
+        // may safely fall back to the live BlockEntity state.
+        if (camouflage == null && level.getBlockEntity(pos) instanceof CamouflageableBlockEntity machine) {
+            camouflage = machine.getCamouflageState();
+        }
+
+        if (camouflage != null && !camouflage.isAir()) {
+            return Shapes.or(FRAME, camouflage.getOcclusionShape(level, pos));
         }
         return FRAME;
     }
