@@ -69,24 +69,10 @@ public final class CamouflageBakedModel extends BakedModelWrapper<BakedModel> {
         } else {
             BakedModel target = Minecraft.getInstance().getBlockRenderer().getBlockModel(camouflage);
 
-            /*
-             * Do not let the machine's full-cube occlusion shape cull the
-             * camouflage block's boundary faces. Directional quads are
-             * normally treated as cullable by the chunk compiler; because
-             * this model occupies a machine block position, those culling
-             * decisions would incorrectly remove fence/bar/pane faces when
-             * they touch the ground or another solid block.
-             *
-             * Promote every directional target quad into the unculled bucket.
-             * The target geometry remains unchanged, while the machine frame
-             * below keeps its original directional/culling behavior.
-             */
-            if (side == null) {
-                result.addAll(target.getQuads(camouflage, null, random, modelData, renderType));
-                for (Direction face : Direction.values()) {
-                    result.addAll(target.getQuads(camouflage, face, random, modelData, renderType));
-                }
-            }
+            // Preserve the target model's directional quad buckets. The
+            // machine Block now supplies a matching camouflage-aware
+            // occlusion shape, so partial geometry is culled accurately.
+            result.addAll(target.getQuads(camouflage, side, random, modelData, renderType));
         }
         // Frame quads are appended after target quads; depth testing keeps the
         // physical rim in front while the camouflage fills the central opening.
