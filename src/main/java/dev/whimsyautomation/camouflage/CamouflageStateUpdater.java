@@ -9,6 +9,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Runs the target block's neighbour-shape logic against a view where the
@@ -30,7 +31,7 @@ public final class CamouflageStateUpdater {
 
         UPDATING.set(true);
         try {
-            LevelAccessor view = createView(level, pos, camouflage);
+            LevelAccessor view = createView(level, pos, camouflage, machine);
             BlockState updatedCamouflage = camouflage.updateShape(direction, neighborState, view, pos, neighborPos);
             if (updatedCamouflage != camouflage) {
                 machine.setCamouflageState(updatedCamouflage);
@@ -60,23 +61,30 @@ public final class CamouflageStateUpdater {
         }
     }
 
-    private static LevelAccessor createView(LevelAccessor delegate, BlockPos targetPos, BlockState targetState) {
+    private static LevelAccessor createView(LevelAccessor delegate, BlockPos targetPos, BlockState targetState, CamouflageableBlockEntity machine) {
         BlockPos immutableTargetPos = targetPos.immutable();
+        AtomicReference<BlockState> virtualState = new AtomicReference<>(targetState);
         return (LevelAccessor) Proxy.newProxyInstance(LevelAccessor.class.getClassLoader(),
                 new Class<?>[]{LevelAccessor.class}, (proxy, method, args) -> {
-                    if (args != null && args.length == 1 && args[0] instanceof BlockPos queriedPos) {
-                        if (method.getName().equals("getBlockState") && immutableTargetPos.equals(queriedPos)) return targetState;
-                        if (method.getName().equals("getBlockEntity") && immutableTargetPos.equals(queriedPos)) return null;
-                        if (method.getName().equals("getFluidState") && immutableTargetPos.equals(queriedPos)) return targetState.getFluidState();
+                    if (args != null && args.length > 0 && args[0] instanceof BlockPos queriedPos
+                            && immutableTargetPos.equals(queriedPos)) {
+                        if (method.getName().equals("getBlockState")) return virtualState.get();
+                        if (method.getName().equals("getBlockEntity")) return null;
+                        if (method.getName().equals("getFluidState")) return virtualState.get().getFluidState();
                     }
 
                     /*
-                     * A disguised block's updateShape implementation is allowed
-                     * to inspect the world, but it is not allowed to mutate the
-                     * machine occupying its position. This mirrors the
-                     * write-protection performed by SecretRooms' DummyIWorld.
+                     * A write to the virtual position changes the disguise,
+                     * not the real machine. Removal and foreign block-entity
+                     * writes are rejected until they have dedicated storage.
                      */
                     if (isProtectedMutation(method, args, immutableTargetPos)) {
+                        if (("setBlock".equals(method.getName()) || "setBlockAndUpdate".equals(method.getName()))
+                                && args.length > 1 && args[1] instanceof BlockState newState) {
+                            virtualState.set(newState);
+                            machine.setCamouflageState(newState);
+                            return true;
+                        }
                         return defaultValue(method.getReturnType());
                     }
 
