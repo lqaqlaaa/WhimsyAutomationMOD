@@ -115,8 +115,11 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                     return extracted;
                 }
                 int actual = actualSlot(slot);
-                return actual < machine.getInventory().getSlots()
-                        ? machine.getInventory().extractItem(actual, amount, simulate) : ItemStack.EMPTY;
+                if (actual >= machine.getInventory().getSlots()) return ItemStack.EMPTY;
+                ItemStack present = machine.getInventory().getStackInSlot(actual);
+                int playerAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
+                ItemStack extracted = machine.getInventory().extractItem(actual, playerAmount, simulate);
+                return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
             }
 
             @Override public int getSlotLimit(int slot) {
