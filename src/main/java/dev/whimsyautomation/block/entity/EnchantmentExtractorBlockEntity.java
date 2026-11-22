@@ -636,9 +636,22 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         internalInventoryUpdate = true;
         try {
-            if (input.is(Items.ENCHANTED_BOOK)) input.set(DataComponents.STORED_ENCHANTMENTS, remaining.toImmutable());
-            else input.set(DataComponents.ENCHANTMENTS, remaining.toImmutable());
-            inventory.setStackInSlot(0, input);
+            if (input.is(Items.ENCHANTED_BOOK)) {
+                // An enchanted book is only a valid source while it still has
+                // stored enchantments. Once the final enchantment is extracted,
+                // consume the now-ordinary book instead of leaving it in the input.
+                if (remaining.toImmutable().isEmpty()) {
+                    inventory.setStackInSlot(0, ItemStack.EMPTY);
+                } else {
+                    input.set(DataComponents.STORED_ENCHANTMENTS, remaining.toImmutable());
+                    inventory.setStackInSlot(0, input);
+                }
+            } else {
+                // Ordinary equipment remains in the input after its enchantments
+                // have been stripped; only enchanted books are consumed at zero.
+                input.set(DataComponents.ENCHANTMENTS, remaining.toImmutable());
+                inventory.setStackInSlot(0, input);
+            }
             if (!outputAlreadyExtracted) {
                 ItemStack remainingOutput = inventory.getStackInSlot(outputSlot).copy();
                 remainingOutput.shrink(book.getCount());
