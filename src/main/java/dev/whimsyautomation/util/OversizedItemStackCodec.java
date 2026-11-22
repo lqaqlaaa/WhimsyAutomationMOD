@@ -14,7 +14,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
  * The handler still exposes normal, legal-sized extractions to players and automation.
  */
 public final class OversizedItemStackCodec {
-    public static final int MAX_COUNT = 1_000_000;
+    public static final int MAX_COUNT = Integer.MAX_VALUE;
     private static final Codec<ItemStack> CODEC = Codec.lazyInitialized(() -> RecordCodecBuilder.create(instance ->
             instance.group(
                     ItemStack.ITEM_NON_AIR_CODEC.fieldOf("id").forGetter(ItemStack::getItemHolder),
