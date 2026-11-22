@@ -94,10 +94,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
         @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
             if (slot < 0 || slot >= getSlots() || amount <= 0) return ItemStack.EMPTY;
-            ItemStack present = getStackInSlot(slot);
-            int legalAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
-            ItemStack extracted = super.extractItem(slot, legalAmount, simulate);
-            return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
+            // This is the machine's automation-facing inventory. Do not clamp
+            // extraction to a player's stack size; GUI slots apply that rule separately.
+            return super.extractItem(slot, amount, simulate);
         }
 
         private void resize(int size) {
