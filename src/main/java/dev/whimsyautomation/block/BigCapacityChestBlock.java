@@ -19,7 +19,6 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.ChestType;
-import net.minecraft.world.phys.BlockHitResult;
 
 public final class BigCapacityChestBlock extends ChestBlock {
     public static final MapCodec<BigCapacityChestBlock> CODEC = MapCodec.unit(BigCapacityChestBlock::new);
@@ -39,7 +38,7 @@ public final class BigCapacityChestBlock extends ChestBlock {
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player) {
         if (ChestBlock.isChestBlockedAt(level, pos)) {
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
