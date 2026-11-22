@@ -117,12 +117,12 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private void addToOutputPlan(List<ItemStack> plan, ItemStack incoming) {
         if (incoming.isEmpty()) return;
         ItemStack template = incoming.copyWithCount(1);
-        int limit = Math.max(1, Math.min(99, template.getMaxStackSize()));
+        int limit = OversizedItemStackCodec.MAX_COUNT;
         int remaining = incoming.getCount();
         for (ItemStack present : plan) {
             if (remaining <= 0) break;
             if (present.isEmpty() || !ItemStack.isSameItemSameComponents(present, template)) continue;
-            int room = Math.max(0, Math.min(99, present.getMaxStackSize()) - present.getCount());
+            int room = Math.max(0, OversizedItemStackCodec.MAX_COUNT - present.getCount());
             int moved = Math.min(room, remaining);
             if (moved > 0) { present.grow(moved); remaining -= moved; }
         }
