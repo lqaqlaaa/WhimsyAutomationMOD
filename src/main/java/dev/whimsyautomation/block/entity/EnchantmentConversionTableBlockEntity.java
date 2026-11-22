@@ -196,7 +196,9 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         for (int i = 0; i < Math.min(savedSideModes.length, sideModes.length); i++) sideModes[i] = Math.max(0, Math.min(2, savedSideModes[i]));
         java.util.Arrays.fill(sidedHandlers, null);
         if (tag.contains("OversizedInventory")) {
-            OversizedItemStackCodec.deserialize(inventory, registries, tag.getCompound("OversizedInventory"));
+            internalInventoryUpdate = true;
+            try { OversizedItemStackCodec.deserialize(inventory, registries, tag.getCompound("OversizedInventory")); }
+            finally { internalInventoryUpdate = false; }
         } else if (tag.contains("Inventory")) {
             // Backward compatibility: migrate the former 99-item batch plus pending queue.
             inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
