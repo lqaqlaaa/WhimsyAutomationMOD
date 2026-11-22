@@ -612,6 +612,23 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack source = slot.getItem();
         ItemStack copy = source.copy();
+        if (index == 0) {
+            int requested = quickMoveSingle ? 1 : source.getCount();
+            ItemStack moving = PlayerStackRules.copyForPlayer(source, requested);
+            int offeredCount = moving.getCount();
+            if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
+            int movedCount = offeredCount - moving.getCount();
+            if (movedCount <= 0) return ItemStack.EMPTY;
+            if (!player.level().isClientSide) {
+                ItemStack extracted = machine.getInventory().extractItem(0, movedCount, false);
+                if (extracted.getCount() != movedCount) return ItemStack.EMPTY;
+            } else {
+                ItemStack predictedRemainder = source.copy();
+                predictedRemainder.shrink(movedCount);
+                slot.set(predictedRemainder);
+            }
+            return PlayerStackRules.copyForPlayer(copy, movedCount);
+        }
         if (index >= OUTPUT_START && index < MACHINE_SLOT_COUNT) {
             int actualOutput = OUTPUT_START + syncedPage * PAGE_SIZE + (index - OUTPUT_START);
             int requested = quickMoveSingle ? 1 : source.getCount();
