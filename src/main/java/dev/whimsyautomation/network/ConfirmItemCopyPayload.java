@@ -35,7 +35,7 @@ public record ConfirmItemCopyPayload(int containerId, BlockPos pos, int count) i
                     || !menu.stillValid(player)) return;
             EnchantmentConversionTableBlockEntity machine = menu.machine();
             if (machine == null || player.level().getBlockEntity(payload.pos()) != machine) return;
-            machine.confirmCopy(payload.count());
+            if (!machine.isAutoMode()) machine.confirmCopy(payload.count());
         });
     }
 
