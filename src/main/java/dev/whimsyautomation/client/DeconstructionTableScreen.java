@@ -142,8 +142,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     @Override
     protected void init() {
         super.init();
-        showFaceColors = menu.machine() != null
-                && SideConfigOverlay.isShowingAllFacesAt(menu.machine().getLevel(), menu.machine().getBlockPos());
+        showFaceColors = menu.machine() != null && SideConfigOverlay.isActive(menu.machine());
         topPos -= 27;
         layoutEditor = new UiLayoutEditor("deconstruction_table");
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
@@ -293,17 +292,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     private void syncSideOverlay() {
-        if (menu.machine() == null) {
-            return;
-        }
-        int[] modes = new int[6];
-        for (int i = 0; i < modes.length; i++) {
-            modes[i] = menu.getSideMode(i);
-        }
-        // Keep the target active while the six-direction panel is open.
-        // Otherwise the diagnostic BER is called but exits before drawing when
-        // all six sides are still disabled and the color toggle is off.
-        SideConfigOverlay.show(menu.machine().getLevel(), menu.machine().getBlockPos(), modes, showFaceColors);
+        if (menu.machine() == null) return;
+        // The overlay toggle is attached to this exact block entity. Face selection
+        // is read live from its six persisted input/output modes by the renderer.
+        SideConfigOverlay.show(menu.machine(), showFaceColors);
     }
 
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
