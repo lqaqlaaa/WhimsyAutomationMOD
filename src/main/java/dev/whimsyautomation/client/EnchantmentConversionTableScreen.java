@@ -31,8 +31,8 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
 
     public EnchantmentConversionTableScreen(EnchantmentConversionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageWidth = 352;
-        imageHeight = 222;
+        imageWidth = 176;
+        imageHeight = 186;
         inventoryLabelY = 82;
         titleLabelY = 6;
     }
@@ -209,7 +209,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     private void renderSideConfig(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int[] modes = new int[6];
         for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
-        SideConfigPanel.render(graphics, font, leftPos, topPos, mouseX, mouseY, partialTick, modes, showFaceColors);
+        SideConfigPanel.render(graphics, font, leftPos, topPos, mouseX, mouseY, partialTick, 0, 10, modes, showFaceColors);
     }
 
     private static boolean inside(double x, double y, double left, double top, double width, double height) {
@@ -230,7 +230,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         }
         if (showSideConfig) {
-            int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos);
+            int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos, 0, 10);
             if (action == 7) showSideConfig = false;
             else if (action >= 0 && action < 6) {
                 sendButton(10 + action);
