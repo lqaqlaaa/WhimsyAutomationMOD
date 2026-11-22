@@ -272,11 +272,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             modes[i] = menu.getSideMode(i);
             hasEnabledSide |= modes[i] != 0;
         }
-        if (showFaceColors || hasEnabledSide) {
-            SideConfigOverlay.show(menu.machine().getBlockPos(), modes, showFaceColors);
-        } else {
-            SideConfigOverlay.clear();
-        }
+        // Keep the target active while the six-direction panel is open.
+        // Otherwise the diagnostic BER is called but exits before drawing when
+        // all six sides are still disabled and the color toggle is off.
+        SideConfigOverlay.show(menu.machine().getBlockPos(), modes, showFaceColors);
     }
 
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
