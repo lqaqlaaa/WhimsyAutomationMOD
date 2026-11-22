@@ -7,6 +7,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -43,6 +45,19 @@ public final class BigCapacityChestMenu extends ChestMenu {
         this.clientLevel = clientLevel;
         this.firstPos = firstPos;
         this.secondPos = secondPos;
+
+        // Replace only the server-side chest slots. Their visible ItemStack is a
+        // 64-item projection, while all mutations go directly to the exact count.
+        if (first != null) {
+            for (int i = 0; i < rows * 9; i++) {
+                BigCapacityChestBlockEntity owner = i < 27 ? first : second;
+                int localSlot = i < 27 ? i : i - 27;
+                if (owner != null) {
+                    slots.set(i, new BigCapacitySlot(owner, localSlot, 8 + (i % 9) * 18,
+                            18 + (i / 9) * 18));
+                }
+            }
+        }
     }
 
     /** Client menu uses a normal mirror container; server slot packets populate it. */
@@ -77,23 +92,91 @@ public final class BigCapacityChestMenu extends ChestMenu {
     private record Setup(Container container, BlockPos firstPos, BlockPos secondPos, int rows) {}
 
     @Override
-    public ItemStack quickMoveStack(net.minecraft.world.entity.player.Player player, int index) {
-        if (index < 0 || index >= slots.size()) return ItemStack.EMPTY;
-        net.minecraft.world.inventory.Slot sourceSlot = slots.get(index);
+    public ItemStack quickMoveStack(Player player, int index) {
+        int chestSlots = rows * 9;
+        if (index < 0 || index >= slots.size() || first == null) return ItemStack.EMPTY;
+        Slot sourceSlot = slots.get(index);
         if (!sourceSlot.hasItem()) return ItemStack.EMPTY;
+
+        if (index < chestSlots) {
+            BigCapacityChestBlockEntity owner = index < 27 ? first : second;
+            int local = index < 27 ? index : index - 27;
+            if (owner == null) return ItemStack.EMPTY;
+            BigInteger remaining = owner.getExactCount(local);
+            if (remaining.signum() <= 0) return ItemStack.EMPTY;
+            ItemStack template = owner.getItem(local);
+            int movedTotal = 0;
+            while (remaining.signum() > 0) {
+                int batchSize = remaining.min(BigInteger.valueOf(64)).intValue();
+                ItemStack batch = template.copyWithCount(batchSize);
+                if (!moveItemStackTo(batch, chestSlots, slots.size(), true)) break;
+                int moved = batchSize - batch.getCount();
+                if (moved <= 0) break;
+                ItemStack extracted = owner.removeItem(local, moved);
+                movedTotal += extracted.getCount();
+                remaining = remaining.subtract(BigInteger.valueOf(extracted.getCount()));
+                if (extracted.getCount() != moved) break;
+            }
+            if (movedTotal <= 0) return ItemStack.EMPTY;
+            ItemStack result = template.copyWithCount(Math.min(64, movedTotal));
+            sourceSlot.onTake(player, result);
+            sourceSlot.setChanged();
+            return result;
+        }
+
         ItemStack original = sourceSlot.getItem().copy();
         ItemStack moving = original.copy();
-        int chestSlots = rows * 9;
-        boolean moved = index < chestSlots
-                ? moveItemStackTo(moving, chestSlots, slots.size(), true)
-                : moveItemStackTo(moving, 0, chestSlots, false);
-        if (!moved) return ItemStack.EMPTY;
-        int amountMoved = original.getCount() - moving.getCount();
-        if (amountMoved <= 0) return ItemStack.EMPTY;
-        sourceSlot.remove(amountMoved);
-        sourceSlot.onTake(player, original.copyWithCount(amountMoved));
+        int insertedTotal = 0;
+        for (int target = 0; target < chestSlots && !moving.isEmpty(); target++) {
+            BigCapacityChestBlockEntity owner = target < 27 ? first : second;
+            int local = target < 27 ? target : target - 27;
+            if (owner == null) continue;
+            int inserted = owner.insertExact(local, moving, moving.getCount());
+            if (inserted > 0) {
+                moving.shrink(inserted);
+                insertedTotal += inserted;
+            }
+        }
+        if (insertedTotal <= 0) return ItemStack.EMPTY;
+        sourceSlot.set(moving.isEmpty() ? ItemStack.EMPTY : moving);
+        sourceSlot.onTake(player, original.copyWithCount(insertedTotal));
         sourceSlot.setChanged();
         return original;
+    }
+
+    private static final class BigCapacitySlot extends Slot {
+        private final BigCapacityChestBlockEntity owner;
+        private final int localSlot;
+
+        private BigCapacitySlot(BigCapacityChestBlockEntity owner, int localSlot, int x, int y) {
+            super(owner, localSlot, x, y);
+            this.owner = owner;
+            this.localSlot = localSlot;
+        }
+
+        @Override public ItemStack getItem() { return owner.getDisplayItem(localSlot); }
+        @Override public boolean hasItem() { return !owner.getExactCount(localSlot).equals(BigInteger.ZERO); }
+        @Override public void set(ItemStack stack) { owner.setGuiItem(localSlot, stack); }
+        @Override public ItemStack remove(int amount) { return owner.removeItem(localSlot, amount); }
+        @Override public void setChanged() { owner.setChanged(); }
+        @Override public boolean mayPlace(ItemStack stack) { return !stack.isEmpty(); }
+        @Override public int getMaxStackSize() { return Integer.MAX_VALUE; }
+        @Override public int getMaxStackSize(ItemStack stack) { return Integer.MAX_VALUE; }
+
+        @Override
+        public ItemStack safeInsert(ItemStack stack, int increment) {
+            if (stack.isEmpty() || increment <= 0 || !mayPlace(stack)) return stack;
+            int offered = Math.min(increment, stack.getCount());
+            int inserted = owner.insertExact(localSlot, stack, offered);
+            return inserted <= 0 ? stack : stack.copyWithCount(stack.getCount() - inserted);
+        }
+
+        @Override
+        public ItemStack safeTake(int amount, int maxAmount, Player player) {
+            int visible = getItem().getCount();
+            int taken = Math.min(Math.min(amount, maxAmount), visible);
+            return taken <= 0 ? ItemStack.EMPTY : owner.removeItem(localSlot, taken);
+        }
     }
 
     public int getRows() { return rows; }
