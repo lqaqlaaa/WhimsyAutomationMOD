@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.Rotation;
@@ -26,7 +27,7 @@ public final class EnchantmentConversionTableBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public EnchantmentConversionTableBlock() {
-        super(BlockBehaviour.Properties.of().strength(2.5F).requiresCorrectToolForDrops());
+        super(BlockBehaviour.Properties.ofFullCopy(Blocks.LECTERN));
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
