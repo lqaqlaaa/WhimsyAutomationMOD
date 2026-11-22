@@ -176,8 +176,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
-            showFaceColors = false;
-            if (showSideConfig) syncSideOverlay(); else SideConfigOverlay.clear();
+            // Keep the world overlay independent from the modal editor.
+            syncSideOverlay();
         }).bounds(leftPos + 264, topPos + 90, 80, 15).build());
 
         String[] sideNames = {"下", "上", "北", "南", "西", "东"};
@@ -195,7 +195,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         }).bounds(184, 127, 160, 16).build();
         sideConfigCloseButton = Button.builder(Component.literal("×"), b -> {
             showSideConfig = false;
-            SideConfigOverlay.clear();
+            syncSideOverlay();
         }).bounds(326, 58, 20, 16).build();
 
         bufferPageField = pageField(262, 153, menu.getBufferPage() + 1);
@@ -262,7 +262,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     private void syncSideOverlay() {
-        if (!showSideConfig || menu.machine() == null) {
+        if (menu.machine() == null) {
             SideConfigOverlay.clear();
             return;
         }
@@ -323,7 +323,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             // same rectangles used when drawing them.
             if (inside(localX, localY, 326, 58, 20, 16)) {
                 showSideConfig = false;
-                SideConfigOverlay.clear();
+                syncSideOverlay();
                 return true;
             }
             for (int i = 0; i < sideConfigButtons.length; i++) {
@@ -415,7 +415,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             return true;
         }
         if (showSideConfig) {
-            if (keyCode == 256) showSideConfig = false;
+            if (keyCode == 256) {
+                showSideConfig = false;
+                syncSideOverlay();
+            }
             return true;
         }
         if (keyCode == 257 || keyCode == 335) {
