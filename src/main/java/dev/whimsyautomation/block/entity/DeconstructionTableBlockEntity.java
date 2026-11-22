@@ -509,8 +509,11 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        if (tag.contains("OversizedInventory")) OversizedItemStackCodec.deserialize(inventory, registries, tag.getCompound("OversizedInventory"));
-        else if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        if (tag.contains("OversizedInventory")) {
+            CompoundTag oversized = tag.getCompound("OversizedInventory");
+            inventory.resize(Math.max(OUTPUT_START + PAGE_SIZE * 10, oversized.getInt("Size")));
+            OversizedItemStackCodec.deserialize(inventory, registries, oversized);
+        } else if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         int requiredOutputSize = OUTPUT_START + PAGE_SIZE * 10;
         for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
             if (!inventory.getStackInSlot(slot).isEmpty()) {
