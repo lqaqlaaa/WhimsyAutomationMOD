@@ -1,18 +1,18 @@
 {
   "variants": {
     "facing=north": {
-      "model": "minecraft:block/crafting_table"
+      "model": "whimsy_automation:block/deconstruction_table"
     },
     "facing=east": {
-      "model": "minecraft:block/crafting_table",
+      "model": "whimsy_automation:block/deconstruction_table",
       "y": 90
     },
     "facing=south": {
-      "model": "minecraft:block/crafting_table",
+      "model": "whimsy_automation:block/deconstruction_table",
       "y": 180
     },
     "facing=west": {
-      "model": "minecraft:block/crafting_table",
+      "model": "whimsy_automation:block/deconstruction_table",
       "y": 270
     }
   }
