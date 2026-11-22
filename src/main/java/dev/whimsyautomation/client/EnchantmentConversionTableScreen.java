@@ -129,6 +129,26 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         graphics.blitSprite(SLOT, leftPos + e.x, topPos + e.y, e.width, e.height);
     }
 
+    private void drawLayoutLabel(GuiGraphics graphics, String id, Component value, int x, int y, int color) {
+        UiLayoutProfile.Element e = layoutEditor.element(id, "label", x, y,
+                Math.max(1, font.width(value)), 9);
+        float sx = e.width / (float) Math.max(1, font.width(value)) * e.textScale;
+        float sy = e.height / 9.0F * e.textScale;
+        graphics.pose().pushPose();
+        graphics.pose().translate(leftPos + e.x, topPos + e.y, 0.0F);
+        graphics.pose().scale(sx, sy, 1.0F);
+        graphics.drawString(font, value, 0, 0, color, false);
+        graphics.pose().popPose();
+    }
+
+    private void applyMenuSlotLayout(String id, int slotIndex, int x, int y) {
+        UiLayoutProfile.Element e = layoutEditor.element(id, "slot", x, y, 16, 16);
+        if (slotIndex >= 0 && slotIndex < menu.slots.size()) {
+            menu.slots.get(slotIndex).x = e.x;
+            menu.slots.get(slotIndex).y = e.y;
+        }
+    }
+
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         drawLayoutPanel(graphics);
@@ -139,17 +159,25 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
                 drawLayoutSlot(graphics, "player_slot_" + (col + row * 9), 8 + col * 18, 104 + row * 18);
         for (int col = 0; col < 9; col++)
             drawLayoutSlot(graphics, "hotbar_slot_" + col, 8 + col * 18, 162);
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.copy_count"),
-                leftPos + 57, topPos + 39, 0x404040, false);
-        graphics.drawString(font, Component.literal("→"), leftPos + 91, topPos + 52, 0x404040, false);
+
+        applyMenuSlotLayout("input_slot", 0, 28, 50);
+        applyMenuSlotLayout("output_slot", 1, 132, 50);
+        for (int i = 0; i < 27; i++)
+            applyMenuSlotLayout("player_slot_" + i, 2 + i, 8 + (i % 9) * 18, 104 + (i / 9) * 18);
+        for (int i = 0; i < 9; i++)
+            applyMenuSlotLayout("hotbar_slot_" + i, 29 + i, 8 + i * 18, 162);
+
+        drawLayoutLabel(graphics, "copy_count_label",
+                Component.translatable("screen.whimsy_automation.copy_count"), 57, 39, 0x404040);
+        drawLayoutLabel(graphics, "input_arrow", Component.literal("→"), 91, 52, 0x404040);
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, Component.translatable("screen.whimsy_automation.conversion_table"),
-                8, titleLabelY, 0x404040, false);
-        graphics.drawString(font, Component.translatable("container.inventory"),
-                8, inventoryLabelY, 0x404040, false);
+        drawLayoutLabel(graphics, "title",
+                Component.translatable("screen.whimsy_automation.conversion_table"), 8, titleLabelY, 0x404040);
+        drawLayoutLabel(graphics, "inventory_label",
+                Component.translatable("container.inventory"), 8, inventoryLabelY, 0x404040);
     }
 
     private void renderTotalOutputCount(GuiGraphics graphics) {
