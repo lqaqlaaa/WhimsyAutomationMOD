@@ -7,42 +7,61 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/** Client-side overlay visibility keyed by the actual block-entity instance. */
+/** Client-side overlay state keyed by the actual block-entity instance. */
 public final class SideConfigOverlay {
-    private static final Map<BlockEntity, Boolean> ACTIVE = new WeakHashMap<>();
+    private record OverlayState(boolean enabled, int[] sideModes) {}
+
+    private static final Map<BlockEntity, OverlayState> STATES = new WeakHashMap<>();
 
     private SideConfigOverlay() {}
 
-    /** Enables/disables the frame preview for this exact machine instance. */
-    public static void show(BlockEntity machine, boolean enabled) {
+    /**
+     * Updates the preview from the menu's synchronized side modes.
+     * The menu DataSlots are authoritative on the client; the client block entity
+     * is not assumed to receive a live update for every automation-side change.
+     */
+    public static void show(BlockEntity machine, int[] sideModes, boolean enabled) {
         if (machine == null) return;
-        if (enabled) ACTIVE.put(machine, Boolean.TRUE);
-        else ACTIVE.remove(machine);
+        if (!enabled) {
+            STATES.remove(machine);
+            return;
+        }
+        int[] copy = new int[Direction.values().length];
+        if (sideModes != null) {
+            System.arraycopy(sideModes, 0, copy, 0, Math.min(sideModes.length, copy.length));
+        }
+        STATES.put(machine, new OverlayState(true, copy));
     }
 
     public static void clear(BlockEntity machine) {
-        if (machine != null) ACTIVE.remove(machine);
+        if (machine != null) STATES.remove(machine);
     }
 
     public static boolean isActive(BlockEntity machine) {
-        return machine != null && ACTIVE.containsKey(machine);
+        OverlayState state = STATES.get(machine);
+        return state != null && state.enabled();
     }
 
     /**
-     * If any side is configured for input or output, show only configured sides.
-     * If all six modes are disabled, the enabled preview shows all six faces.
+     * Show only configured input/output faces when at least one is configured.
+     * When all six are disabled, the enabled preview shows all six faces.
      */
     public static boolean shouldShowFace(BlockEntity machine, int side) {
-        if (!(machine instanceof SideConfigurableBlockEntity configurable) || !isActive(machine)
-                || side < 0 || side >= Direction.values().length) return false;
+        if (!(machine instanceof SideConfigurableBlockEntity) || side < 0 || side >= Direction.values().length) {
+            return false;
+        }
+        OverlayState state = STATES.get(machine);
+        if (state == null || !state.enabled()) return false;
+
+        int[] modes = state.sideModes();
         boolean anyConfigured = false;
-        for (Direction direction : Direction.values()) {
-            if (configurable.getSideMode(direction) != 0) {
+        for (int mode : modes) {
+            if (mode != 0) {
                 anyConfigured = true;
                 break;
             }
         }
-        return !anyConfigured || configurable.getSideMode(Direction.values()[side]) != 0;
+        return !anyConfigured || modes[side] != 0;
     }
 
     public static int color(int side) {
