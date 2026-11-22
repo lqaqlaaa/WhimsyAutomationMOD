@@ -51,7 +51,7 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
 
     @Override
     public boolean shouldRenderOffScreen(T blockEntity) {
-        return SideConfigOverlay.isActiveAt(blockEntity.getBlockPos());
+        return SideConfigOverlay.isActiveAt(blockEntity.getLevel(), blockEntity.getBlockPos());
     }
 
     @Override
@@ -68,13 +68,13 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
     public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffers, int packedLight, int packedOverlay) {
         BlockPos pos = blockEntity.getBlockPos();
-        if (!SideConfigOverlay.isActiveAt(pos)) return;
+        if (!SideConfigOverlay.isActiveAt(blockEntity.getLevel(), pos)) return;
 
         VertexConsumer out = buffers.getBuffer(SIDE_FRAME);
         Matrix4f matrix = poseStack.last().pose();
 
         for (int side = 0; side < 6; side++) {
-            if (!SideConfigOverlay.shouldShowFace(side)) continue;
+            if (!SideConfigOverlay.shouldShowFace(blockEntity.getLevel(), pos, side)) continue;
             int argb = SideConfigOverlay.color(side);
             float r = ((argb >>> 16) & 0xFF) / 255.0F;
             float g = ((argb >>> 8) & 0xFF) / 255.0F;
