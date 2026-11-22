@@ -42,9 +42,10 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
         }
     }
     @Override public int getContainerSize() { return 27; }
+    @Override public int getMaxStackSize() { return Integer.MAX_VALUE; }
     @Override public ItemStack getItem(int slot) {
         if (!valid(slot) || amounts[slot].signum() <= 0 || representatives.get(slot).isEmpty()) return ItemStack.EMPTY;
-        return representatives.get(slot).copyWithCount(1);
+        return representatives.get(slot).copyWithCount(amounts[slot].min(BigInteger.valueOf(64)).intValue());
     }
     public BigInteger getExactCount(int slot) { return valid(slot) ? amounts[slot] : BigInteger.ZERO; }
     @Override public ItemStack removeItem(int slot, int amount) {
@@ -69,7 +70,8 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
         if (!old.isEmpty() && ItemStack.isSameItemSameComponents(old, stack)) {
             // Container slots expose one representative item; vanilla slot operations
             // write back the new visible count. Only the increase is added.
-            int delta = Math.max(0, stack.getCount() - 1);
+            int visibleBefore = amounts[slot].min(BigInteger.valueOf(64)).intValue();
+            int delta = Math.max(0, stack.getCount() - visibleBefore);
             if (delta > 0) amounts[slot] = amounts[slot].add(BigInteger.valueOf(delta)).min(MAX_COUNT);
         } else {
             representatives.set(slot, stack.copyWithCount(1));
