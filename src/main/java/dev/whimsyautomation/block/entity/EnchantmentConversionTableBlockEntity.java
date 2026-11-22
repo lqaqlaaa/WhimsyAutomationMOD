@@ -90,12 +90,29 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         setChanged();
         if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
     }
+    private final IItemHandler automationInputHandler = new IItemHandler() {
+        @Override public int getSlots() { return 1; }
+        @Override public ItemStack getStackInSlot(int slot) {
+            return slot == 0 ? inventory.getStackInSlot(INPUT_SLOT) : ItemStack.EMPTY;
+        }
+        @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            return slot == 0 ? inventory.insertItem(INPUT_SLOT, stack, simulate) : stack;
+        }
+        @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : 0; }
+        @Override public boolean isItemValid(int slot, ItemStack stack) { return slot == 0 && !stack.isEmpty(); }
+    };
+
     public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
-        if (side == null) return new SidedMachineItemHandler(inventory, OUTPUT_SLOT, true, true);
+        if (side == null) return new SidedMachineItemHandler(inventory, automationInputHandler,
+                OUTPUT_SLOT, true, true, () -> false, () -> true);
         int index = side.ordinal();
         if (sidedHandlers[index] == null) {
             int mode = sideModes[index];
-            sidedHandlers[index] = new SidedMachineItemHandler(inventory, OUTPUT_SLOT, mode == 1, mode == 2);
+            sidedHandlers[index] = new SidedMachineItemHandler(inventory, automationInputHandler,
+                    OUTPUT_SLOT, mode == 1, mode == 2, () -> false, () -> true);
         }
         return sidedHandlers[index];
     }
