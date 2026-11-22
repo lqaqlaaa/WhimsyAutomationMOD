@@ -38,7 +38,7 @@ public final class BigCapacityChestBlock extends ChestBlock {
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player) {
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player) {
         if (ChestBlock.isChestBlockedAt(level, pos)) {
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
