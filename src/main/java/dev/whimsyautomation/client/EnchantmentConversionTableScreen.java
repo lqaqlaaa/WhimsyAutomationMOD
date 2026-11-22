@@ -302,6 +302,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             graphics.flush();
             graphics.pose().pushPose();
             graphics.pose().translate(leftPos, topPos, 500.0F);
+            graphics.fill(0, 0, imageWidth, imageHeight, 0xFF202020);
             renderSideConfig(graphics, mouseX, mouseY, partialTick);
             graphics.flush();
             graphics.pose().popPose();
