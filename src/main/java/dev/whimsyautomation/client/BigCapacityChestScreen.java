@@ -37,7 +37,7 @@ public final class BigCapacityChestScreen extends net.minecraft.client.gui.scree
 
     @Override
     protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
-        super.renderSlotContents(graphics, stack, slot, "");
+        super.renderSlotContents(graphics, stack, slot, slot.index < menu.getRows() * 9 ? "" : countString);
     }
 
     @Override
