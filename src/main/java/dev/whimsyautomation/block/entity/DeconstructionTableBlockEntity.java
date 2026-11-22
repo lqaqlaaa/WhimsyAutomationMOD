@@ -378,10 +378,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         setChanged();
     }
 
-    /**
-     * Repairs output stacks created by older builds and splits oversized stacks
-     * before any automation capability can expose them to another mod.
-     */
+    /** Repairs legacy output entries and caps each internal machine stack at the shared oversized limit. */
     private void normalizeOutputInventory() {
         List<ItemStack> outputPlan = new ArrayList<>();
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
@@ -425,12 +422,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         return true;
     }
 
-    /**
-     * Inserts an aggregate amount without ever creating an invalid ItemStack.
-     * MAX_STACK_SIZE is a data component constrained by vanilla to [1, 99];
-     * machine output capacity must be represented by additional slots, not by
-     * writing Integer.MAX_VALUE into the component or stack count.
-     */
+    /** Inserts aggregate machine output into oversized internal stacks without changing item components. */
     private void insertCountIntoOutputPlan(List<ItemStack> plan, ItemStack template, long amount) {
         if (template.isEmpty() || amount <= 0) return;
 
