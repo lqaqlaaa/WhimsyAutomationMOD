@@ -35,13 +35,9 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
             false,
             RenderType.CompositeState.builder()
                     .setShaderState(new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorShader))
-                    .setTransparencyState(new RenderStateShard.TransparencyStateShard(
-                            "whimsy_side_frame_translucent",
-                            () -> {
-                                RenderSystem.enableBlend();
-                                RenderSystem.defaultBlendFunc();
-                            },
-                            RenderSystem::disableBlend))
+                    // The frame is an opaque overlay. Blending without depth writes
+                    // lets overlapping faces accumulate and appear to flicker.
+                    .setTransparencyState(RenderStateShard.NO_TRANSPARENCY)
                     .setCullState(new RenderStateShard.CullStateShard(false))
                     // Apply a small depth bias to the overlay so coplanar frame
                     // quads do not compete with the block surface in the depth buffer.
@@ -53,7 +49,7 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
                             },
                             RenderSystem::disablePolygonOffset))
                     .setDepthTestState(new RenderStateShard.DepthTestStateShard("whimsy_side_frame_depth", 515))
-                    .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, false))
+                    .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, true))
                     .createCompositeState(false));
 
     public SideConfigBlockEntityRenderer(BlockEntityRendererProvider.Context context) {}
