@@ -21,6 +21,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     private EditBox amountInput;
     private Button autoButton;
     private Button sideButton;
+    private Button confirmButton;
     private Button layoutDebugButton;
     private Button layoutExportButton;
     private Button layoutResetButton;
@@ -83,14 +84,15 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         amountInput.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         addRenderableWidget(amountInput);
 
-        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.confirm_copy"), button -> {
+        confirmButton = Button.builder(Component.translatable("screen.whimsy_automation.confirm_copy"), button -> {
             sendCountIfChanged();
             try {
                 int count = Integer.parseInt(amountInput.getValue());
                 if (count >= 1 && count <= EnchantmentConversionTableBlockEntityLimit.MAX_COPY_COUNT)
                     ConfirmItemCopyPayload.send(menu.containerId, menu.getBlockPos(), count);
             } catch (NumberFormatException ignored) { }
-        }).bounds(leftPos + 57, topPos + 72, 62, 20).build());
+        }).bounds(leftPos + 57, topPos + 72, 62, 20).build();
+        addRenderableWidget(confirmButton);
 
         layoutEditor.bindWidgets(children(), leftPos, topPos);
         for (AbstractWidget control : layoutEditor.createControls(font, leftPos, topPos))
@@ -105,6 +107,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     protected void containerTick() {
         super.containerTick();
         if (autoButton != null) autoButton.setMessage(autoLabel());
+        if (confirmButton != null) confirmButton.active = !menu.isAutoMode();
         sendCountIfChanged();
     }
 
