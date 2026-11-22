@@ -189,16 +189,6 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
                 Component.translatable("container.inventory"), 8, inventoryLabelY, 0x404040);
     }
 
-    private void renderTotalOutputCount(GuiGraphics graphics) {
-        int total = menu.getTotalOutputCount();
-        if (total <= 0) return;
-        String countText = Integer.toString(total);
-        int x = leftPos + 132 + 16 - font.width(countText);
-        int y = topPos + 50 + 9;
-        graphics.fill(x - 2, y - 1, x + font.width(countText) + 1, y + 9, 0x99000000);
-        graphics.drawString(font, countText, x, y, 0xFFFFFF, true);
-    }
-
     private void syncSideOverlay() {
         if (menu.machine() == null) return;
         int[] modes = new int[6];
@@ -318,7 +308,6 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             return;
         }
         super.render(graphics, mouseX, mouseY, partialTick);
-        renderTotalOutputCount(graphics);
         if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, mouseX, mouseY);
     }
