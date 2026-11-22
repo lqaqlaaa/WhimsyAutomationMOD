@@ -12,8 +12,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.slf4j.Logger;
 
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * Temporary diagnostic renderer for the six-direction configuration overlay.
@@ -24,7 +25,7 @@ import java.util.Set;
  */
 public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implements BlockEntityRenderer<T> {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Set<BlockPos> LOGGED_POSITIONS = new HashSet<>();
+    private static final Set<BlockEntity> LOGGED_ENTITIES = Collections.newSetFromMap(new WeakHashMap<>());
     private static final AABB RENDER_BOUNDS = new AABB(-0.08, -0.08, -0.08, 1.08, 1.08, 1.08);
     private static final int TEST_RED = 0xFFFF2020;
 
@@ -49,7 +50,7 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
     public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffers, int packedLight, int packedOverlay) {
         BlockPos pos = blockEntity.getBlockPos();
-        if (LOGGED_POSITIONS.add(pos.immutable())) {
+        if (LOGGED_ENTITIES.add(blockEntity)) {
             LOGGER.info("SideConfig BER render called for {} ({})", pos, blockEntity.getType());
         }
         if (!SideConfigOverlay.isActiveAt(pos)) return;
