@@ -140,6 +140,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     protected void init() {
         super.init();
+        showFaceColors = menu.machine() != null
+                && SideConfigOverlay.isShowingAllFacesAt(menu.machine().getBlockPos());
         topPos -= 27;
         layoutEditor = new UiLayoutEditor("enchantment_extractor");
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
@@ -436,7 +438,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     public void removed() {
-        SideConfigOverlay.clear();
+        // Do not clear the world overlay here: closing the GUI must leave it visible.
         super.removed();
     }
 
