@@ -3,7 +3,9 @@ package dev.whimsyautomation.block.entity;
 import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.OversizedItemStackCodec;
+import dev.whimsyautomation.util.SidedMachineItemHandler;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -16,8 +18,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.IItemHandler;
+import org.jetbrains.annotations.Nullable;
 
-public final class EnchantmentConversionTableBlockEntity extends BlockEntity implements MenuProvider {
+public final class EnchantmentConversionTableBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity {
+    private boolean autoMode;
+    private int copyCount = 64;
+    private final int[] sideModes = new int[6];
+    private final IItemHandler[] sidedHandlers = new IItemHandler[6];
+    private boolean internalInventoryUpdate;
     public static final int INPUT_SLOT = 0;
     public static final int OUTPUT_SLOT = 1;
     public static final int SLOT_COUNT = 2;
@@ -41,6 +50,9 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
+            if (slot == INPUT_SLOT && autoMode && !internalInventoryUpdate && level != null && !level.isClientSide) {
+                confirmCopy(copyCount);
+            }
         }
 
         @Override
@@ -54,6 +66,37 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
 
     public EnchantmentConversionTableBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ENCHANTMENT_CONVERSION_TABLE.get(), pos, state);
+    }
+
+    public boolean isAutoMode() { return autoMode; }
+    public int getCopyCount() { return copyCount; }
+    public void setCopyCount(int count) {
+        if (count < 1 || count > MAX_COPY_COUNT || copyCount == count) return;
+        copyCount = count;
+        setChanged();
+    }
+    public void setAutoMode(boolean enabled) {
+        if (autoMode == enabled) return;
+        autoMode = enabled;
+        setChanged();
+        if (enabled && level != null && !level.isClientSide) confirmCopy(copyCount);
+    }
+    @Override public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
+    public void cycleSideMode(Direction side) {
+        int index = side.ordinal();
+        sideModes[index] = (sideModes[index] + 1) % 3;
+        sidedHandlers[index] = null;
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+    public IItemHandler getAutomationItemHandler(@Nullable Direction side) {
+        if (side == null) return new SidedMachineItemHandler(inventory, OUTPUT_SLOT, true, true);
+        int index = side.ordinal();
+        if (sidedHandlers[index] == null) {
+            int mode = sideModes[index];
+            sidedHandlers[index] = new SidedMachineItemHandler(inventory, OUTPUT_SLOT, mode == 1, mode == 2);
+        }
+        return sidedHandlers[index];
     }
 
     public ItemStackHandler getInventory() {
@@ -71,8 +114,11 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         ItemStack input = inventory.getStackInSlot(INPUT_SLOT);
         if (input.isEmpty() || !inventory.getStackInSlot(OUTPUT_SLOT).isEmpty()) return false;
 
-        inventory.setStackInSlot(INPUT_SLOT, ItemStack.EMPTY);
-        inventory.setStackInSlot(OUTPUT_SLOT, input.copyWithCount(count));
+        internalInventoryUpdate = true;
+        try {
+            inventory.setStackInSlot(INPUT_SLOT, ItemStack.EMPTY);
+            inventory.setStackInSlot(OUTPUT_SLOT, input.copyWithCount(count));
+        } finally { internalInventoryUpdate = false; }
         setChanged();
         return true;
     }
@@ -117,11 +163,19 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("OversizedInventory", OversizedItemStackCodec.serialize(inventory, registries));
+        tag.putBoolean("AutoMode", autoMode);
+        tag.putInt("CopyCount", copyCount);
+        tag.putIntArray("SideModes", sideModes);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        autoMode = tag.getBoolean("AutoMode");
+        copyCount = Math.max(1, Math.min(MAX_COPY_COUNT, tag.contains("CopyCount") ? tag.getInt("CopyCount") : 64));
+        int[] savedSideModes = tag.getIntArray("SideModes");
+        for (int i = 0; i < Math.min(savedSideModes.length, sideModes.length); i++) sideModes[i] = Math.max(0, Math.min(2, savedSideModes[i]));
+        java.util.Arrays.fill(sidedHandlers, null);
         if (tag.contains("OversizedInventory")) {
             OversizedItemStackCodec.deserialize(inventory, registries, tag.getCompound("OversizedInventory"));
         } else if (tag.contains("Inventory")) {
