@@ -94,14 +94,9 @@ public final class BigCapacityChestBlock extends ChestBlock {
     }
     @Override protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                            Player player, BlockHitResult hit) {
-        if (level.isClientSide) return InteractionResult.SUCCESS;
-        if (player instanceof ServerPlayer serverPlayer) {
-            MenuProvider provider = getMenuProvider(state, level, pos);
-            if (provider != null) {
-                serverPlayer.openMenu(provider, pos);
-                serverPlayer.awardStat(Stats.OPEN_CHEST);
-            }
-        }
-        return InteractionResult.SUCCESS;
+        // Keep the vanilla ChestBlock open/close lifecycle (including opener
+        // counting and client block-event synchronization), while getMenuProvider
+        // above supplies our BigInteger-aware menu.
+        return super.useWithoutItem(state, level, pos, player, hit);
     }
 }
