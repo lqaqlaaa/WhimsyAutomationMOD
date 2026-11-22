@@ -4,6 +4,8 @@ import dev.whimsyautomation.block.entity.EnchantmentConversionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -23,15 +25,30 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
         @Override
         public int get(int index) {
             int count = machine == null ? 0 : machine.getTotalOutputCount();
-            return index == 0 ? count & 0xFFFF : (count >>> 16) & 0xFFFF;
+            if (index == 0) return count & 0xFFFF;
+            if (index == 1) return (count >>> 16) & 0xFFFF;
+            if (index == 2) return machine != null && machine.isAutoMode() ? 1 : 0;
+            if (index == 3) return machine == null ? 64 & 0xFFFF : machine.getCopyCount() & 0xFFFF;
+            if (index == 4) return machine == null ? 0 : (machine.getCopyCount() >>> 16) & 0xFFFF;
+            if (index >= 5 && index < 11) return machine == null ? 0 : machine.getSideMode(Direction.values()[index - 5]);
+            return 0;
         }
 
         @Override
-        public void set(int index, int value) { }
+        public void set(int index, int value) {
+            if (index == 2) syncedAutoMode = value != 0;
+            else if (index == 3) syncedCopyCount = (syncedCopyCount & 0xFFFF0000) | (value & 0xFFFF);
+            else if (index == 4) syncedCopyCount = (syncedCopyCount & 0xFFFF) | ((value & 0xFFFF) << 16);
+            else if (index >= 5 && index < 11) syncedSideModes[index - 5] = Math.max(0, Math.min(2, value));
+        }
 
         @Override
-        public int getCount() { return 2; }
+        public int getCount() { return 11; }
     };
+
+    private boolean syncedAutoMode;
+    private int syncedCopyCount = 64;
+    private final int[] syncedSideModes = new int[6];
 
     public EnchantmentConversionTableMenu(int id, Inventory inv, FriendlyByteBuf data) {
         this(id, inv, data.readBlockPos());
@@ -68,8 +85,20 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
         return machine;
     }
 
+    public boolean isAutoMode() { return machine != null && !access.equals(null) ? (machine.getLevel() != null && !machine.getLevel().isClientSide ? machine.isAutoMode() : syncedAutoMode) : syncedAutoMode; }
+    public int getCopyCount() { return machine != null && machine.getLevel() != null && !machine.getLevel().isClientSide ? machine.getCopyCount() : syncedCopyCount; }
+    public int getSideMode(int side) { return side < 0 || side >= 6 ? 0 : (machine != null && machine.getLevel() != null && !machine.getLevel().isClientSide ? machine.getSideMode(Direction.values()[side]) : syncedSideModes[side]); }
+
     public int getTotalOutputCount() {
         return data.get(0) | (data.get(1) << 16);
+    }
+
+    @Override public boolean clickMenuButton(Player player, int buttonId) {
+        if (machine == null || player.level().isClientSide) return false;
+        if (buttonId == 0) machine.setAutoMode(!machine.isAutoMode());
+        else if (buttonId >= 10 && buttonId <= 15) machine.cycleSideMode(Direction.values()[buttonId - 10]);
+        else return false;
+        return true;
     }
 
     @Override
