@@ -1,19 +1,8 @@
 {
   "variants": {
-    "facing=north": {
-      "model": "minecraft:block/enchanting_table"
-    },
-    "facing=east": {
-      "model": "whimsy_automation:block/enchantment_extractor",
-      "y": 90
-    },
-    "facing=south": {
-      "model": "whimsy_automation:block/enchantment_extractor",
-      "y": 180
-    },
-    "facing=west": {
-      "model": "whimsy_automation:block/enchantment_extractor",
-      "y": 270
-    }
+    "facing=north": { "model": "minecraft:block/enchanting_table" },
+    "facing=east":  { "model": "minecraft:block/enchanting_table", "y": 90 },
+    "facing=south": { "model": "minecraft:block/enchanting_table", "y": 180 },
+    "facing=west":  { "model": "minecraft:block/enchanting_table", "y": 270 }
   }
 }
