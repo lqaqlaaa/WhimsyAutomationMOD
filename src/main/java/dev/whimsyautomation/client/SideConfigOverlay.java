@@ -9,7 +9,7 @@ import java.util.WeakHashMap;
 
 /** Client-side overlay state keyed by the actual block-entity instance. */
 public final class SideConfigOverlay {
-    private record OverlayState(boolean enabled, boolean[] visibleFaces) {}
+    private record OverlayState(boolean enabled, int[] sideModes, boolean[] visibleFaces) {}
 
     private static final Map<BlockEntity, OverlayState> STATES = new WeakHashMap<>();
 
@@ -22,15 +22,14 @@ public final class SideConfigOverlay {
     public static void show(BlockEntity machine, int[] sideModes, boolean enabled) {
         if (machine == null) return;
         if (!enabled) {
-            clear(machine);
+            STATES.remove(machine);
             return;
         }
         int[] modes = new int[Direction.values().length];
         if (sideModes != null) {
             System.arraycopy(sideModes, 0, modes, 0, Math.min(sideModes.length, modes.length));
         }
-        MODES.put(machine, modes);
-        STATES.put(machine, new OverlayState(true, calculateVisibleFaces(modes)));
+        STATES.put(machine, new OverlayState(true, modes, calculateVisibleFaces(modes)));
     }
 
     /**
@@ -44,15 +43,10 @@ public final class SideConfigOverlay {
 
         // Keep the underlying modes so a later face toggle can be predicted
         // without reading the menu or block entity again.
-        int[] modes = MODES.get(machine);
-        if (modes == null) return;
-        modes = modes.clone();
+        int[] modes = state.sideModes().clone();
         modes[side] = (modes[side] + 1) % 3;
-        MODES.put(machine, modes);
-        STATES.put(machine, new OverlayState(true, calculateVisibleFaces(modes)));
+        STATES.put(machine, new OverlayState(true, modes, calculateVisibleFaces(modes)));
     }
-
-    private static final Map<BlockEntity, int[]> MODES = new WeakHashMap<>();
 
     private static boolean[] calculateVisibleFaces(int[] sideModes) {
         int count = Direction.values().length;
@@ -75,10 +69,7 @@ public final class SideConfigOverlay {
     }
 
     public static void clear(BlockEntity machine) {
-        if (machine != null) {
-            STATES.remove(machine);
-            MODES.remove(machine);
-        }
+        if (machine != null) STATES.remove(machine);
     }
 
     public static boolean isActive(BlockEntity machine) {
