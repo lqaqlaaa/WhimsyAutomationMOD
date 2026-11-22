@@ -21,9 +21,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private EditBox bufferPageField;
     private boolean showSideConfig;
     private boolean showFaceColors;
-    private final Button[] sideConfigButtons = new Button[6];
-    private Button sideColorToggleButton;
-    private Button sideConfigCloseButton;
     private UiLayoutEditor layoutEditor;
     private Button layoutDebugButton;
     private Button layoutExportButton;
@@ -181,22 +178,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             showSideConfig = !showSideConfig;
         }).bounds(leftPos + 264, topPos + 90, 80, 15).build());
 
-        String[] sideNames = {"下", "上", "北", "南", "西", "东"};
-        for (int i = 0; i < 6; i++) {
-            final int side = i;
-            int col = i % 3, row = i / 3;
-            sideConfigButtons[i] = Button.builder(Component.literal(sideNames[i]), b -> {
-                send(10 + side);
-                SideConfigOverlay.cycleFace(menu.machine(), side);
-            }).bounds(184 + col * 55, 82 + row * 22, 50, 18).build();
-        }
-        sideColorToggleButton = Button.builder(Component.literal("显示六面颜色框：关闭"), b -> {
-            showFaceColors = !showFaceColors;
-            syncSideOverlay();
-        }).bounds(184, 127, 160, 16).build();
-        sideConfigCloseButton = Button.builder(Component.literal("×"), b -> {
-            showSideConfig = false;
-        }).bounds(326, 58, 20, 16).build();
+
 
         bufferPageField = pageField(262, 153, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
