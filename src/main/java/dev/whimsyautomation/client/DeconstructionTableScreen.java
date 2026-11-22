@@ -203,8 +203,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
-            showFaceColors = false;
-            if (showSideConfig) syncSideOverlay(); else SideConfigOverlay.clear();
+            // Keep the world overlay independent from the modal editor.
+            syncSideOverlay();
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
                 .bounds(leftPos + 264, topPos + 198, 80, 15).build());
@@ -224,7 +224,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         }).bounds(184, 177, 160, 18).build();
         sideConfigCloseButton = Button.builder(Component.literal("×"), b -> {
             showSideConfig = false;
-            SideConfigOverlay.clear();
+            syncSideOverlay();
         }).bounds(326, 58, 20, 16).build();
         layoutEditor.bindWidgets(children(), leftPos, topPos);
         for (net.minecraft.client.gui.components.AbstractWidget control : layoutEditor.createControls(font, leftPos, topPos))
@@ -291,7 +291,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     private void syncSideOverlay() {
-        if (!showSideConfig || menu.machine() == null) {
+        if (menu.machine() == null) {
             SideConfigOverlay.clear();
             return;
         }
@@ -341,7 +341,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // normal screen-widget coordinate handling.
         if (inside(localX, localY, 326, 58, 20, 16)) {
             showSideConfig = false;
-            SideConfigOverlay.clear();
+            syncSideOverlay();
             return true;
         }
         for (int i = 0; i < sideConfigButtons.length; i++) {
@@ -536,6 +536,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             if (keyCode == 256) {
                 selectedIngredientGroup = -1;
                 showSideConfig = false;
+                syncSideOverlay();
             }
             return true;
         }
