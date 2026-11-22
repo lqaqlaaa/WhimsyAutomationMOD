@@ -212,7 +212,7 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
                 ItemStack template = !visible.isEmpty() ? visible : queuedTemplate;
                 if (!template.isEmpty() && queued > 0
                         && (visible.isEmpty() || ItemStack.isSameItemSameComponents(visible, queuedTemplate))) {
-                    inventory.setStackInSlot(OUTPUT_SLOT, template.copyWithCount(visible.getCount() + queued));
+                    inventory.setStackInSlot(OUTPUT_SLOT, template.copyWithCount((int) Math.min(MAX_COPY_COUNT, (long) visible.getCount() + queued)));
                 }
             } finally { internalInventoryUpdate = false; }
         }
