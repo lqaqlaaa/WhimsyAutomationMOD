@@ -12,7 +12,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class BigCapacityChestScreen extends ContainerScreen<BigCapacityChestMenu> {
+public final class BigCapacityChestScreen extends net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<BigCapacityChestMenu> {
     public BigCapacityChestScreen(BigCapacityChestMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
     }

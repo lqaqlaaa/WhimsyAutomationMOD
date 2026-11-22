@@ -24,7 +24,7 @@ public final class BigCapacityChestMenu extends ChestMenu {
     private final int rows;
     public BigCapacityChestMenu(int id, Inventory inventory, BigCapacityChestBlockEntity first,
                                 BigCapacityChestBlockEntity second, BlockPos pos, int rows) {
-        this(id, inventory, combined(first, second, rows), first, second, rows);
+        this(id, inventory, combined(first, second, rows), first, second, pos, rows);
     }
     public BigCapacityChestMenu(int id, Inventory inventory, Container container,
                                 BigCapacityChestBlockEntity first, BigCapacityChestBlockEntity second,
