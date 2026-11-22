@@ -80,10 +80,22 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
                 8, inventoryLabelY, 0x404040, false);
     }
 
+    private void renderTotalOutputCount(GuiGraphics graphics) {
+        int total = menu.getTotalOutputCount();
+        if (total <= 0) return;
+        String countText = Integer.toString(total);
+        int x = leftPos + 132 + 16 - font.width(countText);
+        int y = topPos + 50 + 9;
+        // Draw the logical total over vanilla's per-stack count (which is at most 99).
+        graphics.fill(x - 2, y - 1, x + font.width(countText) + 1, y + 9, 0x99000000);
+        graphics.drawString(font, countText, x, y, 0xFFFFFF, true);
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderTotalOutputCount(graphics);
         renderTooltip(graphics, mouseX, mouseY);
     }
 }
