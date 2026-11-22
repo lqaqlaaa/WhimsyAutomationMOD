@@ -300,24 +300,9 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-        if (!showSideConfig) return;
-        int x = 176, y = 54;
-        panel(graphics, x, y, 176, 166);
-        graphics.fill(x + 2, y + 2, x + 174, y + 164, 0xFFE0E0E0);
-        graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
-        graphics.drawString(font, Component.literal("点击方向按钮循环切换：关闭 / 输入 / 输出"),
-                x + 8, y + 20, 0xFF505050, false);
-        String[] names = {"下", "上", "北", "南", "西", "东"};
-        String[] modes = {"关闭", "输入", "输出"};
-        for (int i = 0; i < 6; i++) {
-            sideConfigButtons[i].setMessage(Component.literal(names[i] + " · " + modes[Math.min(2, menu.getSideMode(i))]));
-            sideConfigButtons[i].render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
-        }
-        graphics.drawString(font, Component.literal("关闭总开关时，仅显示已启用输入或输出的面"),
-                x + 8, y + 91, 0xFF505050, false);
-        sideColorToggleButton.setMessage(Component.literal("显示六面颜色框：" + (showFaceColors ? "开启" : "关闭")));
-        sideColorToggleButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
-        sideConfigCloseButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
+        int[] modes = new int[6];
+        for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
+        SideConfigPanel.render(graphics, font, leftPos, topPos, mouseX, mouseY, partialTick, modes, showFaceColors);
     }
 
     private static boolean inside(double mouseX, double mouseY,
@@ -328,31 +313,16 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     private boolean clickSideConfig(double mouseX, double mouseY, int mouseButton) {
         if (!showSideConfig) return false;
-        double localX = mouseX - leftPos, localY = mouseY - topPos;
-        // These controls are drawn manually in panel-local coordinates rather
-        // than added to the screen's widget list. Hit-test the exact same
-        // rectangles used by their builders; do not route through Button's
-        // normal screen-widget coordinate handling.
-        if (inside(localX, localY, 326, 58, 20, 16)) {
-            showSideConfig = false;
-            return true;
-        }
-        for (int i = 0; i < sideConfigButtons.length; i++) {
-            int x = 184 + (i % 3) * 55;
-            int y = 88 + (i / 3) * 25;
-            if (inside(localX, localY, x, y, 50, 20)) {
-                send(10 + i);
-                SideConfigOverlay.cycleFace(menu.machine(), i);
-                return true;
-            }
-        }
-        if (inside(localX, localY, 184, 177, 160, 18)) {
+        int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos);
+        if (action == -1) return false;
+        if (action == 7) showSideConfig = false;
+        else if (action >= 0 && action < 6) {
+            send(10 + action);
+            SideConfigOverlay.cycleFace(menu.machine(), action);
+        } else if (action == 6) {
             showFaceColors = !showFaceColors;
             syncSideOverlay();
-            return true;
         }
-        // Treat clicks outside the modal controls as consumed input. Do not
-        // dismiss the six-way panel just because a tap misses a small button.
         return true;
     }
 
