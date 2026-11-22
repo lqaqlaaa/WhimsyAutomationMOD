@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.Slot;
 
 import java.util.List;
 
@@ -257,7 +258,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
                 int itemX = x + (previewSlot.width - 16) / 2;
                 int itemY = y + (previewSlot.height - 16) / 2;
                 graphics.renderItem(stack, itemX, itemY);
-                graphics.renderItemDecorations(font, stack, itemX, itemY);
+                graphics.renderItemDecorations(font, stack.copyWithCount(1), itemX, itemY);
             }
         }
         drawPlayerSlots(graphics);
@@ -526,7 +527,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             if (mouseX >= x && mouseX < x + cell.width
                     && mouseY >= y && mouseY < y + cell.height) {
                 ItemStack stack = preview.get(i);
-                if (!stack.isEmpty()) graphics.renderTooltip(font, stack, mouseX, mouseY);
+                if (!stack.isEmpty()) graphics.renderTooltip(font, StackCountDisplay.withCount(getTooltipFromContainerItem(stack), stack), stack.getTooltipImage(), mouseX, mouseY);
                 return;
             }
         }
@@ -614,10 +615,25 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, (int) virtualX, (int) virtualY);
         renderPreviewItemTooltip(graphics, (int) virtualX, (int) virtualY);
-        Component alternativeHint = alternativeTooltip(virtualX, virtualY);
-        if (alternativeHint != null) {
-            graphics.renderTooltip(font, alternativeHint, (int) virtualX, (int) virtualY);
+        if (alternativeTooltip(virtualX, virtualY) != null) {
+            graphics.drawString(font, "可替代材料 · 点击选择", leftPos + 184, topPos + 211, 0xFF344F70, true);
         }
         graphics.pose().popPose();
+    }
+
+    @Override
+    protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
+        super.renderSlotContents(graphics, stack, slot, stack.getCount() > 1 ? null : countString);
+    }
+
+    @Override
+    protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (hoveredSlot != null && hoveredSlot.hasItem()) {
+            ItemStack stack = hoveredSlot.getItem();
+            graphics.renderTooltip(font, StackCountDisplay.withCount(getTooltipFromContainerItem(stack), stack),
+                    stack.getTooltipImage(), mouseX, mouseY);
+            return;
+        }
+        super.renderTooltip(graphics, mouseX, mouseY);
     }
 }
