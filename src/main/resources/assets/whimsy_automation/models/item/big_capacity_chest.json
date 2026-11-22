@@ -1,1 +1,1 @@
-{"parent":"minecraft:item/generated","textures":{"layer0":"minecraft:entity/chest/normal"}}
+{"parent":"minecraft:item/generated","textures":{"layer0":"minecraft:item/chest"}}
