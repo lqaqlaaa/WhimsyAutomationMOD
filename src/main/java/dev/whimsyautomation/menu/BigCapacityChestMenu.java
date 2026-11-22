@@ -168,6 +168,10 @@ public final class BigCapacityChestMenu extends ChestMenu {
             if (b != null) b.setChanged();
         }
         @Override public boolean stillValid(net.minecraft.world.entity.player.Player player) {
+            // Client-side menus are validated by the server. The block entity
+            // packet may arrive just after the open-menu packet, so do not
+            // close the client screen during that synchronization window.
+            if (level != null) return true;
             BigCapacityChestBlockEntity a = first(), b = second();
             return a != null && a.stillValid(player) && (rows == 3 || b != null && b.stillValid(player));
         }
