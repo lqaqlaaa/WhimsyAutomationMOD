@@ -248,12 +248,13 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 ItemStack extractedInput = super.extractItem(slot, inputAmount, simulate);
                 return PlayerStackRules.copyForPlayer(extractedInput, extractedInput.getCount());
             }
-            int requestedCount = Math.min(amount, Math.min(present.getCount(), PlayerStackRules.getVanillaMaxStackSize(present)));
+            // Output extraction is an automation contract: honor the caller's
+            // requested amount up to the actual stored count, even above 64/99.
+            int requestedCount = Math.min(amount, present.getCount());
             ItemStack requested = present.copyWithCount(requestedCount);
             if (!persistentOutputMode && !canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
             if (simulate) {
-                ItemStack simulated = super.extractItem(slot, requestedCount, true);
-                return PlayerStackRules.copyForPlayer(simulated, simulated.getCount());
+                return super.extractItem(slot, requestedCount, true);
             }
             extractingGeneratedOutput = true;
             ItemStack extracted;
@@ -268,7 +269,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 persistentOutputMode = false;
                 refreshGeneratedSlots();
             }
-            return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
+            return extracted;
         }
 
         @Override
