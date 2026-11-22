@@ -141,6 +141,18 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         graphics.pose().popPose();
     }
 
+    private void drawLayoutLabelLocal(GuiGraphics graphics, String id, Component value, int x, int y, int color) {
+        UiLayoutProfile.Element e = layoutEditor.element(id, "label", x, y,
+                Math.max(1, font.width(value)), 9);
+        float sx = e.width / (float) Math.max(1, font.width(value)) * e.textScale;
+        float sy = e.height / 9.0F * e.textScale;
+        graphics.pose().pushPose();
+        graphics.pose().translate(e.x, e.y, 0.0F);
+        graphics.pose().scale(sx, sy, 1.0F);
+        graphics.drawString(font, value, 0, 0, color, false);
+        graphics.pose().popPose();
+    }
+
     private void applyMenuSlotLayout(String id, int slotIndex, int x, int y) {
         UiLayoutProfile.Element e = layoutEditor.element(id, "slot", x, y, 16, 16);
         if (slotIndex >= 0 && slotIndex < menu.slots.size()) {
@@ -174,9 +186,9 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        drawLayoutLabel(graphics, "title",
+        drawLayoutLabelLocal(graphics, "title",
                 Component.translatable("screen.whimsy_automation.conversion_table"), 8, titleLabelY, 0x404040);
-        drawLayoutLabel(graphics, "inventory_label",
+        drawLayoutLabelLocal(graphics, "inventory_label",
                 Component.translatable("container.inventory"), 8, inventoryLabelY, 0x404040);
     }
 
