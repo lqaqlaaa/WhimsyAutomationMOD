@@ -89,8 +89,16 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
             return ItemStack.EMPTY;
         }
 
-        if (source.isEmpty()) slot.set(ItemStack.EMPTY);
-        else slot.setChanged();
+        if (source.isEmpty()) {
+            slot.set(ItemStack.EMPTY);
+            // quickMoveStack transfers the stack directly and bypasses
+            // ItemStackHandler.extractItem(), so explicitly advance the queue.
+            if (index == EnchantmentConversionTableBlockEntity.OUTPUT_SLOT && machine != null) {
+                machine.refillOutputIfNeeded();
+            }
+        } else {
+            slot.setChanged();
+        }
         return original;
     }
 
