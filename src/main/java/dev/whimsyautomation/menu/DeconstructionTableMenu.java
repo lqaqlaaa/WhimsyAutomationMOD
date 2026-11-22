@@ -103,8 +103,8 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 if (level.isClientSide) {
                     ItemStack cached = clientPageStacks[slot];
                     if (cached.isEmpty()) return ItemStack.EMPTY;
-                    int extractedCount = Math.min(amount, Math.min(cached.getCount(), Math.max(1, cached.getMaxStackSize())));
-                    ItemStack extracted = cached.copyWithCount(extractedCount);
+                    ItemStack extracted = PlayerStackRules.copyForPlayer(cached, amount);
+                    int extractedCount = extracted.getCount();
                     if (!simulate) {
                         cached.shrink(extractedCount);
                         if (cached.isEmpty()) clientPageStacks[slot] = ItemStack.EMPTY;
