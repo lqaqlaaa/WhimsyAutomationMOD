@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:block/lectern",
-  "textures": {
-    "particle": "minecraft:block/lectern_base"
-  }
-}
