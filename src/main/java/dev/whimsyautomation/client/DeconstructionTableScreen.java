@@ -296,10 +296,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             return;
         }
         int[] modes = new int[6];
-        boolean hasEnabledSide = false;
         for (int i = 0; i < modes.length; i++) {
             modes[i] = menu.getSideMode(i);
-            hasEnabledSide |= modes[i] != 0;
         }
         // Keep the target active while the six-direction panel is open.
         // Otherwise the diagnostic BER is called but exits before drawing when
