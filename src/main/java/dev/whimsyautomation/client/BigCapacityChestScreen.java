@@ -2,6 +2,7 @@ package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.menu.BigCapacityChestMenu;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -12,7 +13,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class BigCapacityChestScreen extends net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<BigCapacityChestMenu> {
+public final class BigCapacityChestScreen extends AbstractContainerScreen<BigCapacityChestMenu> {
     private static final ResourceLocation CHEST_27_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_27.png");
     private static final ResourceLocation CHEST_54_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
 
@@ -48,17 +49,30 @@ public final class BigCapacityChestScreen extends net.minecraft.client.gui.scree
 
     @Override
     protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (hoveredSlot != null && hoveredSlot.index < menu.getRows() * 9 && hoveredSlot.hasItem()) {
-            ItemStack stack = hoveredSlot.getItem();
-            List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(stack));
-            BigInteger count = menu.exactCount(hoveredSlot.index);
-            String shown = count.equals(BigInteger.TEN.pow(308)) ? "1E308" : String.format("%,d", count);
-            lines.add(Math.min(1, lines.size()), Component.literal("数量：" + shown));
-            graphics.renderTooltip(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
+        // Keep vanilla's complete tooltip behavior for player inventory slots and while
+        // another item is carried by the cursor.
+        if (hoveredSlot == null || !hoveredSlot.hasItem()
+                || hoveredSlot.index >= menu.getRows() * 9
+                || !menu.getCarried().isEmpty()) {
+            super.renderTooltip(graphics, mouseX, mouseY);
             return;
         }
-        super.renderTooltip(graphics, mouseX, mouseY);
+
+        ItemStack stack = hoveredSlot.getItem();
+        List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(stack));
+        if (lines.isEmpty()) {
+            super.renderTooltip(graphics, mouseX, mouseY);
+            return;
+        }
+
+        BigInteger count = menu.exactCount(hoveredSlot.index);
+        String shown = count.equals(BigInteger.TEN.pow(308)) ? "1E308" : String.format("%,d", count);
+        // Preserve the vanilla item name, mod-added tooltip lines, and tooltip image;
+        // only insert the chest's exact stored quantity after the item name.
+        lines.add(1, Component.literal("数量：" + shown));
+        graphics.renderTooltip(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
     }
+
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256 || (minecraft != null && minecraft.options.keyInventory.matches(keyCode, scanCode))) {
@@ -67,5 +81,4 @@ public final class BigCapacityChestScreen extends net.minecraft.client.gui.scree
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
-
 }
