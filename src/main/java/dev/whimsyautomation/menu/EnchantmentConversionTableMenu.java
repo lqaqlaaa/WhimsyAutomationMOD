@@ -9,6 +9,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.ItemStackHandler;
@@ -18,6 +19,19 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
     private final EnchantmentConversionTableBlockEntity machine;
     private final ContainerLevelAccess access;
     private final BlockPos blockPos;
+    private final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int index) {
+            int count = machine == null ? 0 : machine.getTotalOutputCount();
+            return index == 0 ? count & 0xFFFF : (count >>> 16) & 0xFFFF;
+        }
+
+        @Override
+        public void set(int index, int value) { }
+
+        @Override
+        public int getCount() { return 2; }
+    };
 
     public EnchantmentConversionTableMenu(int id, Inventory inv, FriendlyByteBuf data) {
         this(id, inv, data.readBlockPos());
@@ -28,6 +42,7 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
         blockPos = pos;
         machine = inv.player.level().getBlockEntity(pos) instanceof EnchantmentConversionTableBlockEntity be ? be : null;
         access = ContainerLevelAccess.create(inv.player.level(), pos);
+        addDataSlots(data);
         ItemStackHandler handler = machine == null ? new ItemStackHandler(2) : machine.getInventory();
 
         addSlot(new SlotItemHandler(handler, EnchantmentConversionTableBlockEntity.INPUT_SLOT, 28, 50));
@@ -51,6 +66,10 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
 
     public EnchantmentConversionTableBlockEntity machine() {
         return machine;
+    }
+
+    public int getTotalOutputCount() {
+        return data.get(0) | (data.get(1) << 16);
     }
 
     @Override
