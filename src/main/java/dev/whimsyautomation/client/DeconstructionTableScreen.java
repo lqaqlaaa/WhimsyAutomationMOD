@@ -326,21 +326,35 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         sideConfigCloseButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
     }
 
+    private static boolean inside(double mouseX, double mouseY,
+                                  double x, double y, double width, double height) {
+        return mouseX >= x && mouseX < x + width
+                && mouseY >= y && mouseY < y + height;
+    }
+
     private boolean clickSideConfig(double mouseX, double mouseY, int mouseButton) {
         if (!showSideConfig) return false;
         double localX = mouseX - leftPos, localY = mouseY - topPos;
-        if (sideConfigCloseButton.mouseClicked(localX, localY, mouseButton)) {
+        // These controls are drawn manually in panel-local coordinates rather
+        // than added to the screen's widget list. Hit-test the exact same
+        // rectangles used by their builders; do not route through Button's
+        // normal screen-widget coordinate handling.
+        if (inside(localX, localY, 326, 58, 20, 16)) {
             showSideConfig = false;
             SideConfigOverlay.clear();
             return true;
         }
-        for (Button sideButton : sideConfigButtons) {
-            if (sideButton.mouseClicked(localX, localY, mouseButton)) {
+        for (int i = 0; i < sideConfigButtons.length; i++) {
+            int x = 184 + (i % 3) * 55;
+            int y = 88 + (i / 3) * 25;
+            if (inside(localX, localY, x, y, 50, 20)) {
+                send(10 + i);
                 syncSideOverlay();
                 return true;
             }
         }
-        if (sideColorToggleButton.mouseClicked(localX, localY, mouseButton)) {
+        if (inside(localX, localY, 184, 177, 160, 18)) {
+            showFaceColors = !showFaceColors;
             syncSideOverlay();
             return true;
         }
