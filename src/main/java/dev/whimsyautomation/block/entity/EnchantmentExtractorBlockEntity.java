@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
-public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider {
+public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity {
         
     
     public static final int OUTPUT_START = 1;
