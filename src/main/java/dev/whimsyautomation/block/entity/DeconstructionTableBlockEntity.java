@@ -3,6 +3,7 @@ package dev.whimsyautomation.block.entity;
 import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
+import dev.whimsyautomation.util.OversizedItemStackCodec;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -62,7 +63,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
-        @Override public int getSlotLimit(int slot) { return slot == 0 ? 64 : Integer.MAX_VALUE; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 64 : OversizedItemStackCodec.MAX_COUNT; }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
@@ -87,7 +88,15 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         private DynamicItemStackHandler(int size) { super(size); }
 
         @Override protected int getStackLimit(int slot, ItemStack stack) {
-            return slot == 0 ? 64 : super.getStackLimit(slot, stack);
+            return slot == 0 ? 64 : OversizedItemStackCodec.MAX_COUNT;
+        }
+
+        @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            if (slot >= OUTPUT_START && amount > 0) {
+                ItemStack present = getStackInSlot(slot);
+                amount = Math.min(amount, Math.max(1, present.getMaxStackSize()));
+            }
+            return super.extractItem(slot, amount, simulate);
         }
 
         private void resize(int size) {
@@ -389,7 +398,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             ItemStack stack = plan.get(i);
             if (stack.isEmpty()) continue;
             normalizeStackLimit(stack);
-            int limit = Math.max(1, Math.min(99, stack.getMaxStackSize()));
+            int limit = OversizedItemStackCodec.MAX_COUNT;
             if (stack.getCount() <= limit) continue;
 
             long overflow = (long) stack.getCount() - limit;
@@ -420,7 +429,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
         ItemStack normalizedTemplate = template.copyWithCount(1);
         normalizeStackLimit(normalizedTemplate);
-        int stackLimit = Math.max(1, Math.min(99, normalizedTemplate.getMaxStackSize()));
+        int stackLimit = OversizedItemStackCodec.MAX_COUNT;
         int slotLimit = Math.max(1, inventory.getSlotLimit(OUTPUT_START));
         stackLimit = Math.min(stackLimit, slotLimit);
         long remaining = amount;
@@ -432,7 +441,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             normalizeStackLimit(existing);
             if (!ItemStack.isSameItemSameComponents(existing, normalizedTemplate)) continue;
 
-            int existingLimit = Math.max(1, Math.min(99, existing.getMaxStackSize()));
+            int existingLimit = OversizedItemStackCodec.MAX_COUNT;
             existingLimit = Math.min(existingLimit, slotLimit);
             int space = Math.max(0, existingLimit - existing.getCount());
             int moved = (int) Math.min(remaining, (long) space);
@@ -469,7 +478,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.put("Inventory", inventory.serializeNBT(registries));
+        tag.put("OversizedInventory", OversizedItemStackCodec.serialize(inventory, registries));
         tag.putString("SelectedRecipe", selectedRecipe);
         tag.putString("LockedRecipe", lockedRecipe);
         tag.putInt("WorkTicks", workTicks);
@@ -501,7 +510,8 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        if (tag.contains("OversizedInventory")) OversizedItemStackCodec.deserialize(inventory, registries, tag.getCompound("OversizedInventory"));
+        else if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         int requiredOutputSize = OUTPUT_START + PAGE_SIZE * 10;
         for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
             if (!inventory.getStackInSlot(slot).isEmpty()) {
