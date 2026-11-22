@@ -46,7 +46,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         if (amountInput == null) return;
         try {
             int count = Integer.parseInt(amountInput.getValue());
-            if (count >= 1 && count <= 1_000_000
+            if (count >= 1 && count <= Integer.MAX_VALUE
                     && count != lastSentCount) {
                 ConfigureItemCopyPayload.send(menu.containerId, menu.getBlockPos(), 1, count);
                 lastSentCount = count;
@@ -77,11 +77,11 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         addRenderableWidget(autoButton);
         addRenderableWidget(sideButton);
 
-        amountInput = new EditBox(font, leftPos + 57, topPos + 49, 58, 18,
+        amountInput = new EditBox(font, leftPos + 47, topPos + 49, 82, 18,
                 Component.translatable("screen.whimsy_automation.copy_count"));
         amountInput.setValue(Integer.toString(menu.getCopyCount()));
         lastSentCount = menu.getCopyCount();
-        amountInput.setMaxLength(7);
+        amountInput.setMaxLength(10);
         amountInput.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         addRenderableWidget(amountInput);
 
@@ -112,7 +112,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         // DataSlots may arrive after init; refresh only while the player is not editing.
         if (amountInput != null && !amountInput.isFocused()) {
             int syncedCount = menu.getCopyCount();
-            if (syncedCount >= 1 && syncedCount <= 1_000_000 && syncedCount != lastSentCount) {
+            if (syncedCount >= 1 && syncedCount <= Integer.MAX_VALUE && syncedCount != lastSentCount) {
                 amountInput.setValue(Integer.toString(syncedCount));
                 lastSentCount = syncedCount;
             }
