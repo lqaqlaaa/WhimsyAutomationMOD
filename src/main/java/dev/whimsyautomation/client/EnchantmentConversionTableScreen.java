@@ -251,6 +251,10 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
                 showSideConfig = false;
                 return true;
             }
+            if (inside(lx, ly, imageWidth - 34, 12, 20, 18)) {
+                showSideConfig = false;
+                return true;
+            }
             for (int i = 0; i < 6; i++) {
                 int bx = 18 + (i % 3) * 50, by = 51 + (i / 3) * 30;
                 if (inside(lx, ly, bx, by, 44, 20)) {
