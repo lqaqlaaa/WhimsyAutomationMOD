@@ -30,7 +30,7 @@ public final class BigCapacityChestScreen extends net.minecraft.client.gui.scree
     @Override protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
         super.renderSlotContents(graphics, stack, slot, "");
     }
-    @Override protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {\n        super.render(graphics, mouseX, mouseY, partialTick);\n        renderTooltip(graphics, mouseX, mouseY);\n    }\n\n    @Override protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (hoveredSlot != null && hoveredSlot.index < menu.getRows() * 9 && hoveredSlot.hasItem()) {
             ItemStack stack = hoveredSlot.getItem();
             List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(stack));
