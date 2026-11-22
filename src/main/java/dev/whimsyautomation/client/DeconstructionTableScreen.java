@@ -335,7 +335,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         // normal screen-widget coordinate handling.
         if (inside(localX, localY, 326, 58, 20, 16)) {
             showSideConfig = false;
-            syncSideOverlay();
             return true;
         }
         for (int i = 0; i < sideConfigButtons.length; i++) {
@@ -343,7 +342,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             int y = 88 + (i / 3) * 25;
             if (inside(localX, localY, x, y, 50, 20)) {
                 send(10 + i);
-                syncSideOverlay();
+                SideConfigOverlay.cycleFace(menu.machine(), i);
                 return true;
             }
         }
@@ -530,7 +529,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             if (keyCode == 256) {
                 selectedIngredientGroup = -1;
                 showSideConfig = false;
-                syncSideOverlay();
             }
             return true;
         }
