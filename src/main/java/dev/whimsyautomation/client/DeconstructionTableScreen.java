@@ -204,8 +204,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
-            // Keep the world overlay independent from the modal editor.
-            syncSideOverlay();
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
                 .bounds(leftPos + 264, topPos + 198, 80, 15).build());
@@ -216,7 +214,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             int col = i % 3, row = i / 3;
             sideConfigButtons[i] = Button.builder(Component.literal(sideNames[i]), b -> {
                 send(10 + side);
-                syncSideOverlay();
+                SideConfigOverlay.cycleFace(menu.machine(), side);
             }).bounds(184 + col * 55, 88 + row * 25, 50, 20).build();
         }
         sideColorToggleButton = Button.builder(Component.literal("显示六面颜色框：关闭"), b -> {
@@ -225,7 +223,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         }).bounds(184, 177, 160, 18).build();
         sideConfigCloseButton = Button.builder(Component.literal("×"), b -> {
             showSideConfig = false;
-            syncSideOverlay();
         }).bounds(326, 58, 20, 16).build();
         layoutEditor.bindWidgets(children(), leftPos, topPos);
         for (net.minecraft.client.gui.components.AbstractWidget control : layoutEditor.createControls(font, leftPos, topPos))
@@ -610,7 +607,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         graphics.pose().pushPose();
         graphics.pose().translate(width / 2.0 * (1.0 - scale), height / 2.0 * (1.0 - scale), 0.0);
         graphics.pose().scale((float) scale, (float) scale, 1.0F);
-        syncSideOverlay();
         if (showSideConfig || selectedIngredientGroup >= 0) {
             // Keep the left output storage and player inventory visible. The
             // opaque dialog replaces only the right-hand machine controls.
