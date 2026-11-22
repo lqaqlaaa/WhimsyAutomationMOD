@@ -293,9 +293,13 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     private void syncSideOverlay() {
         if (menu.machine() == null) return;
-        // The overlay toggle is attached to this exact block entity. Face selection
-        // is read live from its six persisted input/output modes by the renderer.
-        SideConfigOverlay.show(menu.machine(), showFaceColors);
+        // Read the six modes from the menu's DataSlots. Those values are synced
+        // from the server and are authoritative on the client while the screen is open.
+        int[] sideModes = new int[6];
+        for (int side = 0; side < sideModes.length; side++) {
+            sideModes[side] = menu.getSideMode(side);
+        }
+        SideConfigOverlay.show(menu.machine(), sideModes, showFaceColors);
     }
 
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
