@@ -105,7 +105,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 if (level.isClientSide) {
                     ItemStack cached = clientPageStacks[slot];
                     if (cached.isEmpty()) return ItemStack.EMPTY;
-                    int extractedCount = Math.min(amount, cached.getCount());
+                    int extractedCount = Math.min(amount, Math.min(cached.getCount(), Math.max(1, cached.getMaxStackSize())));
                     ItemStack extracted = cached.copyWithCount(extractedCount);
                     if (!simulate) {
                         cached.shrink(extractedCount);
@@ -119,7 +119,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
             }
 
             @Override public int getSlotLimit(int slot) {
-                return 64;
+                return dev.whimsyautomation.util.OversizedItemStackCodec.MAX_COUNT;
             }
 
             @Override public boolean isItemValid(int slot, ItemStack stack) {
