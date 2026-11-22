@@ -26,6 +26,11 @@ public final class SideConfigOverlay {
         return target != null && target.equals(pos);
     }
 
+    /** Returns the persisted client-side toggle for the currently targeted block. */
+    public static boolean isShowingAllFacesAt(BlockPos pos) {
+        return target != null && target.equals(pos) && showAllFaces;
+    }
+
     public static boolean shouldShowFace(int side) {
         return showAllFaces || mode(side) != 0;
     }
