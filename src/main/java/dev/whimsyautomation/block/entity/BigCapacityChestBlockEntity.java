@@ -7,6 +7,8 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -82,6 +84,28 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
         }
         setChanged();
     }
+    /**
+     * Inserts a bounded ItemStack into this virtual slot. This is the GUI/quick-move
+     * entry point; hopper insertion continues to use the vanilla Container contract.
+     */
+    public int insertExact(int slot, ItemStack stack, int requested) {
+        if (!valid(slot) || stack == null || stack.isEmpty() || requested <= 0) return 0;
+        ItemStack old = representatives.get(slot);
+        if (!old.isEmpty() && !ItemStack.isSameItemSameComponents(old, stack)) return 0;
+        int accepted = BigInteger.valueOf(requested)
+                .min(MAX_COUNT.subtract(amounts[slot]).max(BigInteger.ZERO))
+                .intValue();
+        if (accepted <= 0) return 0;
+        if (old.isEmpty()) representatives.set(slot, stack.copyWithCount(1));
+        amounts[slot] = amounts[slot].add(BigInteger.valueOf(accepted));
+        setChanged();
+        return accepted;
+    }
+
+    /**
+     * Applies the visible 64-item GUI projection as an absolute value. A decrease
+     * removes only the difference from the visible portion; hidden excess remains.
+     */
     public void setGuiItem(int slot, ItemStack stack) {
         if (!valid(slot)) return;
         if (stack == null || stack.isEmpty()) {
@@ -93,11 +117,43 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
         ItemStack old = representatives.get(slot);
         if (!old.isEmpty() && ItemStack.isSameItemSameComponents(old, stack)) {
             int visibleBefore = amounts[slot].min(BigInteger.valueOf(64)).intValue();
-            int delta = Math.max(0, stack.getCount() - visibleBefore);
-            if (delta > 0) amounts[slot] = amounts[slot].add(BigInteger.valueOf(delta)).min(MAX_COUNT);
+            int visibleAfter = Math.min(64, stack.getCount());
+            if (visibleAfter > visibleBefore) {
+                amounts[slot] = amounts[slot].add(BigInteger.valueOf(visibleAfter - visibleBefore)).min(MAX_COUNT);
+            } else if (visibleAfter < visibleBefore) {
+                amounts[slot] = amounts[slot].subtract(BigInteger.valueOf(visibleBefore - visibleAfter)).max(BigInteger.ZERO);
+                if (amounts[slot].signum() == 0) representatives.set(slot, ItemStack.EMPTY);
+            }
         } else {
             representatives.set(slot, stack.copyWithCount(1));
             amounts[slot] = BigInteger.valueOf(stack.getCount()).min(MAX_COUNT);
+        }
+        setChanged();
+    }
+
+    /**
+     * Drops this physical chest's exact contents. ItemStack has an int count, so
+     * exceptionally large stored values are emitted as multiple int-sized entities.
+     */
+    public void dropAllContents(Level level, BlockPos pos) {
+        if (level == null || level.isClientSide) return;
+        double x = pos.getX() + 0.5D;
+        double y = pos.getY() + 0.5D;
+        double z = pos.getZ() + 0.5D;
+        BigInteger intMax = BigInteger.valueOf(Integer.MAX_VALUE);
+        for (int slot = 0; slot < 27; slot++) {
+            BigInteger remaining = amounts[slot];
+            ItemStack template = representatives.get(slot);
+            if (remaining.signum() <= 0 || template.isEmpty()) continue;
+            while (remaining.signum() > 0) {
+                int batch = remaining.min(intMax).intValue();
+                ItemEntity entity = new ItemEntity(level, x, y, z, template.copyWithCount(batch));
+                entity.setDefaultPickUpDelay();
+                level.addFreshEntity(entity);
+                remaining = remaining.subtract(BigInteger.valueOf(batch));
+            }
+            representatives.set(slot, ItemStack.EMPTY);
+            amounts[slot] = BigInteger.ZERO;
         }
         setChanged();
     }
