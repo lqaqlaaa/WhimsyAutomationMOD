@@ -39,7 +39,23 @@ public final class BigCapacityChestBlock extends ChestBlock {
         return new BigCapacityChestBlockEntity(pos, state);
     }
 
-    // Keep the vanilla chest interaction path; only the menu provider is specialized.
+    // The only interaction customization is transporting the clicked position to the client menu.
+    // All chest opening/closing bookkeeping is handled by the vanilla Container implementation.
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+                                                Player player, BlockHitResult hit) {
+        if (ChestBlock.isChestBlockedAt(level, pos)) {
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        MenuProvider provider = getMenuProvider(state, level, pos);
+        if (provider == null) return InteractionResult.PASS;
+        if (!level.isClientSide) {
+            player.openMenu(provider, buffer -> buffer.writeBlockPos(pos));
+            player.awardStat(net.minecraft.stats.Stats.OPEN_CHEST);
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
     @Override
     protected MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         if (ChestBlock.isChestBlockedAt(level, pos)) return null;
