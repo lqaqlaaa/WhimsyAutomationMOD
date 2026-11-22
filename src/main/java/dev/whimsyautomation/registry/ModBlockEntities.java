@@ -4,6 +4,7 @@ import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.block.entity.EnchantmentExtractorBlockEntity;
 import dev.whimsyautomation.block.entity.EnchantmentConversionTableBlockEntity;
+import dev.whimsyautomation.block.entity.BigCapacityChestBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -23,6 +24,9 @@ public final class ModBlockEntities {
     public static final net.neoforged.neoforge.registries.DeferredHolder<BlockEntityType<?>, BlockEntityType<DeconstructionTableBlockEntity>> DECONSTRUCTION_TABLE =
             BLOCK_ENTITIES.register("deconstruction_table", () ->
                     BlockEntityType.Builder.of(DeconstructionTableBlockEntity::new, ModBlocks.DECONSTRUCTION_TABLE.get()).build(null));
+
+    public static final net.neoforged.neoforge.registries.DeferredHolder<BlockEntityType<?>, BlockEntityType<BigCapacityChestBlockEntity>> BIG_CAPACITY_CHEST =
+            BLOCK_ENTITIES.register("big_capacity_chest", () -> BlockEntityType.Builder.of(BigCapacityChestBlockEntity::new, ModBlocks.BIG_CAPACITY_CHEST.get()).build(null));
 
     private ModBlockEntities() {}
 

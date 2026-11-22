@@ -3,6 +3,8 @@ package dev.whimsyautomation.client;
 import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.client.BigCapacityChestScreen;
+import net.minecraft.client.renderer.blockentity.ChestRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -19,6 +21,8 @@ public final class ClientModEvents {
         event.register(ModMenus.ENCHANTMENT_EXTRACTOR.get(), EnchantmentExtractorScreen::new);
         event.register(ModMenus.DECONSTRUCTION_TABLE.get(), DeconstructionTableScreen::new);
         event.register(ModMenus.ENCHANTMENT_CONVERSION_TABLE.get(), EnchantmentConversionTableScreen::new);
+        event.register(ModMenus.BIG_CAPACITY_CHEST_3.get(), BigCapacityChestScreen::new);
+        event.register(ModMenus.BIG_CAPACITY_CHEST_6.get(), BigCapacityChestScreen::new);
     }
 
     @SubscribeEvent
@@ -26,5 +30,6 @@ public final class ClientModEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), SideConfigBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DECONSTRUCTION_TABLE.get(), SideConfigBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_CONVERSION_TABLE.get(), SideConfigBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.BIG_CAPACITY_CHEST.get(), ChestRenderer::new);
     }
 }
