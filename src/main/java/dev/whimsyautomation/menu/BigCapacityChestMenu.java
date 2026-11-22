@@ -61,6 +61,31 @@ public final class BigCapacityChestMenu extends ChestMenu {
     }
     private record Setup(Container container, BigCapacityChestBlockEntity first,
                          BigCapacityChestBlockEntity second, int rows) {}
+    @Override public net.minecraft.world.item.ItemStack quickMoveStack(net.minecraft.world.entity.player.Player player, int index) {
+        if (index < 0 || index >= slots.size()) return ItemStack.EMPTY;
+        net.minecraft.world.inventory.Slot sourceSlot = slots.get(index);
+        if (!sourceSlot.hasItem()) return ItemStack.EMPTY;
+        ItemStack original = sourceSlot.getItem().copy();
+        ItemStack moving = original.copy();
+        int chestSlots = rows * 9;
+        boolean moved;
+        if (index < chestSlots) {
+            moved = moveItemStackTo(moving, chestSlots, slots.size(), true);
+        } else {
+            moved = moveItemStackTo(moving, 0, chestSlots, false);
+        }
+        if (!moved) return ItemStack.EMPTY;
+        int amountMoved = original.getCount() - moving.getCount();
+        if (amountMoved <= 0) return ItemStack.EMPTY;
+        // Remove only the amount actually transferred. Vanilla ChestMenu's
+        // default quick-move clears a slot when its 64-item preview is emptied,
+        // which would otherwise erase the remainder of a BigInteger-sized stack.
+        sourceSlot.remove(amountMoved);
+        sourceSlot.onTake(player, original.copyWithCount(amountMoved));
+        sourceSlot.setChanged();
+        return original;
+    }
+
     public BigInteger exactCount(int menuSlot) {
         if (menuSlot < 0 || menuSlot >= rows * 9) return BigInteger.ZERO;
         BigCapacityChestBlockEntity owner = menuSlot < 27 || second == null ? first : second;
