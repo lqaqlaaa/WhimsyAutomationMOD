@@ -110,7 +110,18 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
         ItemStack original = source.copy();
 
         if (index == EnchantmentConversionTableBlockEntity.OUTPUT_SLOT) {
-            if (!moveItemStackTo(source, 2, slots.size(), true)) return ItemStack.EMPTY;
+            // Never shift-click an oversized machine stack directly into player
+            // inventory slots. Transfer at most one legal stack and debit the
+            // exact accepted amount from the authoritative oversized inventory.
+            int legalAmount = Math.min(source.getCount(), source.getMaxStackSize());
+            ItemStack moving = source.copyWithCount(legalAmount);
+            if (!moveItemStackTo(moving, 2, slots.size(), true)) return ItemStack.EMPTY;
+            int moved = legalAmount - moving.getCount();
+            if (moved <= 0 || machine == null) return ItemStack.EMPTY;
+            ItemStack extracted = machine.getInventory().extractItem(
+                    EnchantmentConversionTableBlockEntity.OUTPUT_SLOT, moved, false);
+            if (extracted.getCount() != moved) return ItemStack.EMPTY;
+            return original.copyWithCount(moved);
         } else if (index >= 2) {
             if (!moveItemStackTo(source, EnchantmentConversionTableBlockEntity.INPUT_SLOT,
                     EnchantmentConversionTableBlockEntity.INPUT_SLOT + 1, false)) return ItemStack.EMPTY;
@@ -118,11 +129,8 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
             return ItemStack.EMPTY;
         }
 
-        if (source.isEmpty()) {
-            slot.set(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
-        }
+        if (source.isEmpty()) slot.set(ItemStack.EMPTY);
+        else slot.setChanged();
         return original;
     }
 
