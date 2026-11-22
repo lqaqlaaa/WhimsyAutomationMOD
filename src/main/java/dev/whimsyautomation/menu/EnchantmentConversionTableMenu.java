@@ -71,6 +71,14 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
             public boolean mayPlace(ItemStack stack) {
                 return false;
             }
+
+            @Override
+            public ItemStack remove(int amount) {
+                ItemStack present = handler.getStackInSlot(EnchantmentConversionTableBlockEntity.OUTPUT_SLOT);
+                int playerAmount = Math.min(amount, dev.whimsyautomation.util.PlayerStackRules.getVanillaMaxStackSize(present));
+                ItemStack extracted = handler.extractItem(EnchantmentConversionTableBlockEntity.OUTPUT_SLOT, playerAmount, false);
+                return dev.whimsyautomation.util.PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
+            }
         });
 
         for (int row = 0; row < 3; row++)
