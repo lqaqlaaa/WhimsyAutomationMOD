@@ -318,6 +318,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             return;
         }
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderTotalOutputCount(graphics);
         if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, mouseX, mouseY);
     }
