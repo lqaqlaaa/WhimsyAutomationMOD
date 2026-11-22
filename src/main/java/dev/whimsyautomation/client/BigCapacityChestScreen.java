@@ -2,7 +2,6 @@ package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.menu.BigCapacityChestMenu;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -20,6 +19,8 @@ public final class BigCapacityChestScreen extends net.minecraft.client.gui.scree
         inventoryLabelY = imageHeight - 94;
         titleLabelY = 6;
     }
+    @Override public BigCapacityChestMenu getMenu() { return menu; }
+
     @Override protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
         super.renderSlotContents(graphics, stack, slot, "");
     }

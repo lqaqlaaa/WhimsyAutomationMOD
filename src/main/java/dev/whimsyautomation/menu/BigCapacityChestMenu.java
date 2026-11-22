@@ -86,6 +86,8 @@ public final class BigCapacityChestMenu extends ChestMenu {
         return original;
     }
 
+    public int getRows() { return rows; }
+
     public BigInteger exactCount(int menuSlot) {
         if (menuSlot < 0 || menuSlot >= rows * 9) return BigInteger.ZERO;
         BigCapacityChestBlockEntity owner = menuSlot < 27 || second == null ? first : second;
