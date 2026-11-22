@@ -3,6 +3,7 @@ package dev.whimsyautomation.menu;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.util.PlayerStackRules;
 import dev.whimsyautomation.network.DeconstructionRecipeSnapshotPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -614,14 +615,18 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
         if (index >= OUTPUT_START && index < MACHINE_SLOT_COUNT) {
             int actualOutput = OUTPUT_START + syncedPage * PAGE_SIZE + (index - OUTPUT_START);
             int requested = quickMoveSingle ? 1 : source.getCount();
-            ItemStack moving = source.copyWithCount(Math.min(requested, source.getCount()));
+            ItemStack moving = PlayerStackRules.copyForPlayer(source, requested);
+            int offeredCount = moving.getCount();
             if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
-            int movedCount = Math.min(requested, source.getCount()) - moving.getCount();
+            int movedCount = offeredCount - moving.getCount();
             if (movedCount <= 0) return ItemStack.EMPTY;
             // Only the server mutates the block entity. The client predicts the
             // destination transfer and waits for authoritative slot synchronization.
-            if (!player.level().isClientSide) machine.getInventory().extractItem(actualOutput, movedCount, false);
-            return copy.copyWithCount(movedCount);
+            if (!player.level().isClientSide) {
+                ItemStack extracted = machine.getInventory().extractItem(actualOutput, movedCount, false);
+                if (extracted.getCount() != movedCount) return ItemStack.EMPTY;
+            }
+            return PlayerStackRules.copyForPlayer(copy, movedCount);
         }
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
