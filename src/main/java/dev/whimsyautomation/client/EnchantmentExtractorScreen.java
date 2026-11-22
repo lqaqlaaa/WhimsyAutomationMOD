@@ -141,7 +141,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     protected void init() {
         super.init();
         showFaceColors = menu.machine() != null
-                && SideConfigOverlay.isShowingAllFacesAt(menu.machine().getBlockPos());
+                && SideConfigOverlay.isShowingAllFacesAt(menu.machine().getLevel(), menu.machine().getBlockPos());
         topPos -= 27;
         layoutEditor = new UiLayoutEditor("enchantment_extractor");
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
@@ -265,7 +265,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     private void syncSideOverlay() {
         if (menu.machine() == null) {
-            SideConfigOverlay.clear();
             return;
         }
         int[] modes = new int[6];
@@ -275,7 +274,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         // Keep the target active while the six-direction panel is open.
         // Otherwise the diagnostic BER is called but exits before drawing when
         // all six sides are still disabled and the color toggle is off.
-        SideConfigOverlay.show(menu.machine().getBlockPos(), modes, showFaceColors);
+        SideConfigOverlay.show(menu.machine().getLevel(), menu.machine().getBlockPos(), modes, showFaceColors);
     }
 
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
