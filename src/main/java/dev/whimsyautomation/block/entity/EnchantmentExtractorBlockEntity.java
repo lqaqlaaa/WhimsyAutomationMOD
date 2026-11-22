@@ -240,7 +240,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (amount <= 0) return ItemStack.EMPTY;
+            if (slot < 0 || slot >= getSlots() || amount <= 0) return ItemStack.EMPTY;
             ItemStack present = getStackInSlot(slot);
             if (present.isEmpty()) return ItemStack.EMPTY;
             if (slot <= 0) {
