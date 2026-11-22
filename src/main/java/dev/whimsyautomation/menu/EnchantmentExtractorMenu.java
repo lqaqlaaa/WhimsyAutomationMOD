@@ -3,6 +3,7 @@ package dev.whimsyautomation.menu;
 import dev.whimsyautomation.block.entity.EnchantmentExtractorBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.util.PlayerStackRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -105,8 +106,8 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 if (level.isClientSide) {
                     ItemStack cached = clientPageStacks[slot];
                     if (cached.isEmpty()) return ItemStack.EMPTY;
-                    int extractedCount = Math.min(amount, Math.min(cached.getCount(), Math.max(1, cached.getMaxStackSize())));
-                    ItemStack extracted = cached.copyWithCount(extractedCount);
+                    ItemStack extracted = PlayerStackRules.copyForPlayer(cached, amount);
+                    int extractedCount = extracted.getCount();
                     if (!simulate) {
                         cached.shrink(extractedCount);
                         if (cached.isEmpty()) clientPageStacks[slot] = ItemStack.EMPTY;
@@ -155,9 +156,11 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE || level.isClientSide) return ItemStack.EMPTY;
                 int actual = actualSlot(slot);
                 if (actual >= machine.getInputBuffer().getSlots()) return ItemStack.EMPTY;
-                ItemStack extracted = machine.getInputBuffer().extractItem(actual, amount, simulate);
+                ItemStack present = machine.getInputBuffer().getStackInSlot(actual);
+                int legalAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
+                ItemStack extracted = machine.getInputBuffer().extractItem(actual, legalAmount, simulate);
                 if (!simulate && !extracted.isEmpty()) machine.compactInputBuffer();
-                return extracted;
+                return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
             }
             @Override public int getSlotLimit(int slot) { return 64; }
             @Override public boolean isItemValid(int slot, ItemStack stack) {
@@ -321,13 +324,15 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
         if (index >= OUTPUT_MENU_START && index < BUFFER_MENU_START) {
             int actualOutputSlot = getActualOutputSlot(index);
             int requested = quickMoveSingle ? 1 : source.getCount();
-            ItemStack moving = source.copyWithCount(Math.min(requested, source.getCount()));
+            ItemStack moving = PlayerStackRules.copyForPlayer(source, requested);
+            int offeredCount = moving.getCount();
+            ItemStack debitTemplate = source.copyWithCount(offeredCount);
             if (!player.level().isClientSide && !machine.isPersistentOutputMode()
-                    && !machine.canConsumeGeneratedBook(actualOutputSlot, moving)) {
+                    && !machine.canConsumeGeneratedBook(actualOutputSlot, debitTemplate)) {
                 return ItemStack.EMPTY;
             }
             if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
-            int movedCount = Math.min(requested, source.getCount()) - moving.getCount();
+            int movedCount = offeredCount - moving.getCount();
             if (movedCount <= 0) return ItemStack.EMPTY;
             if (!player.level().isClientSide) {
                 if (machine.isPersistentOutputMode()) {
@@ -335,7 +340,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                     // amount from the durable machine output inventory explicitly.
                     ItemStack extracted = machine.getInventory().extractItem(actualOutputSlot, movedCount, false);
                     if (extracted.getCount() != movedCount) return ItemStack.EMPTY;
-                } else if (!machine.consumeGeneratedBook(actualOutputSlot, copy.copyWithCount(movedCount))) {
+                } else if (!machine.consumeGeneratedBook(actualOutputSlot, debitTemplate.copyWithCount(movedCount))) {
                     return ItemStack.EMPTY;
                 }
             }
@@ -347,7 +352,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 predictedRemainder.shrink(movedCount);
                 slot.set(predictedRemainder);
             }
-            return copy.copyWithCount(movedCount);
+            return PlayerStackRules.copyForPlayer(copy, movedCount);
         }
         if (index < MACHINE_SLOT_COUNT) {
             if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
