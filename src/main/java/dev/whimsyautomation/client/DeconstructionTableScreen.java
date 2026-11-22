@@ -204,7 +204,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
             showFaceColors = false;
-            SideConfigOverlay.clear();
+            if (showSideConfig) syncSideOverlay(); else SideConfigOverlay.clear();
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
                 .bounds(leftPos + 264, topPos + 198, 80, 15).build());
@@ -344,8 +344,8 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             syncSideOverlay();
             return true;
         }
-        showSideConfig = false;
-        SideConfigOverlay.clear();
+        // Treat clicks outside the modal controls as consumed input. Do not
+        // dismiss the six-way panel just because a tap misses a small button.
         return true;
     }
 
