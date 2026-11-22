@@ -15,8 +15,6 @@ import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentConversionTableScreen extends AbstractContainerScreen<EnchantmentConversionTableMenu> {
     private static final ResourceLocation SLOT = ResourceLocation.withDefaultNamespace("container/slot");
-    private static final String[] SIDE_NAMES = {"下", "上", "北", "南", "西", "东"};
-    private static final String[] SIDE_MODES = {"关闭", "输入", "输出"};
     private EditBox amountInput;
     private Button autoButton;
     private Button sideButton;
@@ -31,8 +29,8 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
 
     public EnchantmentConversionTableScreen(EnchantmentConversionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageWidth = 176;
-        imageHeight = 186;
+        imageWidth = 352;
+        imageHeight = 222;
         inventoryLabelY = 82;
         titleLabelY = 6;
     }
@@ -109,6 +107,14 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         super.containerTick();
         if (autoButton != null) autoButton.setMessage(autoLabel());
         if (confirmButton != null) confirmButton.active = !menu.isAutoMode();
+        // DataSlots may arrive after init; refresh only while the player is not editing.
+        if (amountInput != null && !amountInput.isFocused()) {
+            int syncedCount = menu.getCopyCount();
+            if (syncedCount >= 1 && syncedCount <= 1_000_000 && syncedCount != lastSentCount) {
+                amountInput.setValue(Integer.toString(syncedCount));
+                lastSentCount = syncedCount;
+            }
+        }
         sendCountIfChanged();
     }
 
@@ -198,34 +204,10 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         SideConfigOverlay.show(menu.machine(), modes, showFaceColors);
     }
 
-    private void renderSideConfig(GuiGraphics graphics) {
-        // Opaque full-screen modal: hide every slot, item, label and widget below it.
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, 500);
-        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF202020);
-        int x = leftPos + 8, y = topPos + 8;
-        panel(graphics, x, y, imageWidth - 16, imageHeight - 16);
-        graphics.fill(x + 2, y + 2, x + imageWidth - 18, y + imageHeight - 18, 0xFFE0E0E0);
-        graphics.drawCenteredString(font, Component.literal("六向输入 / 输出设置"),
-                leftPos + imageWidth / 2, y + 9, 0xFF202020);
-        graphics.drawCenteredString(font, Component.literal("点击方向切换：关闭 → 输入 → 输出"),
-                leftPos + imageWidth / 2, y + 22, 0xFF505050);
-        for (int i = 0; i < 6; i++) {
-            int col = i % 3, row = i / 3;
-            int bx = leftPos + 18 + col * 50, by = y + 43 + row * 30;
-            int mode = Math.max(0, Math.min(2, menu.getSideMode(i)));
-            panel(graphics, bx, by, 46, 24);
-            graphics.drawCenteredString(font, Component.literal(SIDE_NAMES[i] + " · " + SIDE_MODES[mode]),
-                    bx + 23, by + 8, 0xFF202020);
-        }
-        int toggleY = y + 142;
-        panel(graphics, leftPos + 18, toggleY, imageWidth - 52, 20);
-        graphics.drawCenteredString(font,
-                Component.literal("显示六面颜色边框：" + (showFaceColors ? "开启" : "关闭")),
-                leftPos + imageWidth / 2, toggleY + 6, 0xFF202020);
-        panel(graphics, leftPos + imageWidth - 34, y + 4, 20, 18);
-        graphics.drawCenteredString(font, Component.literal("×"), leftPos + imageWidth - 24, y + 9, 0xFF202020);
-        graphics.pose().popPose();
+    private void renderSideConfig(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        int[] modes = new int[6];
+        for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
+        SideConfigPanel.render(graphics, font, leftPos, topPos, mouseX, mouseY, partialTick, modes, showFaceColors);
     }
 
     private static boolean inside(double x, double y, double left, double top, double width, double height) {
@@ -246,27 +228,14 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         }
         if (showSideConfig) {
-            double lx = mouseX - leftPos, ly = mouseY - topPos;
-            if (!inside(lx, ly, 8, 8, imageWidth - 16, imageHeight - 16)) {
-                showSideConfig = false;
-                return true;
-            }
-            if (inside(lx, ly, imageWidth - 34, 12, 20, 18)) {
-                showSideConfig = false;
-                return true;
-            }
-            for (int i = 0; i < 6; i++) {
-                int bx = 18 + (i % 3) * 50, by = 51 + (i / 3) * 30;
-                if (inside(lx, ly, bx, by, 44, 20)) {
-                    sendButton(10 + i);
-                    SideConfigOverlay.cycleFace(menu.machine(), i);
-                    return true;
-                }
-            }
-            if (inside(lx, ly, 18, 150, imageWidth - 52, 20)) {
+            int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos);
+            if (action == 7) showSideConfig = false;
+            else if (action >= 0 && action < 6) {
+                sendButton(10 + action);
+                SideConfigOverlay.cycleFace(menu.machine(), action);
+            } else if (action == 6) {
                 showFaceColors = !showFaceColors;
                 syncSideOverlay();
-                return true;
             }
             return true;
         }
@@ -327,9 +296,13 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         if (layoutExportButton != null) layoutExportButton.visible = layoutEditor != null && layoutEditor.enabled();
         if (layoutResetButton != null) layoutResetButton.visible = layoutEditor != null && layoutEditor.enabled();
         if (showSideConfig) {
-            renderBackground(graphics, mouseX, mouseY, partialTick);
             super.render(graphics, -10000, -10000, partialTick);
-            renderSideConfig(graphics);
+            graphics.flush();
+            graphics.pose().pushPose();
+            graphics.pose().translate(leftPos, topPos, 500.0F);
+            renderSideConfig(graphics, mouseX, mouseY, partialTick);
+            graphics.flush();
+            graphics.pose().popPose();
             return;
         }
         super.render(graphics, mouseX, mouseY, partialTick);
