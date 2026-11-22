@@ -36,7 +36,9 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
 
         @Override
         public void set(int index, int value) {
-            if (index == 2) syncedAutoMode = value != 0;
+            if (index == 0) syncedOutputCount = (syncedOutputCount & 0xFFFF0000) | (value & 0xFFFF);
+            else if (index == 1) syncedOutputCount = (syncedOutputCount & 0xFFFF) | ((value & 0xFFFF) << 16);
+            else if (index == 2) syncedAutoMode = value != 0;
             else if (index == 3) syncedCopyCount = (syncedCopyCount & 0xFFFF0000) | (value & 0xFFFF);
             else if (index == 4) syncedCopyCount = (syncedCopyCount & 0xFFFF) | ((value & 0xFFFF) << 16);
             else if (index >= 5 && index < 11) syncedSideModes[index - 5] = Math.max(0, Math.min(2, value));
@@ -48,6 +50,7 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
 
     private boolean syncedAutoMode;
     private int syncedCopyCount = 64;
+    private int syncedOutputCount;
     private final int[] syncedSideModes = new int[6];
 
     public EnchantmentConversionTableMenu(int id, Inventory inv, FriendlyByteBuf data) {
@@ -90,7 +93,8 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
     public int getSideMode(int side) { return side < 0 || side >= 6 ? 0 : (machine != null && machine.getLevel() != null && !machine.getLevel().isClientSide ? machine.getSideMode(Direction.values()[side]) : syncedSideModes[side]); }
 
     public int getTotalOutputCount() {
-        return data.get(0) | (data.get(1) << 16);
+        return machine != null && machine.getLevel() != null && !machine.getLevel().isClientSide
+                ? machine.getTotalOutputCount() : syncedOutputCount;
     }
 
     @Override public boolean clickMenuButton(Player player, int buttonId) {
