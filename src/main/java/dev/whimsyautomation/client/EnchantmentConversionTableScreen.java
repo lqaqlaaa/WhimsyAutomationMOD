@@ -26,6 +26,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     private Button layoutResetButton;
     private UiLayoutEditor layoutEditor;
     private boolean showSideConfig;
+    private boolean showFaceColors;
     private int lastSentCount = 64;
 
     public EnchantmentConversionTableScreen(EnchantmentConversionTableMenu menu, Inventory inventory, Component title) {
@@ -56,6 +57,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     @Override
     protected void init() {
         super.init();
+        showFaceColors = SideConfigOverlay.isActive(menu.machine());
         layoutEditor = new UiLayoutEditor("enchantment_conversion_table");
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
                 .bounds(leftPos + 144, topPos + 6, 26, 14).build();
@@ -189,21 +191,41 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         graphics.drawString(font, countText, x, y, 0xFFFFFF, true);
     }
 
+    private void syncSideOverlay() {
+        if (menu.machine() == null) return;
+        int[] modes = new int[6];
+        for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
+        SideConfigOverlay.show(menu.machine(), modes, showFaceColors);
+    }
+
     private void renderSideConfig(GuiGraphics graphics) {
-        int x = leftPos + 12, y = topPos + 42;
-        panel(graphics, x, y, 152, 96);
-        graphics.fill(x + 2, y + 2, x + 150, y + 94, 0xFFE0E0E0);
-        graphics.drawString(font, Component.literal("六向输入 / 输出设置"), x + 8, y + 7, 0xFF202020, false);
-        graphics.drawString(font, Component.literal("点击方向切换：关闭 → 输入 → 输出"), x + 8, y + 19, 0xFF505050, false);
+        // Opaque full-screen modal: hide every slot, item, label and widget below it.
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 500);
+        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF202020);
+        int x = leftPos + 8, y = topPos + 8;
+        panel(graphics, x, y, imageWidth - 16, imageHeight - 16);
+        graphics.fill(x + 2, y + 2, x + imageWidth - 18, y + imageHeight - 18, 0xFFE0E0E0);
+        graphics.drawCenteredString(font, Component.literal("六向输入 / 输出设置"),
+                leftPos + imageWidth / 2, y + 9, 0xFF202020);
+        graphics.drawCenteredString(font, Component.literal("点击方向切换：关闭 → 输入 → 输出"),
+                leftPos + imageWidth / 2, y + 22, 0xFF505050);
         for (int i = 0; i < 6; i++) {
             int col = i % 3, row = i / 3;
-            int bx = x + 8 + col * 48, by = y + 37 + row * 24;
-            int mode = menu.getSideMode(i);
-            panel(graphics, bx, by, 44, 20);
-            graphics.drawCenteredString(font, Component.literal(SIDE_NAMES[i] + " " + SIDE_MODES[mode]),
-                    bx + 22, by + 6, 0xFF202020);
+            int bx = leftPos + 18 + col * 50, by = y + 43 + row * 30;
+            int mode = Math.max(0, Math.min(2, menu.getSideMode(i)));
+            panel(graphics, bx, by, 46, 24);
+            graphics.drawCenteredString(font, Component.literal(SIDE_NAMES[i] + " · " + SIDE_MODES[mode]),
+                    bx + 23, by + 8, 0xFF202020);
         }
-        graphics.drawCenteredString(font, Component.literal("点击面板外关闭"), x + 76, y + 83, 0xFF555555);
+        int toggleY = y + 112;
+        panel(graphics, leftPos + 18, toggleY, imageWidth - 52, 20);
+        graphics.drawCenteredString(font,
+                Component.literal("显示六面颜色边框：" + (showFaceColors ? "开启" : "关闭")),
+                leftPos + imageWidth / 2, toggleY + 6, 0xFF202020);
+        panel(graphics, leftPos + imageWidth - 34, y + 4, 20, 18);
+        graphics.drawCenteredString(font, Component.literal("×"), leftPos + imageWidth - 24, y + 9, 0xFF202020);
+        graphics.pose().popPose();
     }
 
     private static boolean inside(double x, double y, double left, double top, double width, double height) {
@@ -233,8 +255,14 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
                 int bx = 20 + (i % 3) * 48, by = 79 + (i / 3) * 24;
                 if (inside(lx, ly, bx, by, 44, 20)) {
                     sendButton(10 + i);
+                    SideConfigOverlay.cycleFace(menu.machine(), i);
                     return true;
                 }
+            }
+            if (inside(lx, ly, 18, 120, imageWidth - 52, 20)) {
+                showFaceColors = !showFaceColors;
+                syncSideOverlay();
+                return true;
             }
             return true;
         }
