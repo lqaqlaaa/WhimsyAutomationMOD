@@ -25,17 +25,16 @@ public final class BigCapacityChestMenu extends ChestMenu {
     private final BlockPos firstPos;
     private final BlockPos secondPos;
 
-    public BigCapacityChestMenu(int id, Inventory inventory, BigCapacityChestBlockEntity first,
-                                BigCapacityChestBlockEntity second, BlockPos pos, int rows) {
-        this(id, inventory, new GuiChestContainer(first, second, rows), first, second,
-                pos, rows, null, pos,
-                second == null ? null : pos.relative(ChestBlock.getConnectedDirection(first.getBlockState())));
+    /** Server menu: receives the real vanilla chest container (BE or CompoundContainer). */
+    public BigCapacityChestMenu(int id, Inventory inventory, Container vanillaContainer,
+                                BigCapacityChestBlockEntity first, BigCapacityChestBlockEntity second,
+                                BlockPos firstPos, BlockPos secondPos, int rows) {
+        this(id, inventory, vanillaContainer, first, second, rows, null, firstPos, secondPos);
     }
 
     private BigCapacityChestMenu(int id, Inventory inventory, Container container,
                                  BigCapacityChestBlockEntity first, BigCapacityChestBlockEntity second,
-                                 BlockPos pos, int rows, Level clientLevel,
-                                 BlockPos firstPos, BlockPos secondPos) {
+                                 int rows, Level clientLevel, BlockPos firstPos, BlockPos secondPos) {
         super(rows == 6 ? ModMenus.BIG_CAPACITY_CHEST_6.get() : ModMenus.BIG_CAPACITY_CHEST_3.get(),
                 id, inventory, container, rows);
         this.first = first;
@@ -46,27 +45,33 @@ public final class BigCapacityChestMenu extends ChestMenu {
         this.secondPos = secondPos;
     }
 
+    /** Client menu uses a normal mirror container; server slot packets populate it. */
     public BigCapacityChestMenu(int id, Inventory inventory, net.minecraft.network.FriendlyByteBuf data) {
         this(id, inventory, clientSetup(inventory, data.readBlockPos()));
     }
 
     private BigCapacityChestMenu(int id, Inventory inventory, Setup setup) {
-        this(id, inventory, setup.container, null, null, setup.firstPos, setup.rows,
+        this(id, inventory, setup.container, null, null, setup.rows,
                 inventory.player.level(), setup.firstPos, setup.secondPos);
     }
 
-    private static Setup clientSetup(Inventory inventory, BlockPos pos) {
+    private static Setup clientSetup(Inventory inventory, BlockPos clickedPos) {
         Level level = inventory.player.level();
-        BlockState state = level.getBlockState(pos);
+        BlockState state = level.getBlockState(clickedPos);
         int rows = 3;
-        BlockPos otherPos = null;
+        BlockPos firstPos = clickedPos;
+        BlockPos secondPos = null;
         if (state.hasProperty(BlockStateProperties.CHEST_TYPE)
                 && state.getValue(BlockStateProperties.CHEST_TYPE) != ChestType.SINGLE) {
-            Direction direction = ChestBlock.getConnectedDirection(state);
-            otherPos = pos.relative(direction);
+            Direction connected = ChestBlock.getConnectedDirection(state);
+            secondPos = clickedPos.relative(connected);
             rows = 6;
+            if (state.getValue(BlockStateProperties.CHEST_TYPE) == ChestType.RIGHT) {
+                firstPos = secondPos;
+                secondPos = clickedPos;
+            }
         }
-        return new Setup(new GuiChestContainer(level, pos, otherPos, rows), pos, otherPos, rows);
+        return new Setup(new SimpleContainer(rows * 9), firstPos, secondPos, rows);
     }
 
     private record Setup(Container container, BlockPos firstPos, BlockPos secondPos, int rows) {}
@@ -91,114 +96,13 @@ public final class BigCapacityChestMenu extends ChestMenu {
         return original;
     }
 
-    private static final class GuiChestContainer implements Container {
-        private final BigCapacityChestBlockEntity left;
-        private final BigCapacityChestBlockEntity right;
-        private final Level level;
-        private final BlockPos firstPos;
-        private final BlockPos secondPos;
-        private final int rows;
-
-        GuiChestContainer(BigCapacityChestBlockEntity left, BigCapacityChestBlockEntity right, int rows) {
-            this.left = left;
-            this.right = right;
-            this.level = null;
-            this.firstPos = null;
-            this.secondPos = null;
-            this.rows = rows;
-        }
-
-        GuiChestContainer(Level level, BlockPos firstPos, BlockPos secondPos, int rows) {
-            this.left = null;
-            this.right = null;
-            this.level = level;
-            this.firstPos = firstPos;
-            this.secondPos = secondPos;
-            this.rows = rows;
-        }
-
-        private BigCapacityChestBlockEntity first() {
-            if (left != null) return left;
-            return level != null && level.getBlockEntity(firstPos) instanceof BigCapacityChestBlockEntity be ? be : null;
-        }
-
-        private BigCapacityChestBlockEntity second() {
-            if (right != null) return right;
-            return level != null && secondPos != null
-                    && level.getBlockEntity(secondPos) instanceof BigCapacityChestBlockEntity be ? be : null;
-        }
-
-        private BigCapacityChestBlockEntity owner(int slot) {
-            return slot < 27 || rows == 3 ? first() : second();
-        }
-
-        private int local(int slot) {
-            return slot < 27 || rows == 3 ? slot : slot - 27;
-        }
-
-        @Override public int getContainerSize() { return rows * 9; }
-        @Override public boolean isEmpty() {
-            BigCapacityChestBlockEntity a = first(), b = second();
-            return (a == null || a.isEmpty()) && (b == null || b.isEmpty());
-        }
-        @Override public ItemStack getItem(int slot) {
-            if (slot < 0 || slot >= getContainerSize()) return ItemStack.EMPTY;
-            BigCapacityChestBlockEntity be = owner(slot);
-            return be == null ? ItemStack.EMPTY : be.getDisplayItem(local(slot));
-        }
-        @Override public ItemStack removeItem(int slot, int amount) {
-            if (slot < 0 || slot >= getContainerSize()) return ItemStack.EMPTY;
-            BigCapacityChestBlockEntity be = owner(slot);
-            return be == null ? ItemStack.EMPTY : be.removeItem(local(slot), amount);
-        }
-        @Override public ItemStack removeItemNoUpdate(int slot) {
-            if (slot < 0 || slot >= getContainerSize()) return ItemStack.EMPTY;
-            BigCapacityChestBlockEntity be = owner(slot);
-            return be == null ? ItemStack.EMPTY : be.removeItemNoUpdate(local(slot));
-        }
-        @Override public void setItem(int slot, ItemStack stack) {
-            if (slot < 0 || slot >= getContainerSize()) return;
-            BigCapacityChestBlockEntity be = owner(slot);
-            if (be != null) be.setGuiItem(local(slot), stack);
-        }
-        @Override public int getMaxStackSize() { return Integer.MAX_VALUE; }
-        @Override public void setChanged() {
-            BigCapacityChestBlockEntity a = first(), b = second();
-            if (a != null) a.setChanged();
-            if (b != null) b.setChanged();
-        }
-        @Override public boolean stillValid(net.minecraft.world.entity.player.Player player) {
-            // Client-side menus are validated by the server. The block entity
-            // packet may arrive just after the open-menu packet, so do not
-            // close the client screen during that synchronization window.
-            if (level != null) return true;
-            BigCapacityChestBlockEntity a = first(), b = second();
-            return a != null && a.stillValid(player) && (rows == 3 || b != null && b.stillValid(player));
-        }
-        @Override public void startOpen(net.minecraft.world.entity.player.Player player) {
-            BigCapacityChestBlockEntity a = first(), b = second();
-            if (a != null) a.startOpen(player);
-            if (b != null) b.startOpen(player);
-        }
-        @Override public void stopOpen(net.minecraft.world.entity.player.Player player) {
-            BigCapacityChestBlockEntity a = first(), b = second();
-            if (a != null) a.stopOpen(player);
-            if (b != null) b.stopOpen(player);
-        }
-        @Override public boolean canPlaceItem(int slot, ItemStack stack) { return true; }
-        @Override public void clearContent() {
-            BigCapacityChestBlockEntity a = first(), b = second();
-            if (a != null) a.clearContent();
-            if (b != null) b.clearContent();
-        }
-    }
-
     public int getRows() { return rows; }
 
     public BigInteger exactCount(int menuSlot) {
         if (menuSlot < 0 || menuSlot >= rows * 9) return BigInteger.ZERO;
+        boolean useFirst = menuSlot < 27 || rows == 3;
         BigCapacityChestBlockEntity owner;
-        if (menuSlot < 27 || rows == 3) {
+        if (useFirst) {
             owner = first != null ? first
                     : clientLevel != null && clientLevel.getBlockEntity(firstPos) instanceof BigCapacityChestBlockEntity be ? be : null;
         } else {
