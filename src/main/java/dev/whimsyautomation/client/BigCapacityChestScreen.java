@@ -15,6 +15,10 @@ import java.util.List;
 public final class BigCapacityChestScreen extends net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<BigCapacityChestMenu> {
     public BigCapacityChestScreen(BigCapacityChestMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
+        imageWidth = 176;
+        imageHeight = 114 + 18 * menu.getRows();
+        inventoryLabelY = imageHeight - 94;
+        titleLabelY = 6;
     }
     @Override protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
         super.renderSlotContents(graphics, stack, slot, "");

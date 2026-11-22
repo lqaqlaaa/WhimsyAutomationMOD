@@ -96,6 +96,12 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
     @Override protected AbstractContainerMenu createMenu(int id, Inventory inventory) { return null; }
     private boolean valid(int slot) { return slot >= 0 && slot < 27; }
 
+    @Override public void setChanged() {
+        super.setChanged();
+        if (level != null && !level.isClientSide)
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
     @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         CompoundTag exact = new CompoundTag();
