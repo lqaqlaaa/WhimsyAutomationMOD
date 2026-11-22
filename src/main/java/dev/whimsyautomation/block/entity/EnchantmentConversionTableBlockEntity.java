@@ -68,6 +68,11 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         return inventory;
     }
 
+    /** Total amount represented by the visible batch plus queued batches. */
+    public int getTotalOutputCount() {
+        return inventory.getStackInSlot(OUTPUT_SLOT).getCount() + pendingCount;
+    }
+
     /** Called only by the validated server-side confirmation payload. */
     public boolean confirmCopy(int count) {
         if (level == null || level.isClientSide || count < 1 || count > MAX_COPY_COUNT) return false;
