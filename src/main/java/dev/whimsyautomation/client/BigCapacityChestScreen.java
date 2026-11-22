@@ -13,7 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class BigCapacityChestScreen extends net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<BigCapacityChestMenu> {
-    private static final ResourceLocation CHEST_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+    private static final ResourceLocation CHEST_27_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_27.png");
+    private static final ResourceLocation CHEST_54_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
 
     public BigCapacityChestScreen(BigCapacityChestMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -30,7 +31,8 @@ public final class BigCapacityChestScreen extends net.minecraft.client.gui.scree
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(CHEST_TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+        ResourceLocation texture = menu.getRows() == 6 ? CHEST_54_TEXTURE : CHEST_27_TEXTURE;
+        graphics.blit(texture, leftPos, topPos, 0, 0, imageWidth, imageHeight);
     }
 
     @Override
@@ -45,10 +47,19 @@ public final class BigCapacityChestScreen extends net.minecraft.client.gui.scree
             List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(stack));
             BigInteger count = menu.exactCount(hoveredSlot.index);
             String shown = count.equals(BigInteger.TEN.pow(308)) ? "1E308" : String.format("%,d", count);
-            lines.add(1, Component.literal("数量：" + shown));
+            lines.add(Math.min(1, lines.size()), Component.literal("数量：" + shown));
             graphics.renderTooltip(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
             return;
         }
         super.renderTooltip(graphics, mouseX, mouseY);
     }
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256 || (minecraft != null && minecraft.options.keyInventory.matches(keyCode, scanCode))) {
+            onClose();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
 }
