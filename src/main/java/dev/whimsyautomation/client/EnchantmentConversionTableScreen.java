@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -88,7 +89,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             sendCountIfChanged();
             try {
                 int count = Integer.parseInt(amountInput.getValue());
-                if (count >= 1 && count <= EnchantmentConversionTableBlockEntityLimit.MAX_COPY_COUNT)
+                if (count >= 1 && count <= 1_000_000)
                     ConfirmItemCopyPayload.send(menu.containerId, menu.getBlockPos(), count);
             } catch (NumberFormatException ignored) { }
         }).bounds(leftPos + 57, topPos + 72, 62, 20).build();
