@@ -4,6 +4,7 @@ import dev.whimsyautomation.menu.EnchantmentExtractorMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
 import dev.whimsyautomation.util.OversizedItemStackCodec;
+import dev.whimsyautomation.util.PlayerStackRules;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
@@ -200,11 +201,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private void dropInLegalStacks(ItemStack stack) {
         if (stack.isEmpty()) return;
         int remaining = stack.getCount();
-        int legalSize = Math.max(1, stack.getMaxStackSize());
+        int legalSize = Math.max(1, PlayerStackRules.getVanillaMaxStackSize(stack));
         while (remaining > 0) {
             int batch = Math.min(remaining, legalSize);
             Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
-                    worldPosition.getZ() + 0.5, stack.copyWithCount(batch));
+                    worldPosition.getZ() + 0.5, PlayerStackRules.copyForPlayer(stack, batch));
             remaining -= batch;
         }
     }
@@ -242,7 +243,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             if (slot <= 0 || amount <= 0) return super.extractItem(slot, amount, simulate);
             ItemStack present = getStackInSlot(slot);
             if (present.isEmpty()) return ItemStack.EMPTY;
-            int requestedCount = Math.min(amount, Math.min(present.getCount(), Math.max(1, present.getMaxStackSize())));
+            int requestedCount = Math.min(amount, Math.min(present.getCount(), PlayerStackRules.getVanillaMaxStackSize(present)));
             ItemStack requested = present.copyWithCount(requestedCount);
             if (!persistentOutputMode && !canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
             if (simulate) return super.extractItem(slot, requestedCount, true);
@@ -259,7 +260,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 persistentOutputMode = false;
                 refreshGeneratedSlots();
             }
-            return extracted;
+            return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
         }
 
         @Override
