@@ -14,6 +14,7 @@ import java.util.List;
 
 public final class BigCapacityChestScreen extends net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<BigCapacityChestMenu> {
     private static final ResourceLocation CHEST_TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+
     public BigCapacityChestScreen(BigCapacityChestMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 176;
@@ -21,16 +22,24 @@ public final class BigCapacityChestScreen extends net.minecraft.client.gui.scree
         inventoryLabelY = imageHeight - 94;
         titleLabelY = 6;
     }
-    @Override public BigCapacityChestMenu getMenu() { return menu; }
 
-    @Override protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+    @Override
+    public BigCapacityChestMenu getMenu() {
+        return menu;
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         graphics.blit(CHEST_TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
     }
 
-    @Override protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
+    @Override
+    protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
         super.renderSlotContents(graphics, stack, slot, "");
     }
-    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {\n        super.render(graphics, mouseX, mouseY, partialTick);\n        renderTooltip(graphics, mouseX, mouseY);\n    }\n\n    @Override protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+
+    @Override
+    protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (hoveredSlot != null && hoveredSlot.index < menu.getRows() * 9 && hoveredSlot.hasItem()) {
             ItemStack stack = hoveredSlot.getItem();
             List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(stack));
