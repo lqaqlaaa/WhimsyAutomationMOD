@@ -1,59 +1,48 @@
 package dev.whimsyautomation.client;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
+import dev.whimsyautomation.block.entity.SideConfigurableBlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/**
- * Client-side six-face previews, independently tracked for every loaded level
- * and block position. A single global target caused opening a second machine
- * to silently replace the first machine's preview.
- */
+/** Client-side overlay visibility keyed by the actual block-entity instance. */
 public final class SideConfigOverlay {
-    private static final Map<Level, Map<BlockPos, OverlayState>> STATES = new WeakHashMap<>();
+    private static final Map<BlockEntity, Boolean> ACTIVE = new WeakHashMap<>();
 
     private SideConfigOverlay() {}
 
-    public static void show(Level level, BlockPos pos, int[] sideModes, boolean showAll) {
-        if (level == null || pos == null) return;
-        Map<BlockPos, OverlayState> levelStates = STATES.computeIfAbsent(level, ignored -> new HashMap<>());
-        levelStates.put(pos.immutable(), new OverlayState(
-                sideModes == null ? new int[6] : sideModes.clone(), showAll));
+    /** Enables/disables the frame preview for this exact machine instance. */
+    public static void show(BlockEntity machine, boolean enabled) {
+        if (machine == null) return;
+        if (enabled) ACTIVE.put(machine, Boolean.TRUE);
+        else ACTIVE.remove(machine);
     }
 
-    public static void clear(Level level, BlockPos pos) {
-        if (level == null || pos == null) return;
-        Map<BlockPos, OverlayState> levelStates = STATES.get(level);
-        if (levelStates == null) return;
-        levelStates.remove(pos);
-        if (levelStates.isEmpty()) STATES.remove(level);
+    public static void clear(BlockEntity machine) {
+        if (machine != null) ACTIVE.remove(machine);
     }
 
-    public static boolean isActiveAt(Level level, BlockPos pos) {
-        return state(level, pos) != null;
+    public static boolean isActive(BlockEntity machine) {
+        return machine != null && ACTIVE.containsKey(machine);
     }
 
-    public static boolean isShowingAllFacesAt(Level level, BlockPos pos) {
-        OverlayState state = state(level, pos);
-        return state != null && state.showAllFaces;
-    }
-
-    public static boolean shouldShowFace(Level level, BlockPos pos, int side) {
-        OverlayState state = state(level, pos);
-        return state != null && (state.showAllFaces || mode(state, side) != 0);
-    }
-
-    private static OverlayState state(Level level, BlockPos pos) {
-        if (level == null || pos == null) return null;
-        Map<BlockPos, OverlayState> levelStates = STATES.get(level);
-        return levelStates == null ? null : levelStates.get(pos);
-    }
-
-    private static int mode(OverlayState state, int side) {
-        return side < 0 || side >= state.modes.length ? 0 : state.modes[side];
+    /**
+     * If any side is configured for input or output, show only configured sides.
+     * If all six modes are disabled, the enabled preview shows all six faces.
+     */
+    public static boolean shouldShowFace(BlockEntity machine, int side) {
+        if (!(machine instanceof SideConfigurableBlockEntity configurable) || !isActive(machine)
+                || side < 0 || side >= Direction.values().length) return false;
+        boolean anyConfigured = false;
+        for (Direction direction : Direction.values()) {
+            if (configurable.getSideMode(direction) != 0) {
+                anyConfigured = true;
+                break;
+            }
+        }
+        return !anyConfigured || configurable.getSideMode(Direction.values()[side]) != 0;
     }
 
     public static int color(int side) {
@@ -67,6 +56,4 @@ public final class SideConfigOverlay {
             default -> 0xFFFFFFFF;
         };
     }
-
-    private record OverlayState(int[] modes, boolean showAllFaces) {}
 }
