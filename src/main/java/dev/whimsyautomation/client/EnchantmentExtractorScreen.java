@@ -437,7 +437,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     @Override
     protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
-        super.renderSlotContents(graphics, stack, slot, stack.getCount() > 1 ? null : countString);
+        super.renderSlotContents(graphics, stack, slot, stack.getCount() > 1 ? "" : countString);
     }
 
     @Override
