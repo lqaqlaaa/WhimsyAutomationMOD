@@ -30,7 +30,7 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     public static final int INPUT_SLOT = 0;
     public static final int OUTPUT_SLOT = 1;
     public static final int SLOT_COUNT = 2;
-    public static final int MAX_COPY_COUNT = 1_000_000;
+    public static final int MAX_COPY_COUNT = Integer.MAX_VALUE;
     private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
         @Override
         public int getSlotLimit(int slot) {
