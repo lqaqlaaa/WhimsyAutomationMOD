@@ -34,6 +34,13 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         }
 
         @Override
+        protected int getStackLimit(int slot, ItemStack stack) {
+            // The output is intentionally an overstacked queue: a request for
+            // 128 items must remain 128 even when the item's normal stack size is 64.
+            return slot == OUTPUT_SLOT ? MAX_COPY_COUNT : 1;
+        }
+
+        @Override
         protected void onContentsChanged(int slot) {
             setChanged();
         }
