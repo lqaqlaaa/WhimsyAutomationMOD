@@ -207,7 +207,14 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
             ItemStack stack = inventory.getStackInSlot(slot);
             if (!stack.isEmpty()) {
-                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, stack);
+                int remaining = stack.getCount();
+                int legalSize = Math.max(1, stack.getMaxStackSize());
+                while (remaining > 0) {
+                    int batch = Math.min(remaining, legalSize);
+                    Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
+                            worldPosition.getZ() + 0.5, stack.copyWithCount(batch));
+                    remaining -= batch;
+                }
                 inventory.setStackInSlot(slot, ItemStack.EMPTY);
             }
         }
