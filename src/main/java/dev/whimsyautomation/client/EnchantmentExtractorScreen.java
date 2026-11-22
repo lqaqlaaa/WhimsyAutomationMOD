@@ -317,7 +317,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             // same rectangles used when drawing them.
             if (inside(localX, localY, 326, 58, 20, 16)) {
                 showSideConfig = false;
-                syncSideOverlay();
                 return true;
             }
             for (int i = 0; i < sideConfigButtons.length; i++) {
@@ -325,7 +324,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 int y = 82 + (i / 3) * 22;
                 if (inside(localX, localY, x, y, 50, 18)) {
                     send(10 + i);
-                    syncSideOverlay();
+                    SideConfigOverlay.cycleFace(menu.machine(), i);
                     return true;
                 }
             }
@@ -411,7 +410,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         if (showSideConfig) {
             if (keyCode == 256) {
                 showSideConfig = false;
-                syncSideOverlay();
             }
             return true;
         }
