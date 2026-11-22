@@ -177,7 +177,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
             showFaceColors = false;
-            SideConfigOverlay.clear();
+            if (showSideConfig) syncSideOverlay(); else SideConfigOverlay.clear();
         }).bounds(leftPos + 264, topPos + 90, 80, 15).build());
 
         String[] sideNames = {"下", "上", "北", "南", "西", "东"};
@@ -327,8 +327,8 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 syncSideOverlay();
                 return true;
             }
-            if (mouseX < leftPos + 176 || mouseY >= topPos + 148)
-                return super.mouseClicked(mouseX, mouseY, button);
+            // Modal is exclusive: do not forward taps to the hidden controls,
+            // which could toggle this panel closed again.
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
