@@ -24,6 +24,10 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private static final int PICKER_VISIBLE_ROWS = 7;
     private boolean pickerDragging;
     private boolean showSideConfig;
+    private boolean showFaceColors;
+    private final Button[] sideConfigButtons = new Button[6];
+    private Button sideColorToggleButton;
+    private Button sideConfigCloseButton;
     private UiLayoutEditor layoutEditor;
     private Button layoutDebugButton;
     private Button layoutExportButton;
@@ -199,9 +203,29 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         addRenderableWidget(autoButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
+            showFaceColors = false;
+            SideConfigOverlay.clear();
             selectedIngredientGroup = -1;
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
                 .bounds(leftPos + 264, topPos + 198, 80, 15).build());
+
+        String[] sideNames = {"下", "上", "北", "南", "西", "东"};
+        for (int i = 0; i < 6; i++) {
+            final int side = i;
+            int col = i % 3, row = i / 3;
+            sideConfigButtons[i] = Button.builder(Component.literal(sideNames[i]), b -> {
+                send(10 + side);
+                syncSideOverlay();
+            }).bounds(184 + col * 55, 88 + row * 25, 50, 20).build();
+        }
+        sideColorToggleButton = Button.builder(Component.literal("显示六面颜色框：关闭"), b -> {
+            showFaceColors = !showFaceColors;
+            syncSideOverlay();
+        }).bounds(184, 177, 160, 18).build();
+        sideConfigCloseButton = Button.builder(Component.literal("×"), b -> {
+            showSideConfig = false;
+            SideConfigOverlay.clear();
+        }).bounds(326, 58, 20, 16).build();
         layoutEditor.bindWidgets(children(), leftPos, topPos);
         for (net.minecraft.client.gui.components.AbstractWidget control : layoutEditor.createControls(font, leftPos, topPos))
             addRenderableWidget(control);
@@ -266,45 +290,57 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
 
     }
 
-    private void renderSideConfig(GuiGraphics graphics) {
+    private void syncSideOverlay() {
+        if (!showSideConfig || !showFaceColors || menu.machine() == null) {
+            SideConfigOverlay.clear();
+            return;
+        }
+        int[] modes = new int[6];
+        for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
+        SideConfigOverlay.show(menu.machine().getBlockPos(), modes);
+    }
+
+    private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         if (!showSideConfig) return;
-        // renderLabels is already translated to the GUI origin.
         int x = 176, y = 54;
-        // The modal replaces the complete right-hand work area, including
-        // the lower action row, so no controls leak through underneath it.
         panel(graphics, x, y, 176, 166);
         graphics.fill(x + 2, y + 2, x + 174, y + 164, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
-        graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
+        graphics.drawString(font, Component.literal("点击方向按钮循环切换：关闭 / 输入 / 输出"),
+                x + 8, y + 20, 0xFF505050, false);
         String[] names = {"下", "上", "北", "南", "西", "东"};
-        String[] modes = {"关", "入", "出"};
-        int[] colors = {0xFF993333, 0xFF7FCC19, 0xFF334CB2, 0xFFE5E533, 0xFF7F3FB2, 0xFF4C7F99};
+        String[] modes = {"关闭", "输入", "输出"};
         for (int i = 0; i < 6; i++) {
-            int col = i % 3, row = i / 3;
-            int cellX = x + 8 + col * 55, cellY = y + 34 + row * 25;
-            graphics.fill(cellX, cellY + 1, cellX + 8, cellY + 9, colors[i]);
-            graphics.drawString(font, Component.literal(names[i] + "：" + modes[Math.min(2, menu.getSideMode(i))]),
-                    cellX + 12, cellY, 0xFF303030, false);
+            sideConfigButtons[i].setMessage(Component.literal(names[i] + " · " + modes[Math.min(2, menu.getSideMode(i))]));
+            sideConfigButtons[i].render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
         }
-        graphics.drawString(font, Component.literal("点击方向切换输入/输出/关闭"), x + 8, y + 91, 0xFF606060, false);
+        graphics.drawString(font, Component.literal("颜色框只显示已启用输入或输出的面"),
+                x + 8, y + 91, 0xFF505050, false);
+        sideColorToggleButton.setMessage(Component.literal("显示六面颜色框：" + (showFaceColors ? "开启" : "关闭")));
+        sideColorToggleButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
+        sideConfigCloseButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
     }
 
-    private boolean clickSideConfig(double mouseX, double mouseY) {
+    private boolean clickSideConfig(double mouseX, double mouseY, int mouseButton) {
         if (!showSideConfig) return false;
-        int x = leftPos + 176, y = topPos + 54;
-        if (mouseX >= x + 150 && mouseX < x + 176 && mouseY >= y && mouseY < y + 24) {
+        double localX = mouseX - leftPos, localY = mouseY - topPos;
+        if (sideConfigCloseButton.mouseClicked(localX, localY, mouseButton)) {
             showSideConfig = false;
+            SideConfigOverlay.clear();
             return true;
         }
-        if (mouseX >= x + 5 && mouseX < x + 171 && mouseY >= y + 28 && mouseY < y + 66) {
-            int col = Math.min(2, Math.max(0, (int) ((mouseX - (x + 8)) / 55)));
-            int row = mouseY < y + 59 ? 0 : 1;
-            send(10 + row * 3 + col);
+        for (Button sideButton : sideConfigButtons) {
+            if (sideButton.mouseClicked(localX, localY, mouseButton)) {
+                syncSideOverlay();
+                return true;
+            }
+        }
+        if (sideColorToggleButton.mouseClicked(localX, localY, mouseButton)) {
+            syncSideOverlay();
             return true;
         }
-        // Consume every click while the modal is open; never forward it to the
-        // hidden container slots or widgets.
         showSideConfig = false;
+        SideConfigOverlay.clear();
         return true;
     }
 
@@ -400,7 +436,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             selectedIngredientGroup = -1;
             return true;
         }
-        if (clickSideConfig(mouseX, mouseY)) return true;
+        if (clickSideConfig(mouseX, mouseY, button)) return true;
         for (int i = 0; i < 27; i++) {
             UiLayoutProfile.Element cell = layoutEditor.element("preview_slot_" + i, "preview_slot",
                     184 + (i % 9) * 18, 71 + (i / 9) * 18, 16, 16);
@@ -545,12 +581,19 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     }
 
     @Override
+    public void removed() {
+        SideConfigOverlay.clear();
+        super.removed();
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         double scale = uiScale();
         double virtualX = virtualMouseX(mouseX), virtualY = virtualMouseY(mouseY);
         graphics.pose().pushPose();
         graphics.pose().translate(width / 2.0 * (1.0 - scale), height / 2.0 * (1.0 - scale), 0.0);
         graphics.pose().scale((float) scale, (float) scale, 1.0F);
+        syncSideOverlay();
         if (showSideConfig || selectedIngredientGroup >= 0) {
             // Keep the left output storage and player inventory visible. The
             // opaque dialog replaces only the right-hand machine controls.
@@ -570,7 +613,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             graphics.flush();
             graphics.pose().pushPose();
             graphics.pose().translate(leftPos, topPos, 500.0F);
-            if (showSideConfig) renderSideConfig(graphics);
+            if (showSideConfig) renderSideConfig(graphics, virtualX, virtualY, partialTick);
             else renderIngredientPicker(graphics, (int) virtualX, (int) virtualY);
             // Submit the modal while its elevated Z transform is still active.
             graphics.flush();

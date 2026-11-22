@@ -1,10 +1,10 @@
 {
   "textures": {
-    "particle": "whimsy_automation:block/deconstruction_table_side",
-    "front": "whimsy_automation:block/deconstruction_table_front",
-    "side": "whimsy_automation:block/deconstruction_table_side",
-    "top": "whimsy_automation:block/deconstruction_table_top",
-    "bottom": "minecraft:block/dark_oak_planks"
+    "particle": "minecraft:block/crafting_table_side",
+    "front": "minecraft:block/crafting_table_front",
+    "side": "minecraft:block/crafting_table_side",
+    "top": "minecraft:block/crafting_table_top",
+    "bottom": "minecraft:block/oak_planks"
   },
   "elements": [
     {

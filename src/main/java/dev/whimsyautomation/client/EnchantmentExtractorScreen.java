@@ -18,6 +18,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private EditBox outputPageField;
     private EditBox bufferPageField;
     private boolean showSideConfig;
+    private boolean showFaceColors;
+    private final Button[] sideConfigButtons = new Button[6];
+    private Button sideColorToggleButton;
+    private Button sideConfigCloseButton;
     private UiLayoutEditor layoutEditor;
     private Button layoutDebugButton;
     private Button layoutExportButton;
@@ -170,8 +174,29 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         outputModeButton = Button.builder(outputModeLabel(), b -> send(2))
                 .bounds(leftPos + 264, topPos + 110, 80, 15).build();
         addRenderableWidget(outputModeButton);
-        addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> showSideConfig = !showSideConfig)
-                .bounds(leftPos + 264, topPos + 90, 80, 15).build());
+        addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
+            showSideConfig = !showSideConfig;
+            showFaceColors = false;
+            SideConfigOverlay.clear();
+        }).bounds(leftPos + 264, topPos + 90, 80, 15).build());
+
+        String[] sideNames = {"下", "上", "北", "南", "西", "东"};
+        for (int i = 0; i < 6; i++) {
+            final int side = i;
+            int col = i % 3, row = i / 3;
+            sideConfigButtons[i] = Button.builder(Component.literal(sideNames[i]), b -> {
+                send(10 + side);
+                syncSideOverlay();
+            }).bounds(184 + col * 55, 82 + row * 22, 50, 18).build();
+        }
+        sideColorToggleButton = Button.builder(Component.literal("显示六面颜色框：关闭"), b -> {
+            showFaceColors = !showFaceColors;
+            syncSideOverlay();
+        }).bounds(184, 127, 160, 16).build();
+        sideConfigCloseButton = Button.builder(Component.literal("×"), b -> {
+            showSideConfig = false;
+            SideConfigOverlay.clear();
+        }).bounds(326, 58, 20, 16).build();
 
         bufferPageField = pageField(262, 153, menu.getBufferPage() + 1);
         addRenderableWidget(bufferPageField);
@@ -236,27 +261,33 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     }
 
-    private void renderSideConfig(GuiGraphics graphics) {
-        if (!showSideConfig) return;
-        // renderLabels is already translated to the GUI origin.
-        int x = 176, y = 54;
-        // The direction editor occupies only the upper control region.
-        // The expandable input buffer remains visible and interactive below it.
-        panel(graphics, x, y, 176, 71);
-        graphics.fill(x + 2, y + 2, x + 174, y + 69, 0xFFE0E0E0);
-        graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
-        graphics.drawString(font, Component.literal("×"), x + 162, y + 7, 0xFF202020, false);
-        String[] names = {"下", "上", "北", "南", "西", "东"};
-        String[] modes = {"关", "入", "出"};
-        int[] colors = {0xFF993333, 0xFF7FCC19, 0xFF334CB2, 0xFFE5E533, 0xFF7F3FB2, 0xFF4C7F99};
-        for (int i = 0; i < 6; i++) {
-            int col = i % 3, row = i / 3;
-            int cellX = x + 8 + col * 55, cellY = y + 28 + row * 20;
-            graphics.fill(cellX, cellY + 1, cellX + 8, cellY + 9, colors[i]);
-            graphics.drawString(font, Component.literal(names[i] + "：" + modes[Math.min(2, menu.getSideMode(i))]),
-                    cellX + 12, cellY, 0xFF303030, false);
+    private void syncSideOverlay() {
+        if (!showSideConfig || !showFaceColors || menu.machine() == null) {
+            SideConfigOverlay.clear();
+            return;
         }
-        graphics.drawString(font, Component.literal("点击切换输入/输出/关闭"), x + 8, y + 63, 0xFF606060, false);
+        int[] modes = new int[6];
+        for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
+        SideConfigOverlay.show(menu.machine().getBlockPos(), modes);
+    }
+
+    private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
+        if (!showSideConfig) return;
+        int x = 176, y = 54;
+        panel(graphics, x, y, 176, 94);
+        graphics.fill(x + 2, y + 2, x + 174, y + 92, 0xFFE0E0E0);
+        graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
+        graphics.drawString(font, Component.literal("点击方向按钮循环切换：关闭 / 输入 / 输出"),
+                x + 8, y + 19, 0xFF505050, false);
+        String[] names = {"下", "上", "北", "南", "西", "东"};
+        String[] modes = {"关闭", "输入", "输出"};
+        for (int i = 0; i < 6; i++) {
+            sideConfigButtons[i].setMessage(Component.literal(names[i] + " · " + modes[Math.min(2, menu.getSideMode(i))]));
+            sideConfigButtons[i].render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
+        }
+        sideColorToggleButton.setMessage(Component.literal("显示六面颜色框：" + (showFaceColors ? "开启" : "关闭")));
+        sideColorToggleButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
+        sideConfigCloseButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
     }
 
     @Override
@@ -275,22 +306,24 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         }
         if (showSideConfig) {
-            int x = leftPos + 176, y = topPos + 54;
-            if (mouseX >= x + 150 && mouseX < x + 176 && mouseY >= y && mouseY < y + 24) {
+            double localX = mouseX - leftPos, localY = mouseY - topPos;
+            if (sideConfigCloseButton.mouseClicked(localX, localY, button)) {
                 showSideConfig = false;
+                SideConfigOverlay.clear();
                 return true;
             }
-            if (mouseX >= x + 5 && mouseX < x + 171 && mouseY >= y + 24 && mouseY < y + 66) {
-                int col = Math.min(2, Math.max(0, (int) ((mouseX - (x + 8)) / 55)));
-                int row = mouseY < y + 45 ? 0 : 1;
-                send(10 + row * 3 + col);
+            for (Button sideButton : sideConfigButtons) {
+                if (sideButton.mouseClicked(localX, localY, button)) {
+                    syncSideOverlay();
+                    return true;
+                }
+            }
+            if (sideColorToggleButton.mouseClicked(localX, localY, button)) {
+                syncSideOverlay();
                 return true;
             }
-            // Leave the buffer slots and their page controls usable while the
-            // six-direction editor is open.
-            if (mouseX < leftPos + 176 || mouseY >= topPos + 130)
+            if (mouseX < leftPos + 176 || mouseY >= topPos + 148)
                 return super.mouseClicked(mouseX, mouseY, button);
-            showSideConfig = false;
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
@@ -300,7 +333,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
         if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.drag(x, y, net.minecraft.client.gui.screens.Screen.hasShiftDown());
-        if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 162)
+        if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 148)
             return true;
         double scale = uiScale();
         return super.mouseDragged(x, y, button, dragX / scale, dragY / scale);
@@ -314,7 +347,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
                 return super.mouseReleased(x, y, button);
             return layoutEditor.release();
         }
-        if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 162)
+        if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 148)
             return true;
         return super.mouseReleased(x, y, button);
     }
@@ -381,6 +414,12 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     @Override
+    public void removed() {
+        SideConfigOverlay.clear();
+        super.removed();
+    }
+
+    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         double scale = uiScale();
         double virtualX = virtualMouseX(mouseX), virtualY = virtualMouseY(mouseY);
@@ -388,6 +427,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         graphics.pose().translate(width / 2.0 * (1.0 - scale),
                 height / 2.0 * (1.0 - scale), 0.0);
         graphics.pose().scale((float) scale, (float) scale, 1.0F);
+        syncSideOverlay();
         if (showSideConfig) {
             // The full interface is uniformly scaled to fit the available GUI
             // viewport; the modal only replaces the upper control area.
@@ -395,7 +435,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             graphics.flush();
             graphics.pose().pushPose();
             graphics.pose().translate(leftPos, topPos, 500.0F);
-            renderSideConfig(graphics);
+            renderSideConfig(graphics, virtualX, virtualY, partialTick);
             graphics.flush();
             graphics.pose().popPose();
             graphics.pose().popPose();

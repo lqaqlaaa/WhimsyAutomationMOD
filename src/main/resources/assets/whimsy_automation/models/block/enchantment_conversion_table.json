@@ -1,43 +1,6 @@
 {
+  "parent": "minecraft:block/lectern",
   "textures": {
-    "particle": "whimsy_automation:block/enchantment_conversion_table_side",
-    "front": "whimsy_automation:block/enchantment_conversion_table_front",
-    "side": "whimsy_automation:block/enchantment_conversion_table_side",
-    "top": "whimsy_automation:block/enchantment_conversion_table_top",
-    "bottom": "minecraft:block/dark_oak_planks"
-  },
-  "elements": [
-    {
-      "from": [
-        0,
-        0,
-        0
-      ],
-      "to": [
-        16,
-        16,
-        16
-      ],
-      "faces": {
-        "north": {
-          "texture": "#front"
-        },
-        "south": {
-          "texture": "#side"
-        },
-        "east": {
-          "texture": "#side"
-        },
-        "west": {
-          "texture": "#side"
-        },
-        "up": {
-          "texture": "#top"
-        },
-        "down": {
-          "texture": "#bottom"
-        }
-      }
-    }
-  ]
+    "particle": "minecraft:block/lectern_base"
+  }
 }

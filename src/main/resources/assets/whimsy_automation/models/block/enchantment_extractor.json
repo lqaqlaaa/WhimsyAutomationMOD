@@ -1,10 +1,9 @@
 {
   "textures": {
-    "particle": "whimsy_automation:block/enchantment_extractor_side",
-    "front": "whimsy_automation:block/enchantment_extractor_front",
-    "side": "whimsy_automation:block/enchantment_extractor_side",
-    "top": "whimsy_automation:block/enchantment_extractor_top",
-    "bottom": "minecraft:block/dark_oak_planks"
+    "particle": "minecraft:block/enchanting_table_side",
+    "side": "minecraft:block/enchanting_table_side",
+    "top": "minecraft:block/enchanting_table_top",
+    "bottom": "minecraft:block/enchanting_table_bottom"
   },
   "elements": [
     {
@@ -20,7 +19,7 @@
       ],
       "faces": {
         "north": {
-          "texture": "#front"
+          "texture": "#side"
         },
         "south": {
           "texture": "#side"
