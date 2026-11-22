@@ -114,6 +114,7 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         if (level == null || level.isClientSide || count < 1 || count > MAX_COPY_COUNT) return false;
         ItemStack input = inventory.getStackInSlot(INPUT_SLOT);
         if (input.isEmpty() || !inventory.getStackInSlot(OUTPUT_SLOT).isEmpty()) return false;
+        copyCount = count;
 
         internalInventoryUpdate = true;
         try {
