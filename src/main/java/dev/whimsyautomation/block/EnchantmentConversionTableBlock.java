@@ -26,7 +26,7 @@ public final class EnchantmentConversionTableBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public EnchantmentConversionTableBlock() {
-        super(BlockBehaviour.Properties.of().strength(3.5F).requiresCorrectToolForDrops());
+        super(BlockBehaviour.Properties.of().strength(2.5F).requiresCorrectToolForDrops());
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 

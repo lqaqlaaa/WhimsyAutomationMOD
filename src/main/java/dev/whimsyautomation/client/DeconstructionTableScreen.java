@@ -314,7 +314,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             sideConfigButtons[i].setMessage(Component.literal(names[i] + " · " + modes[Math.min(2, menu.getSideMode(i))]));
             sideConfigButtons[i].render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
         }
-        graphics.drawString(font, Component.literal("颜色框只显示已启用输入或输出的面"),
+        graphics.drawString(font, Component.literal("关闭总开关时，仅显示已启用输入或输出的面"),
                 x + 8, y + 91, 0xFF505050, false);
         sideColorToggleButton.setMessage(Component.literal("显示六面颜色框：" + (showFaceColors ? "开启" : "关闭")));
         sideColorToggleButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);

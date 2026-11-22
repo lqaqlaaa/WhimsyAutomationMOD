@@ -29,7 +29,7 @@ public final class EnchantmentExtractorBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public EnchantmentExtractorBlock() {
-        super(BlockBehaviour.Properties.of().strength(3.5F).requiresCorrectToolForDrops());
+        super(BlockBehaviour.Properties.of().strength(5.0F).requiresCorrectToolForDrops());
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 

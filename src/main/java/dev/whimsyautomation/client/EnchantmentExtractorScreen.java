@@ -262,13 +262,21 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     private void syncSideOverlay() {
-        if (!showSideConfig || !showFaceColors || menu.machine() == null) {
+        if (!showSideConfig || menu.machine() == null) {
             SideConfigOverlay.clear();
             return;
         }
         int[] modes = new int[6];
-        for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
-        SideConfigOverlay.show(menu.machine().getBlockPos(), modes);
+        boolean hasEnabledSide = false;
+        for (int i = 0; i < modes.length; i++) {
+            modes[i] = menu.getSideMode(i);
+            hasEnabledSide |= modes[i] != 0;
+        }
+        if (showFaceColors || hasEnabledSide) {
+            SideConfigOverlay.show(menu.machine().getBlockPos(), modes, showFaceColors);
+        } else {
+            SideConfigOverlay.clear();
+        }
     }
 
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {

@@ -1,3 +1,19 @@
 {
-  "parent": "whimsy_automation:block/enchantment_conversion_table"
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "minecraft:block/lectern_sides",
+    "down": "minecraft:block/lectern_base",
+    "up": "minecraft:block/lectern_top",
+    "north": "minecraft:block/lectern_front",
+    "south": "minecraft:block/lectern_sides",
+    "east": "minecraft:block/lectern_sides",
+    "west": "minecraft:block/lectern_sides"
+  },
+  "display": {
+    "gui": {
+      "rotation": [30, 225, 0],
+      "translation": [0, 0, 0],
+      "scale": [0.625, 0.625, 0.625]
+    }
+  }
 }

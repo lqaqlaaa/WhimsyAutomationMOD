@@ -21,14 +21,14 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
         PoseStack.Pose pose = poseStack.last();
         for (Direction direction : Direction.values()) {
             int index = direction.ordinal();
-            if (SideConfigOverlay.mode(index) == 0) continue;
+            if (!SideConfigOverlay.shouldShowFace(index)) continue;
             drawFace(lines, pose, direction, SideConfigOverlay.color(index));
         }
     }
 
     private static void drawFace(VertexConsumer out, PoseStack.Pose pose,
                                  Direction direction, int color) {
-        float low = 0.025F, high = 0.975F, edge = 0.002F;
+        float low = 0.035F, high = 0.965F, edge = 0.012F;
         float x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4;
         float nx = direction.getStepX(), ny = direction.getStepY(), nz = direction.getStepZ();
         switch (direction) {

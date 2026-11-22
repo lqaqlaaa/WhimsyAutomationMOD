@@ -1,6 +1,25 @@
 {
-  "parent": "minecraft:block/lectern",
   "textures": {
-    "particle": "minecraft:block/lectern_base"
-  }
+    "particle": "minecraft:block/lectern_sides",
+    "down": "minecraft:block/lectern_base",
+    "up": "minecraft:block/lectern_top",
+    "north": "minecraft:block/lectern_front",
+    "south": "minecraft:block/lectern_sides",
+    "east": "minecraft:block/lectern_sides",
+    "west": "minecraft:block/lectern_sides"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "down": {"texture": "#down"},
+        "up": {"texture": "#up"},
+        "north": {"texture": "#north"},
+        "south": {"texture": "#south"},
+        "east": {"texture": "#east"},
+        "west": {"texture": "#west"}
+      }
+    }
+  ]
 }

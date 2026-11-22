@@ -29,7 +29,7 @@ public final class DeconstructionTableBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public DeconstructionTableBlock() {
-        super(BlockBehaviour.Properties.of().strength(3.5F).requiresCorrectToolForDrops());
+        super(BlockBehaviour.Properties.of().strength(2.5F).requiresCorrectToolForDrops());
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 

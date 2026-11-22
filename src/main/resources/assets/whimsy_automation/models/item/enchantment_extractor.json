@@ -1,3 +1,19 @@
 {
-  "parent": "whimsy_automation:block/enchantment_extractor"
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "minecraft:block/enchanting_table_side",
+    "down": "minecraft:block/enchanting_table_bottom",
+    "up": "minecraft:block/enchanting_table_top",
+    "north": "minecraft:block/enchanting_table_side",
+    "south": "minecraft:block/enchanting_table_side",
+    "east": "minecraft:block/enchanting_table_side",
+    "west": "minecraft:block/enchanting_table_side"
+  },
+  "display": {
+    "gui": {
+      "rotation": [30, 225, 0],
+      "translation": [0, 0, 0],
+      "scale": [0.625, 0.625, 0.625]
+    }
+  }
 }
