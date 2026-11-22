@@ -271,22 +271,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     }
 
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
-        if (!showSideConfig) return;
-        int x = 176, y = 54;
-        panel(graphics, x, y, 176, 94);
-        graphics.fill(x + 2, y + 2, x + 174, y + 92, 0xFFE0E0E0);
-        graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
-        graphics.drawString(font, Component.literal("点击方向按钮循环切换：关闭 / 输入 / 输出"),
-                x + 8, y + 19, 0xFF505050, false);
-        String[] names = {"下", "上", "北", "南", "西", "东"};
-        String[] modes = {"关闭", "输入", "输出"};
-        for (int i = 0; i < 6; i++) {
-            sideConfigButtons[i].setMessage(Component.literal(names[i] + " · " + modes[Math.min(2, menu.getSideMode(i))]));
-            sideConfigButtons[i].render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
-        }
-        sideColorToggleButton.setMessage(Component.literal("显示六面颜色框：" + (showFaceColors ? "开启" : "关闭")));
-        sideColorToggleButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
-        sideConfigCloseButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
+        int[] modes = new int[6];
+        for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
+        SideConfigPanel.render(graphics, font, leftPos, topPos, mouseX, mouseY, partialTick, modes, showFaceColors);
     }
 
     private static boolean inside(double mouseX, double mouseY,
@@ -311,30 +298,15 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         }
         if (showSideConfig) {
-            double localX = mouseX - leftPos, localY = mouseY - topPos;
-            // The modal controls are manually rendered, not registered as
-            // ordinary screen widgets. Use panel-local hitboxes matching the
-            // same rectangles used when drawing them.
-            if (inside(localX, localY, 326, 58, 20, 16)) {
-                showSideConfig = false;
-                return true;
-            }
-            for (int i = 0; i < sideConfigButtons.length; i++) {
-                int x = 184 + (i % 3) * 55;
-                int y = 82 + (i / 3) * 22;
-                if (inside(localX, localY, x, y, 50, 18)) {
-                    send(10 + i);
-                    SideConfigOverlay.cycleFace(menu.machine(), i);
-                    return true;
-                }
-            }
-            if (inside(localX, localY, 184, 127, 160, 16)) {
+            int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos);
+            if (action == 7) showSideConfig = false;
+            else if (action >= 0 && action < 6) {
+                send(10 + action);
+                SideConfigOverlay.cycleFace(menu.machine(), action);
+            } else if (action == 6) {
                 showFaceColors = !showFaceColors;
                 syncSideOverlay();
-                return true;
             }
-            // Modal is exclusive: do not forward taps to the hidden controls,
-            // which could toggle this panel closed again.
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
@@ -344,7 +316,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         double x = virtualMouseX(mouseX), y = virtualMouseY(mouseY);
         if (layoutEditor != null && layoutEditor.enabled()) return layoutEditor.drag(x, y, net.minecraft.client.gui.screens.Screen.hasShiftDown());
-        if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 148)
+        if (showSideConfig && x >= leftPos + 176 && y >= topPos + 54 && y < topPos + 220)
             return true;
         double scale = uiScale();
         return super.mouseDragged(x, y, button, dragX / scale, dragY / scale);
