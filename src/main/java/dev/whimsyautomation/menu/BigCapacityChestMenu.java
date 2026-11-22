@@ -42,7 +42,7 @@ public final class BigCapacityChestMenu extends ChestMenu {
     }
     private static Container combined(BigCapacityChestBlockEntity a, BigCapacityChestBlockEntity b, int rows) {
         if (rows == 6 && b != null) return new GuiChestContainer(a, b);
-        return a == null ? new SimpleContainer(rows * 9) : a;
+        return a == null ? new SimpleContainer(rows * 9) : new GuiChestContainer(a, null);
     }
     private static Setup clientContainer(Inventory inventory, BlockPos pos) {
         var level = inventory.player.level();
@@ -54,7 +54,7 @@ public final class BigCapacityChestMenu extends ChestMenu {
                 if (level.getBlockEntity(pos.relative(direction)) instanceof BigCapacityChestBlockEntity b)
                     return new Setup(new GuiChestContainer(a, b), a, b, 6);
             }
-            return new Setup(a, a, null, 3);
+            return new Setup(new GuiChestContainer(a, null), a, null, 3);
         }
         return new Setup(new SimpleContainer(27), null, null, 3);
     }
