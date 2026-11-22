@@ -120,13 +120,13 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     }
 
     private void drawLayoutPanel(GuiGraphics graphics) {
-        UiLayoutProfile.Element e = layoutEditor.element("main_panel", "panel", 0, 0, imageWidth, imageHeight);
-        panel(graphics, leftPos + e.x, topPos + e.y, e.width, e.height);
+        panel(graphics, leftPos, topPos, imageWidth, imageHeight);
     }
 
     private void drawLayoutSlot(GuiGraphics graphics, String id, int x, int y) {
-        UiLayoutProfile.Element e = layoutEditor.element(id, "slot", x, y, 16, 16);
-        graphics.blitSprite(SLOT, leftPos + e.x, topPos + e.y, e.width, e.height);
+        // Slot hitboxes are owned by the menu and remain fixed; the layout
+        // debugger edits controls and labels without separating icons from slots.
+        graphics.blitSprite(SLOT, leftPos + x, topPos + y, 16, 16);
     }
 
     private void drawLayoutLabel(GuiGraphics graphics, String id, Component value, int x, int y, int color) {
@@ -153,13 +153,6 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         graphics.pose().popPose();
     }
 
-    private void applyMenuSlotLayout(String id, int slotIndex, int x, int y) {
-        UiLayoutProfile.Element e = layoutEditor.element(id, "slot", x, y, 16, 16);
-        if (slotIndex >= 0 && slotIndex < menu.slots.size()) {
-            menu.slots.get(slotIndex).x = e.x;
-            menu.slots.get(slotIndex).y = e.y;
-        }
-    }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
@@ -172,12 +165,6 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         for (int col = 0; col < 9; col++)
             drawLayoutSlot(graphics, "hotbar_slot_" + col, 8 + col * 18, 162);
 
-        applyMenuSlotLayout("input_slot", 0, 28, 50);
-        applyMenuSlotLayout("output_slot", 1, 132, 50);
-        for (int i = 0; i < 27; i++)
-            applyMenuSlotLayout("player_slot_" + i, 2 + i, 8 + (i % 9) * 18, 104 + (i / 9) * 18);
-        for (int i = 0; i < 9; i++)
-            applyMenuSlotLayout("hotbar_slot_" + i, 29 + i, 8 + i * 18, 162);
 
         drawLayoutLabel(graphics, "copy_count_label",
                 Component.translatable("screen.whimsy_automation.copy_count"), 57, 39, 0x404040);
