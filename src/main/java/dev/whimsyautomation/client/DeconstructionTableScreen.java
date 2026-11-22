@@ -509,7 +509,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
             if (mouseX >= x && mouseX < x + cell.width
                     && mouseY >= y && mouseY < y + cell.height) {
                 ItemStack stack = preview.get(i);
-                if (!stack.isEmpty()) graphics.renderTooltip(font, StackCountDisplay.withCount(getTooltipFromContainerItem(stack), stack), stack.getTooltipImage(), mouseX, mouseY);
+                if (!stack.isEmpty()) graphics.renderTooltip(font, StackCountDisplay.withCount(getTooltipFromContainerItem(stack), stack), stack.getTooltipImage(), stack, mouseX, mouseY);
                 return;
             }
         }
