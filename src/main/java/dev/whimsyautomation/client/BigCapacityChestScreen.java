@@ -37,6 +37,15 @@ public final class BigCapacityChestScreen extends AbstractContainerScreen<BigCap
     }
 
     @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // Keep the same explicit tooltip dispatch used by the machine screens.
+        // The chest screen previously overrode renderTooltip() but never
+        // explicitly invoked it from its own render path.
+        super.render(graphics, mouseX, mouseY, partialTick);
+        renderTooltip(graphics, mouseX, mouseY);
+    }
+
+    @Override
     protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
         if (slot.index < menu.getRows() * 9 && !stack.isEmpty()) {
             int visible = menu.exactCount(slot.index).min(BigInteger.valueOf(64)).intValue();
