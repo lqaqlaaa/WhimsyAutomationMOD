@@ -198,7 +198,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
-        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : 99; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : OversizedItemStackCodec.MAX_COUNT; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (stack.isEmpty()) return false;
             // The extractor must accept every non-empty input. Items without
@@ -230,7 +230,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             if (slot <= 0 || amount <= 0) return super.extractItem(slot, amount, simulate);
             ItemStack present = getStackInSlot(slot);
             if (present.isEmpty()) return ItemStack.EMPTY;
-            int requestedCount = Math.min(amount, present.getCount());
+            int requestedCount = Math.min(amount, Math.min(present.getCount(), Math.max(1, present.getMaxStackSize())));
             ItemStack requested = present.copyWithCount(requestedCount);
             if (!persistentOutputMode && !canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
             if (simulate) return super.extractItem(slot, requestedCount, true);
@@ -262,7 +262,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         private DynamicItemStackHandler(int size) { super(size); }
 
         @Override protected int getStackLimit(int slot, ItemStack stack) {
-            return slot == 0 ? 1 : Math.max(1, Math.min(99, stack.getMaxStackSize()));
+            return slot == 0 ? 1 : OversizedItemStackCodec.MAX_COUNT;
         }
 
         private void resize(int size) {
@@ -691,7 +691,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.put("Inventory", inventory.serializeNBT(registries));
+        tag.put("OversizedInventory", OversizedItemStackCodec.serialize(inventory, registries));
         tag.put("InputBuffer", inputBuffer.serializeNBT(registries));
         tag.putInt("WorkTicks", workTicks);
         tag.putBoolean("AutoMode", autoMode);
@@ -705,7 +705,8 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        if (tag.contains("OversizedInventory")) OversizedItemStackCodec.deserialize(inventory, registries, tag.getCompound("OversizedInventory"));
+        else if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         if (tag.contains("InputBuffer")) inputBuffer.deserializeNBT(registries, tag.getCompound("InputBuffer"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
         boolean hasOutputModeMarker = tag.contains("PersistentOutputMode");
