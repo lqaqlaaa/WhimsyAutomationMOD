@@ -322,7 +322,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         if (hoveredSlot != null && hoveredSlot.hasItem()) {
             ItemStack stack = hoveredSlot.getItem();
             graphics.renderTooltip(font, StackCountDisplay.withCount(getTooltipFromContainerItem(stack), stack),
-                    stack.getTooltipImage(), mouseX, mouseY);
+                    stack.getTooltipImage(), stack, mouseX, mouseY);
             return;
         }
         super.renderTooltip(graphics, mouseX, mouseY);
