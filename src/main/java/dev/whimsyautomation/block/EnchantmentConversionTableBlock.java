@@ -139,4 +139,9 @@ public final class EnchantmentConversionTableBlock extends BaseEntityBlock {
         return vanillaShapeState(state).useShapeForLightOcclusion();
     }
 
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+        return vanillaShapeState(state).propagatesSkylightDown(level, pos);
+    }
+
 }
