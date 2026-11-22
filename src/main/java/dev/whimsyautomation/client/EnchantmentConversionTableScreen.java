@@ -218,6 +218,23 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // The modal owns the entire screen while open. This check must precede
+        // layout-editor and widget handling, otherwise clicks can reach controls
+        // underneath the six-face panel.
+        if (showSideConfig) {
+            int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos, 0, 10);
+            if (action == 7) {
+                showSideConfig = false;
+                setFocused(null);
+            } else if (action >= 0 && action < 6) {
+                sendButton(10 + action);
+                SideConfigOverlay.cycleFace(menu.machine(), action);
+            } else if (action == 6) {
+                showFaceColors = !showFaceColors;
+                syncSideOverlay();
+            }
+            return true;
+        }
         if (layoutDebugButton != null && layoutDebugButton.isMouseOver(mouseX, mouseY)) {
             layoutEditor.toggle();
             return true;
@@ -229,58 +246,50 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
                 return super.mouseClicked(mouseX, mouseY, button);
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         }
-        if (showSideConfig) {
-            int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos, 0, 10);
-            if (action == 7) showSideConfig = false;
-            else if (action >= 0 && action < 6) {
-                sendButton(10 + action);
-                SideConfigOverlay.cycleFace(menu.machine(), action);
-            } else if (action == 6) {
-                showFaceColors = !showFaceColors;
-                syncSideOverlay();
-            }
-            return true;
-        }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (showSideConfig) return true;
         if (layoutEditor != null && layoutEditor.enabled())
             return layoutEditor.drag(mouseX, mouseY, Screen.hasShiftDown());
-        if (showSideConfig) return true;
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (showSideConfig) return true;
         if (layoutEditor != null && layoutEditor.enabled()) {
             if (layoutEditor.hasFocusedInput() || layoutEditor.isControlAt(mouseX, mouseY))
                 return super.mouseReleased(mouseX, mouseY, button);
             return layoutEditor.release();
         }
-        if (showSideConfig) return true;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (showSideConfig) return true;
         if (layoutEditor != null && layoutEditor.enabled() && !layoutEditor.hasFocusedInput()) return true;
         return super.charTyped(codePoint, modifiers);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (showSideConfig) {
+            if (keyCode == 256) {
+                showSideConfig = false;
+                setFocused(null);
+            }
+            return true;
+        }
         if (layoutEditor != null && layoutEditor.enabled()) {
             if (layoutEditor.hasFocusedInput()) return super.keyPressed(keyCode, scanCode, modifiers);
             if (layoutEditor.keyPressed(keyCode, modifiers)) return true;
             if (keyCode == 69) { try { layoutEditor.export(); } catch (java.io.IOException ignored) { } return true; }
             if (keyCode == 82) { layoutEditor.reset(); return true; }
             if (keyCode == 256) { layoutEditor.toggle(); return true; }
-            return true;
-        }
-        if (showSideConfig) {
-            if (keyCode == 256) showSideConfig = false;
             return true;
         }
         if (keyCode == 257 || keyCode == 335) {
