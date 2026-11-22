@@ -20,7 +20,7 @@ public final class OversizedItemStackCodec {
                     Codec.INT.fieldOf("count").orElse(1).forGetter(ItemStack::getCount),
                     net.minecraft.core.component.DataComponentPatch.CODEC
                             .optionalFieldOf("components", net.minecraft.core.component.DataComponentPatch.EMPTY)
-                            .forGetter(stack -> stack.getComponents().asPatch())
+                            .forGetter(stack -> stack.getComponentsPatch())
             ).apply(instance, ItemStack::new)));
 
     private OversizedItemStackCodec() {}
