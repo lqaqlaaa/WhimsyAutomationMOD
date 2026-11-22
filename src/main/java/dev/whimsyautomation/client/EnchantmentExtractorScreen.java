@@ -257,7 +257,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
         int[] modes = new int[6];
         for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
-        SideConfigPanel.render(graphics, font, leftPos, topPos, mouseX, mouseY, partialTick, modes, showFaceColors);
+        SideConfigPanel.render(graphics, font, leftPos, topPos, mouseX, mouseY, partialTick, 176, 54, modes, showFaceColors);
     }
 
     private static boolean inside(double mouseX, double mouseY,
@@ -282,7 +282,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             return layoutEditor.click(mouseX, mouseY, leftPos, topPos, button);
         }
         if (showSideConfig) {
-            int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos);
+            int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos, 176, 54);
             if (action == 7) showSideConfig = false;
             else if (action >= 0 && action < 6) {
                 send(10 + action);
