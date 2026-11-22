@@ -295,6 +295,12 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         sideConfigCloseButton.render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
     }
 
+    private static boolean inside(double mouseX, double mouseY,
+                                  double x, double y, double width, double height) {
+        return mouseX >= x && mouseX < x + width
+                && mouseY >= y && mouseY < y + height;
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         mouseX = virtualMouseX(mouseX);
@@ -312,18 +318,25 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         }
         if (showSideConfig) {
             double localX = mouseX - leftPos, localY = mouseY - topPos;
-            if (sideConfigCloseButton.mouseClicked(localX, localY, button)) {
+            // The modal controls are manually rendered, not registered as
+            // ordinary screen widgets. Use panel-local hitboxes matching the
+            // same rectangles used when drawing them.
+            if (inside(localX, localY, 326, 58, 20, 16)) {
                 showSideConfig = false;
                 SideConfigOverlay.clear();
                 return true;
             }
-            for (Button sideButton : sideConfigButtons) {
-                if (sideButton.mouseClicked(localX, localY, button)) {
+            for (int i = 0; i < sideConfigButtons.length; i++) {
+                int x = 184 + (i % 3) * 55;
+                int y = 82 + (i / 3) * 22;
+                if (inside(localX, localY, x, y, 50, 18)) {
+                    send(10 + i);
                     syncSideOverlay();
                     return true;
                 }
             }
-            if (sideColorToggleButton.mouseClicked(localX, localY, button)) {
+            if (inside(localX, localY, 184, 127, 160, 16)) {
+                showFaceColors = !showFaceColors;
                 syncSideOverlay();
                 return true;
             }
