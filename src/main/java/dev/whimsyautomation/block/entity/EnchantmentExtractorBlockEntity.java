@@ -706,8 +706,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        if (tag.contains("OversizedInventory")) OversizedItemStackCodec.deserialize(inventory, registries, tag.getCompound("OversizedInventory"));
-        else if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+        if (tag.contains("OversizedInventory")) {
+            CompoundTag oversized = tag.getCompound("OversizedInventory");
+            inventory.resize(Math.max(OUTPUT_START + PAGE_SIZE * 10, oversized.getInt("Size")));
+            OversizedItemStackCodec.deserialize(inventory, registries, oversized);
+        } else if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         if (tag.contains("InputBuffer")) inputBuffer.deserializeNBT(registries, tag.getCompound("InputBuffer"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
         boolean hasOutputModeMarker = tag.contains("PersistentOutputMode");
