@@ -17,7 +17,11 @@ public final class StackCountDisplay {
     public static List<Component> withCount(List<Component> original, ItemStack stack) {
         List<Component> lines = new ArrayList<>(original);
         if (!stack.isEmpty() && stack.getCount() > 1) {
-            lines.add(Component.literal("数量：" + format(stack.getCount())));
+            // Tooltip line 0 is the item name. Keep the count immediately below
+            // it so long descriptions, attributes and modded details cannot push
+            // the most important storage information to the bottom.
+            lines.add(Math.min(1, lines.size()),
+                    Component.literal("数量：" + format(stack.getCount())));
         }
         return lines;
     }
