@@ -240,9 +240,14 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (slot <= 0 || amount <= 0) return super.extractItem(slot, amount, simulate);
+            if (amount <= 0) return ItemStack.EMPTY;
             ItemStack present = getStackInSlot(slot);
             if (present.isEmpty()) return ItemStack.EMPTY;
+            if (slot <= 0) {
+                int inputAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
+                ItemStack extractedInput = super.extractItem(slot, inputAmount, simulate);
+                return PlayerStackRules.copyForPlayer(extractedInput, extractedInput.getCount());
+            }
             int requestedCount = Math.min(amount, Math.min(present.getCount(), PlayerStackRules.getVanillaMaxStackSize(present)));
             ItemStack requested = present.copyWithCount(requestedCount);
             if (!persistentOutputMode && !canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
