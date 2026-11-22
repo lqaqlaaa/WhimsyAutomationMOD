@@ -3,6 +3,7 @@ package dev.whimsyautomation.menu;
 import dev.whimsyautomation.block.entity.EnchantmentConversionTableBlockEntity;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.util.PlayerStackRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.inventory.DataSlot;
@@ -117,15 +118,15 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
             // Never shift-click an oversized machine stack directly into player
             // inventory slots. Transfer at most one legal stack and debit the
             // exact accepted amount from the authoritative oversized inventory.
-            int legalAmount = Math.min(source.getCount(), source.getMaxStackSize());
-            ItemStack moving = source.copyWithCount(legalAmount);
+            int legalAmount = Math.min(source.getCount(), PlayerStackRules.getVanillaMaxStackSize(source));
+            ItemStack moving = PlayerStackRules.copyForPlayer(source, legalAmount);
             if (!moveItemStackTo(moving, 2, slots.size(), true)) return ItemStack.EMPTY;
             int moved = legalAmount - moving.getCount();
             if (moved <= 0 || machine == null) return ItemStack.EMPTY;
             ItemStack extracted = machine.getInventory().extractItem(
                     EnchantmentConversionTableBlockEntity.OUTPUT_SLOT, moved, false);
             if (extracted.getCount() != moved) return ItemStack.EMPTY;
-            return original.copyWithCount(moved);
+            return PlayerStackRules.copyForPlayer(original, moved);
         } else if (index >= 2) {
             if (!moveItemStackTo(source, EnchantmentConversionTableBlockEntity.INPUT_SLOT,
                     EnchantmentConversionTableBlockEntity.INPUT_SLOT + 1, false)) return ItemStack.EMPTY;
