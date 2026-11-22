@@ -59,9 +59,9 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (slot == OUTPUT_SLOT && amount > 0) {
-                amount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(getStackInSlot(OUTPUT_SLOT)));
-            }
+            if (amount <= 0) return ItemStack.EMPTY;
+            ItemStack present = getStackInSlot(slot);
+            amount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
             ItemStack extracted = super.extractItem(slot, amount, simulate);
             return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
         }
