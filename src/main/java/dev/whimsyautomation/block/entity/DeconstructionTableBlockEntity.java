@@ -4,6 +4,7 @@ import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
 import dev.whimsyautomation.util.OversizedItemStackCodec;
+import dev.whimsyautomation.util.PlayerStackRules;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -94,9 +95,10 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
             if (slot >= OUTPUT_START && amount > 0) {
                 ItemStack present = getStackInSlot(slot);
-                amount = Math.min(amount, Math.max(1, present.getMaxStackSize()));
+                amount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
             }
-            return super.extractItem(slot, amount, simulate);
+            ItemStack extracted = super.extractItem(slot, amount, simulate);
+            return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
         }
 
         private void resize(int size) {
