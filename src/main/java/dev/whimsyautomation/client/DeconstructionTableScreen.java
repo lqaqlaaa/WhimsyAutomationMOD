@@ -26,9 +26,6 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private boolean pickerDragging;
     private boolean showSideConfig;
     private boolean showFaceColors;
-    private final Button[] sideConfigButtons = new Button[6];
-    private Button sideColorToggleButton;
-    private Button sideConfigCloseButton;
     private UiLayoutEditor layoutEditor;
     private Button layoutDebugButton;
     private Button layoutExportButton;
@@ -209,22 +206,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
         }).tooltip(Tooltip.create(Component.literal("分别设置六个面的自动化输入/输出")))
                 .bounds(leftPos + 264, topPos + 198, 80, 15).build());
 
-        String[] sideNames = {"下", "上", "北", "南", "西", "东"};
-        for (int i = 0; i < 6; i++) {
-            final int side = i;
-            int col = i % 3, row = i / 3;
-            sideConfigButtons[i] = Button.builder(Component.literal(sideNames[i]), b -> {
-                send(10 + side);
-                SideConfigOverlay.cycleFace(menu.machine(), side);
-            }).bounds(184 + col * 55, 88 + row * 25, 50, 20).build();
-        }
-        sideColorToggleButton = Button.builder(Component.literal("显示六面颜色框：关闭"), b -> {
-            showFaceColors = !showFaceColors;
-            syncSideOverlay();
-        }).bounds(184, 177, 160, 18).build();
-        sideConfigCloseButton = Button.builder(Component.literal("×"), b -> {
-            showSideConfig = false;
-        }).bounds(326, 58, 20, 16).build();
+
         layoutEditor.bindWidgets(children(), leftPos, topPos);
         for (net.minecraft.client.gui.components.AbstractWidget control : layoutEditor.createControls(font, leftPos, topPos))
             addRenderableWidget(control);
