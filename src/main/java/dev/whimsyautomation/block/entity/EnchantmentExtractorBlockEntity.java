@@ -720,7 +720,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (tag.contains("OversizedInventory")) {
             CompoundTag oversized = tag.getCompound("OversizedInventory");
             inventory.resize(Math.max(OUTPUT_START + PAGE_SIZE * 10, oversized.getInt("Size")));
-            OversizedItemStackCodec.deserialize(inventory, registries, oversized);
+            internalInventoryUpdate = true;
+            try { OversizedItemStackCodec.deserialize(inventory, registries, oversized); }
+            finally { internalInventoryUpdate = false; }
         } else if (tag.contains("Inventory")) inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         if (tag.contains("InputBuffer")) inputBuffer.deserializeNBT(registries, tag.getCompound("InputBuffer"));
         autoExtractionPaused = tag.getBoolean("AutoExtractionPaused");
