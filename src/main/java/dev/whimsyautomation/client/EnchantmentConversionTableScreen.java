@@ -218,7 +218,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             graphics.drawCenteredString(font, Component.literal(SIDE_NAMES[i] + " · " + SIDE_MODES[mode]),
                     bx + 23, by + 8, 0xFF202020);
         }
-        int toggleY = y + 112;
+        int toggleY = y + 142;
         panel(graphics, leftPos + 18, toggleY, imageWidth - 52, 20);
         graphics.drawCenteredString(font,
                 Component.literal("显示六面颜色边框：" + (showFaceColors ? "开启" : "关闭")),
@@ -247,19 +247,19 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
         }
         if (showSideConfig) {
             double lx = mouseX - leftPos, ly = mouseY - topPos;
-            if (!inside(lx, ly, 12, 42, 152, 96)) {
+            if (!inside(lx, ly, 8, 8, imageWidth - 16, imageHeight - 16)) {
                 showSideConfig = false;
                 return true;
             }
             for (int i = 0; i < 6; i++) {
-                int bx = 20 + (i % 3) * 48, by = 79 + (i / 3) * 24;
+                int bx = 18 + (i % 3) * 50, by = 51 + (i / 3) * 30;
                 if (inside(lx, ly, bx, by, 44, 20)) {
                     sendButton(10 + i);
                     SideConfigOverlay.cycleFace(menu.machine(), i);
                     return true;
                 }
             }
-            if (inside(lx, ly, 18, 120, imageWidth - 52, 20)) {
+            if (inside(lx, ly, 18, 150, imageWidth - 52, 20)) {
                 showFaceColors = !showFaceColors;
                 syncSideOverlay();
                 return true;
