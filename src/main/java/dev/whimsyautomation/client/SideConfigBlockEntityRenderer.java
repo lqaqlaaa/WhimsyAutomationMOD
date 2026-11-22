@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import dev.whimsyautomation.block.entity.SideConfigurableBlockEntity;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 
@@ -56,7 +57,7 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
 
     @Override
     public boolean shouldRenderOffScreen(T blockEntity) {
-        return SideConfigOverlay.isActiveAt(blockEntity.getLevel(), blockEntity.getBlockPos());
+        return SideConfigOverlay.isActive(blockEntity);
     }
 
     @Override
@@ -72,14 +73,14 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
     @Override
     public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffers, int packedLight, int packedOverlay) {
-        BlockPos pos = blockEntity.getBlockPos();
-        if (!SideConfigOverlay.isActiveAt(blockEntity.getLevel(), pos)) return;
+        if (!SideConfigOverlay.isActive(blockEntity)
+                || !(blockEntity instanceof SideConfigurableBlockEntity)) return;
 
         VertexConsumer out = buffers.getBuffer(SIDE_FRAME);
         Matrix4f matrix = poseStack.last().pose();
 
         for (int side = 0; side < 6; side++) {
-            if (!SideConfigOverlay.shouldShowFace(blockEntity.getLevel(), pos, side)) continue;
+            if (!SideConfigOverlay.shouldShowFace(blockEntity, side)) continue;
             int argb = SideConfigOverlay.color(side);
             float r = ((argb >>> 16) & 0xFF) / 255.0F;
             float g = ((argb >>> 8) & 0xFF) / 255.0F;
