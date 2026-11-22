@@ -50,7 +50,8 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
-            if (slot == INPUT_SLOT && autoMode && !internalInventoryUpdate && level != null && !level.isClientSide) {
+            if (autoMode && !internalInventoryUpdate && level != null && !level.isClientSide
+                    && !getStackInSlot(INPUT_SLOT).isEmpty() && getStackInSlot(OUTPUT_SLOT).isEmpty()) {
                 confirmCopy(copyCount);
             }
         }
