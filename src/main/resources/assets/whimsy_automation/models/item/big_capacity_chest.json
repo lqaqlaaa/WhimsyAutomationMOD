@@ -1,1 +1,1 @@
-{"parent":"minecraft:item/generated","textures":{"layer0":"whimsy_automation:item/big_capacity_chest"}}
+{"parent":"minecraft:item/generated","textures":{"layer0":"minecraft:entity/chest/normal"}}
