@@ -12,6 +12,8 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.Slot;
 
 public final class EnchantmentConversionTableScreen extends AbstractContainerScreen<EnchantmentConversionTableMenu> {
     private static final ResourceLocation SLOT = ResourceLocation.withDefaultNamespace("container/slot");
@@ -306,8 +308,23 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             return;
         }
         super.render(graphics, mouseX, mouseY, partialTick);
-        renderTotalOutputCount(graphics);
         if (layoutEditor != null) layoutEditor.render(graphics, leftPos, topPos);
         renderTooltip(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, String countString) {
+        super.renderSlotContents(graphics, stack, slot, stack.getCount() > 1 ? null : countString);
+    }
+
+    @Override
+    protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (hoveredSlot != null && hoveredSlot.hasItem()) {
+            ItemStack stack = hoveredSlot.getItem();
+            graphics.renderTooltip(font, StackCountDisplay.withCount(getTooltipFromContainerItem(stack), stack),
+                    stack.getTooltipImage(), mouseX, mouseY);
+            return;
+        }
+        super.renderTooltip(graphics, mouseX, mouseY);
     }
 }
