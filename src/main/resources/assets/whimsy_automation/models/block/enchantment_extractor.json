@@ -1,42 +1,9 @@
 {
+  "parent": "minecraft:block/cube_bottom_top",
   "textures": {
     "particle": "minecraft:block/enchanting_table_side",
     "side": "minecraft:block/enchanting_table_side",
     "top": "minecraft:block/enchanting_table_top",
     "bottom": "minecraft:block/enchanting_table_bottom"
-  },
-  "elements": [
-    {
-      "from": [
-        0,
-        0,
-        0
-      ],
-      "to": [
-        16,
-        16,
-        16
-      ],
-      "faces": {
-        "north": {
-          "texture": "#side"
-        },
-        "south": {
-          "texture": "#side"
-        },
-        "east": {
-          "texture": "#side"
-        },
-        "west": {
-          "texture": "#side"
-        },
-        "up": {
-          "texture": "#top"
-        },
-        "down": {
-          "texture": "#bottom"
-        }
-      }
-    }
-  ]
+  }
 }

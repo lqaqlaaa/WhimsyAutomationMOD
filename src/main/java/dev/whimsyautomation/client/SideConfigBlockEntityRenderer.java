@@ -7,16 +7,41 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-/** Draws a direction-coloured frame only while that machine's six-way editor is open. */
+/**
+ * Draws the six-direction configuration frames around the edited machine.
+ * The expanded render bounds are essential: the frames sit just outside the
+ * block's unit AABB, so the default block-entity frustum test can cull them.
+ */
 public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implements BlockEntityRenderer<T> {
+    private static final AABB RENDER_BOUNDS = new AABB(-0.08, -0.08, -0.08, 1.08, 1.08, 1.08);
+
     public SideConfigBlockEntityRenderer(BlockEntityRendererProvider.Context context) {}
+
+    @Override
+    public boolean shouldRenderOffScreen(T blockEntity) {
+        // The preview is a temporary editor overlay, not part of the machine's
+        // normal render bounds. Keep it alive while its editor is open.
+        return SideConfigOverlay.isActiveAt(blockEntity.getBlockPos());
+    }
+
+    @Override
+    public int getViewDistance() {
+        return 128;
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(T blockEntity) {
+        return RENDER_BOUNDS.move(blockEntity.getBlockPos());
+    }
 
     @Override
     public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffers, int packedLight, int packedOverlay) {
         if (!SideConfigOverlay.isActiveAt(blockEntity.getBlockPos())) return;
+
         VertexConsumer lines = buffers.getBuffer(RenderType.lines());
         PoseStack.Pose pose = poseStack.last();
         for (Direction direction : Direction.values()) {
@@ -28,7 +53,8 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
 
     private static void drawFace(VertexConsumer out, PoseStack.Pose pose,
                                  Direction direction, int color) {
-        float low = 0.035F, high = 0.965F, edge = 0.012F;
+        // Keep the border slightly outside the block to avoid z-fighting.
+        float low = 0.025F, high = 0.975F, edge = 0.035F;
         float x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4;
         float nx = direction.getStepX(), ny = direction.getStepY(), nz = direction.getStepZ();
         switch (direction) {
