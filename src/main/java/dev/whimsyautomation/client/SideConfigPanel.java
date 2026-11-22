@@ -25,17 +25,17 @@ public final class SideConfigPanel {
     }
 
     public static void render(GuiGraphics graphics, Font font, int leftPos, int topPos,
-                              double mouseX, double mouseY, float partialTick,
+                              double mouseX, double mouseY, float partialTick, int panelX, int panelY,
                               int[] sideModes, boolean showFaceColors) {
-        int x = 176, y = 54;
+        int x = panelX, y = panelY;
         panel(graphics, x, y, 176, 166);
         graphics.fill(x + 2, y + 2, x + 174, y + 164, 0xFFE0E0E0);
         graphics.drawString(font, Component.literal("六向设置"), x + 8, y + 8, 0xFF202020, false);
         graphics.drawString(font, Component.literal("点击方向按钮循环切换：关闭 / 输入 / 输出"),
                 x + 8, y + 20, 0xFF505050, false);
         for (int i = 0; i < 6; i++) {
-            int bx = 184 + (i % 3) * 55;
-            int by = 88 + (i / 3) * 25;
+            int bx = panelX + 8 + (i % 3) * 55;
+            int by = panelY + 34 + (i / 3) * 25;
             int mode = Math.max(0, Math.min(2, sideModes[i]));
             Button.builder(Component.literal(NAMES[i] + " · " + MODES[mode]), b -> {})
                     .bounds(bx, by, 50, 20).build()
@@ -44,24 +44,24 @@ public final class SideConfigPanel {
         graphics.drawString(font, Component.literal("关闭总开关时，仅显示已启用输入或输出的面"),
                 x + 8, y + 91, 0xFF505050, false);
         Button.builder(Component.literal("显示六面颜色框：" + (showFaceColors ? "开启" : "关闭")), b -> {})
-                .bounds(184, 177, 160, 18).build()
+                .bounds(panelX + 8, panelY + 123, 160, 18).build()
                 .render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
         Button.builder(Component.literal("×"), b -> {})
-                .bounds(326, 58, 20, 16).build()
+                .bounds(panelX + 150, panelY + 4, 20, 16).build()
                 .render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
     }
 
     /** Returns 0..5 for a face, 6 for the color toggle, 7 for close,
      * -2 for another click inside the modal, and -1 outside the modal. */
-    public static int hit(double localX, double localY) {
-        if (localX >= 326 && localX < 346 && localY >= 58 && localY < 74) return 7;
+    public static int hit(double localX, double localY, int panelX, int panelY) {
+        if (localX >= panelX + 150 && localX < panelX + 170 && localY >= panelY + 4 && localY < panelY + 20) return 7;
         for (int i = 0; i < 6; i++) {
-            int x = 184 + (i % 3) * 55;
-            int y = 88 + (i / 3) * 25;
+            int x = panelX + 8 + (i % 3) * 55;
+            int y = panelY + 34 + (i / 3) * 25;
             if (localX >= x && localX < x + 50 && localY >= y && localY < y + 20) return i;
         }
-        if (localX >= 184 && localX < 344 && localY >= 177 && localY < 195) return 6;
-        if (localX >= 176 && localX < 352 && localY >= 54 && localY < 220) return -2;
+        if (localX >= panelX + 8 && localX < panelX + 168 && localY >= panelY + 123 && localY < panelY + 141) return 6;
+        if (localX >= panelX && localX < panelX + 176 && localY >= panelY && localY < panelY + 166) return -2;
         return -1;
     }
 }
