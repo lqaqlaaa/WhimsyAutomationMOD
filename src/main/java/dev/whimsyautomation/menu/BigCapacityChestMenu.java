@@ -5,7 +5,6 @@ import dev.whimsyautomation.registry.ModMenus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.CompoundContainer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -42,7 +41,7 @@ public final class BigCapacityChestMenu extends ChestMenu {
         this(id, inventory, setup.container, setup.first, setup.second, setup.rows == 6 ? null : null, setup.rows);
     }
     private static Container combined(BigCapacityChestBlockEntity a, BigCapacityChestBlockEntity b, int rows) {
-        if (rows == 6 && b != null) return new CompoundContainer(a, b);
+        if (rows == 6 && b != null) return new GuiChestContainer(a, b);
         return a == null ? new SimpleContainer(rows * 9) : a;
     }
     private static Setup clientContainer(Inventory inventory, BlockPos pos) {
@@ -53,7 +52,7 @@ public final class BigCapacityChestMenu extends ChestMenu {
                     && state.getValue(BlockStateProperties.CHEST_TYPE) != ChestType.SINGLE) {
                 Direction direction = ChestBlock.getConnectedDirection(state);
                 if (level.getBlockEntity(pos.relative(direction)) instanceof BigCapacityChestBlockEntity b)
-                    return new Setup(new CompoundContainer(a, b), a, b, 6);
+                    return new Setup(new GuiChestContainer(a, b), a, b, 6);
             }
             return new Setup(a, a, null, 3);
         }
@@ -84,6 +83,50 @@ public final class BigCapacityChestMenu extends ChestMenu {
         sourceSlot.onTake(player, original.copyWithCount(amountMoved));
         sourceSlot.setChanged();
         return original;
+    }
+
+    private static final class GuiChestContainer implements Container {
+        private final BigCapacityChestBlockEntity left;
+        private final BigCapacityChestBlockEntity right;
+        GuiChestContainer(BigCapacityChestBlockEntity left, BigCapacityChestBlockEntity right) {
+            this.left = left;
+            this.right = right;
+        }
+        private BigCapacityChestBlockEntity owner(int slot) { return slot < 27 || right == null ? left : right; }
+        private int local(int slot) { return slot < 27 || right == null ? slot : slot - 27; }
+        @Override public int getContainerSize() { return right == null ? 27 : 54; }
+        @Override public boolean isEmpty() { return (left == null || left.isEmpty()) && (right == null || right.isEmpty()); }
+        @Override public ItemStack getItem(int slot) {
+            BigCapacityChestBlockEntity be = owner(slot);
+            return be == null ? ItemStack.EMPTY : be.getDisplayItem(local(slot));
+        }
+        @Override public ItemStack removeItem(int slot, int amount) {
+            BigCapacityChestBlockEntity be = owner(slot);
+            return be == null ? ItemStack.EMPTY : be.removeItem(local(slot), amount);
+        }
+        @Override public ItemStack removeItemNoUpdate(int slot) {
+            BigCapacityChestBlockEntity be = owner(slot);
+            return be == null ? ItemStack.EMPTY : be.removeItemNoUpdate(local(slot));
+        }
+        @Override public void setItem(int slot, ItemStack stack) {
+            BigCapacityChestBlockEntity be = owner(slot);
+            if (be != null) be.setGuiItem(local(slot), stack);
+        }
+        @Override public int getMaxStackSize() { return Integer.MAX_VALUE; }
+        @Override public void setChanged() { if (left != null) left.setChanged(); if (right != null) right.setChanged(); }
+        @Override public boolean stillValid(net.minecraft.world.entity.player.Player player) {
+            return (left == null || left.stillValid(player)) && (right == null || right.stillValid(player));
+        }
+        @Override public void startOpen(net.minecraft.world.entity.player.Player player) {
+            if (left != null) left.startOpen(player);
+            if (right != null) right.startOpen(player);
+        }
+        @Override public void stopOpen(net.minecraft.world.entity.player.Player player) {
+            if (left != null) left.stopOpen(player);
+            if (right != null) right.stopOpen(player);
+        }
+        @Override public boolean canPlaceItem(int slot, ItemStack stack) { return true; }
+        @Override public void clearContent() { if (left != null) left.clearContent(); if (right != null) right.clearContent(); }
     }
 
     public int getRows() { return rows; }
