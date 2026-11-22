@@ -9,8 +9,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
-import net.minecraft.world.CompoundContainer;
-import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
@@ -44,9 +42,8 @@ public final class BigCapacityChestBlock extends ChestBlock {
         }
         Direction direction = ChestBlock.getConnectedDirection(state);
         if (!(level.getBlockEntity(pos.relative(direction)) instanceof BigCapacityChestBlockEntity second)) return null;
-        Container combined = new CompoundContainer(first, second);
         return new SimpleMenuProvider((id, inv, player) ->
-                new BigCapacityChestMenu(id, inv, combined, first, second, pos, 6), title);
+                new BigCapacityChestMenu(id, inv, first, second, pos, 6), title);
     }
     @Override protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                            Player player, BlockHitResult hit) {
