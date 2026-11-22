@@ -201,17 +201,20 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
             finally { internalInventoryUpdate = false; }
         } else if (tag.contains("Inventory")) {
             // Backward compatibility: migrate the former 99-item batch plus pending queue.
-            inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
-            int queued = Math.max(0, Math.min(MAX_COPY_COUNT, tag.getInt("PendingCount")));
-            ItemStack visible = inventory.getStackInSlot(OUTPUT_SLOT);
-            ItemStack queuedTemplate = tag.contains("PendingTemplate")
-                    ? ItemStack.parse(registries, tag.getCompound("PendingTemplate")).orElse(ItemStack.EMPTY)
-                    : ItemStack.EMPTY;
-            ItemStack template = !visible.isEmpty() ? visible : queuedTemplate;
-            if (!template.isEmpty() && queued > 0
-                    && (visible.isEmpty() || ItemStack.isSameItemSameComponents(visible, queuedTemplate))) {
-                inventory.setStackInSlot(OUTPUT_SLOT, template.copyWithCount(visible.getCount() + queued));
-            }
+            internalInventoryUpdate = true;
+            try {
+                inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
+                int queued = Math.max(0, Math.min(MAX_COPY_COUNT, tag.getInt("PendingCount")));
+                ItemStack visible = inventory.getStackInSlot(OUTPUT_SLOT);
+                ItemStack queuedTemplate = tag.contains("PendingTemplate")
+                        ? ItemStack.parse(registries, tag.getCompound("PendingTemplate")).orElse(ItemStack.EMPTY)
+                        : ItemStack.EMPTY;
+                ItemStack template = !visible.isEmpty() ? visible : queuedTemplate;
+                if (!template.isEmpty() && queued > 0
+                        && (visible.isEmpty() || ItemStack.isSameItemSameComponents(visible, queuedTemplate))) {
+                    inventory.setStackInSlot(OUTPUT_SLOT, template.copyWithCount(visible.getCount() + queued));
+                }
+            } finally { internalInventoryUpdate = false; }
         }
     }
 }
