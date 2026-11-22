@@ -4,6 +4,7 @@ import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.OversizedItemStackCodec;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
+import dev.whimsyautomation.util.PlayerStackRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -59,9 +60,10 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
             if (slot == OUTPUT_SLOT && amount > 0) {
-                amount = Math.min(amount, getStackInSlot(OUTPUT_SLOT).getMaxStackSize());
+                amount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(getStackInSlot(OUTPUT_SLOT)));
             }
-            return super.extractItem(slot, amount, simulate);
+            ItemStack extracted = super.extractItem(slot, amount, simulate);
+            return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
         }
     };
 
