@@ -39,6 +39,19 @@ public final class BigCapacityChestBlock extends ChestBlock {
         return new BigCapacityChestBlockEntity(pos, state);
     }
 
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos,
+                         BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock())
+                && level.getBlockEntity(pos) instanceof BigCapacityChestBlockEntity chest) {
+            // Empty our exact-count store first. ChestBlock's vanilla removal path
+            // still performs its normal bookkeeping, but cannot drop the one-item
+            // representative stacks a second time.
+            chest.dropAllContents(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
     // The only interaction customization is transporting the clicked position to the client menu.
     // All chest opening/closing bookkeeping is handled by the vanilla Container implementation.
     @Override
