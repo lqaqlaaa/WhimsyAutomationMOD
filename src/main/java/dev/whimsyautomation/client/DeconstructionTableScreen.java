@@ -315,7 +315,7 @@ public final class DeconstructionTableScreen extends AbstractContainerScreen<Dec
     private boolean clickSideConfig(double mouseX, double mouseY, int mouseButton) {
         if (!showSideConfig) return false;
         int action = SideConfigPanel.hit(mouseX - leftPos, mouseY - topPos);
-        if (action == -1) return false;
+        if (action == -1) return true;
         if (action == 7) showSideConfig = false;
         else if (action >= 0 && action < 6) {
             send(10 + action);
