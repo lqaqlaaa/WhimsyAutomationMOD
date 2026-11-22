@@ -89,7 +89,7 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
             sendCountIfChanged();
             try {
                 int count = Integer.parseInt(amountInput.getValue());
-                if (count >= 1 && count <= 1_000_000)
+                if (count >= 1 && count <= Integer.MAX_VALUE)
                     ConfirmItemCopyPayload.send(menu.containerId, menu.getBlockPos(), count);
             } catch (NumberFormatException ignored) { }
         }).bounds(leftPos + 57, topPos + 72, 62, 20).build();
