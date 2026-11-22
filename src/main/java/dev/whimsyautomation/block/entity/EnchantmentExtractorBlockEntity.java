@@ -182,8 +182,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
                 worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, input);
         if (persistentOutputMode) for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
             ItemStack stored = inventory.getStackInSlot(slot);
-            if (!stored.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5,
-                    worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, stored);
+            dropInLegalStacks(stored);
         }
         for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
             ItemStack queued = inputBuffer.getStackInSlot(slot);
@@ -196,6 +195,18 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         }
         internalInventoryUpdate = false;
         for (int slot = 0; slot < inputBuffer.getSlots(); slot++) inputBuffer.setStackInSlot(slot, ItemStack.EMPTY);
+    }
+
+    private void dropInLegalStacks(ItemStack stack) {
+        if (stack.isEmpty()) return;
+        int remaining = stack.getCount();
+        int legalSize = Math.max(1, stack.getMaxStackSize());
+        while (remaining > 0) {
+            int batch = Math.min(remaining, legalSize);
+            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
+                    worldPosition.getZ() + 0.5, stack.copyWithCount(batch));
+            remaining -= batch;
+        }
     }
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
