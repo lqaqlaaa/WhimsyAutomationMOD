@@ -93,11 +93,10 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
 
         @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (slot >= OUTPUT_START && amount > 0) {
-                ItemStack present = getStackInSlot(slot);
-                amount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
-            }
-            ItemStack extracted = super.extractItem(slot, amount, simulate);
+            if (amount <= 0) return ItemStack.EMPTY;
+            ItemStack present = getStackInSlot(slot);
+            int legalAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
+            ItemStack extracted = super.extractItem(slot, legalAmount, simulate);
             return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
         }
 
