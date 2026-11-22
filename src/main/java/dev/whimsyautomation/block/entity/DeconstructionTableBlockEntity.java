@@ -44,7 +44,7 @@ import java.util.Map;
  * Reverse-processes supported registered recipes. Recipe preview, recipe lock and
  * automation are deliberately separate states.
  */
-public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider {
+public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity {
         
     
     public static final int OUTPUT_START = 1;
