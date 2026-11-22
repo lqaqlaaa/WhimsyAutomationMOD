@@ -22,7 +22,7 @@ public final class SideConfigOverlay {
     public static void show(BlockEntity machine, int[] sideModes, boolean enabled) {
         if (machine == null) return;
         if (!enabled) {
-            STATES.remove(machine);
+            clear(machine);
             return;
         }
         int[] modes = new int[Direction.values().length];
@@ -42,9 +42,8 @@ public final class SideConfigOverlay {
         OverlayState state = STATES.get(machine);
         if (state == null || !state.enabled()) return;
 
-        boolean[] visible = state.visibleFaces().clone();
-        // A face that was hidden because all sides were disabled needs its
-        // underlying mode to be tracked, so store modes in the state as well.
+        // Keep the underlying modes so a later face toggle can be predicted
+        // without reading the menu or block entity again.
         int[] modes = MODES.get(machine);
         if (modes == null) return;
         modes = modes.clone();
