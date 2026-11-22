@@ -177,8 +177,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("六向设置"), b -> {
             showSideConfig = !showSideConfig;
-            // Keep the world overlay independent from the modal editor.
-            syncSideOverlay();
         }).bounds(leftPos + 264, topPos + 90, 80, 15).build());
 
         String[] sideNames = {"下", "上", "北", "南", "西", "东"};
@@ -187,7 +185,7 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             int col = i % 3, row = i / 3;
             sideConfigButtons[i] = Button.builder(Component.literal(sideNames[i]), b -> {
                 send(10 + side);
-                syncSideOverlay();
+                SideConfigOverlay.cycleFace(menu.machine(), side);
             }).bounds(184 + col * 55, 82 + row * 22, 50, 18).build();
         }
         sideColorToggleButton = Button.builder(Component.literal("显示六面颜色框：关闭"), b -> {
@@ -196,7 +194,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         }).bounds(184, 127, 160, 16).build();
         sideConfigCloseButton = Button.builder(Component.literal("×"), b -> {
             showSideConfig = false;
-            syncSideOverlay();
         }).bounds(326, 58, 20, 16).build();
 
         bufferPageField = pageField(262, 153, menu.getBufferPage() + 1);
@@ -445,7 +442,6 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
         graphics.pose().translate(width / 2.0 * (1.0 - scale),
                 height / 2.0 * (1.0 - scale), 0.0);
         graphics.pose().scale((float) scale, (float) scale, 1.0F);
-        syncSideOverlay();
         if (showSideConfig) {
             // The full interface is uniformly scaled to fit the available GUI
             // viewport; the modal only replaces the upper control area.
