@@ -251,7 +251,10 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int requestedCount = Math.min(amount, Math.min(present.getCount(), PlayerStackRules.getVanillaMaxStackSize(present)));
             ItemStack requested = present.copyWithCount(requestedCount);
             if (!persistentOutputMode && !canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
-            if (simulate) return super.extractItem(slot, requestedCount, true);
+            if (simulate) {
+                ItemStack simulated = super.extractItem(slot, requestedCount, true);
+                return PlayerStackRules.copyForPlayer(simulated, simulated.getCount());
+            }
             extractingGeneratedOutput = true;
             ItemStack extracted;
             try {
