@@ -85,7 +85,7 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
         return machine;
     }
 
-    public boolean isAutoMode() { return machine != null && !access.equals(null) ? (machine.getLevel() != null && !machine.getLevel().isClientSide ? machine.isAutoMode() : syncedAutoMode) : syncedAutoMode; }
+    public boolean isAutoMode() { return machine != null && machine.getLevel() != null && !machine.getLevel().isClientSide ? machine.isAutoMode() : syncedAutoMode; }
     public int getCopyCount() { return machine != null && machine.getLevel() != null && !machine.getLevel().isClientSide ? machine.getCopyCount() : syncedCopyCount; }
     public int getSideMode(int side) { return side < 0 || side >= 6 ? 0 : (machine != null && machine.getLevel() != null && !machine.getLevel().isClientSide ? machine.getSideMode(Direction.values()[side]) : syncedSideModes[side]); }
 
