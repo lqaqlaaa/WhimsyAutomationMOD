@@ -41,6 +41,8 @@ public final class BigCapacityChestScreen extends AbstractContainerScreen<BigCap
         if (slot.index < menu.getRows() * 9 && !stack.isEmpty()) {
             int visible = menu.exactCount(slot.index).min(BigInteger.valueOf(64)).intValue();
             ItemStack display = stack.copyWithCount(Math.max(1, visible));
+            // Hide only the vanilla count badge in the chest slot. Do not alter
+            // AbstractContainerScreen's item-hover/tooltip pipeline.
             super.renderSlotContents(graphics, display, slot, "");
             return;
         }
@@ -49,28 +51,30 @@ public final class BigCapacityChestScreen extends AbstractContainerScreen<BigCap
 
     @Override
     protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        // Keep vanilla's complete tooltip behavior for player inventory slots and while
-        // another item is carried by the cursor.
-        if (hoveredSlot == null || !hoveredSlot.hasItem()
-                || hoveredSlot.index >= menu.getRows() * 9
-                || !menu.getCarried().isEmpty()) {
-            super.renderTooltip(graphics, mouseX, mouseY);
+        // Match the machine screens: render the hovered ItemStack tooltip directly.
+        // Calling super.renderTooltip here only renders generic Screen/widget
+        // tooltips; it does NOT render an inventory slot's item tooltip.
+        if (hoveredSlot != null && hoveredSlot.hasItem()) {
+            ItemStack stack = hoveredSlot.getItem();
+            List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(stack));
+
+            if (hoveredSlot.index < menu.getRows() * 9) {
+                BigInteger count = menu.exactCount(hoveredSlot.index);
+                String shown = count.equals(BigInteger.TEN.pow(308)) ? "1E308" : String.format("%,d", count);
+                if (!lines.isEmpty()) {
+                    // Preserve the complete vanilla/modded tooltip and insert
+                    // the exact stored quantity immediately below the item name.
+                    lines.add(1, Component.literal("数量：" + shown));
+                }
+            } else {
+                // Player inventory slots retain their normal stack-count line.
+                lines = new ArrayList<>(StackCountDisplay.withCount(lines, stack));
+            }
+
+            graphics.renderTooltip(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
             return;
         }
-
-        ItemStack stack = hoveredSlot.getItem();
-        List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(stack));
-        if (lines.isEmpty()) {
-            super.renderTooltip(graphics, mouseX, mouseY);
-            return;
-        }
-
-        BigInteger count = menu.exactCount(hoveredSlot.index);
-        String shown = count.equals(BigInteger.TEN.pow(308)) ? "1E308" : String.format("%,d", count);
-        // Preserve the vanilla item name, mod-added tooltip lines, and tooltip image;
-        // only insert the chest's exact stored quantity after the item name.
-        lines.add(1, Component.literal("数量：" + shown));
-        graphics.renderTooltip(font, lines, stack.getTooltipImage(), stack, mouseX, mouseY);
+        super.renderTooltip(graphics, mouseX, mouseY);
     }
 
     @Override
