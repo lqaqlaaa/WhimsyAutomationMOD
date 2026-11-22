@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.Rotation;
@@ -29,7 +30,7 @@ public final class DeconstructionTableBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public DeconstructionTableBlock() {
-        super(BlockBehaviour.Properties.of().strength(2.5F).requiresCorrectToolForDrops());
+        super(BlockBehaviour.Properties.ofFullCopy(Blocks.CRAFTING_TABLE));
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
