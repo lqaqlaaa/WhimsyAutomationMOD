@@ -30,7 +30,7 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            return slot == INPUT_SLOT;
+            return slot == INPUT_SLOT || slot == OUTPUT_SLOT;
         }
 
         @Override
