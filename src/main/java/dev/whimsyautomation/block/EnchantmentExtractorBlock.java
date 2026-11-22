@@ -10,6 +10,8 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
@@ -92,4 +94,60 @@ public final class EnchantmentExtractorBlock extends BaseEntityBlock {
                 type, ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(),
                 EnchantmentExtractorBlockEntity::serverTick);
     }
+
+    /**
+     * Reuse the corresponding vanilla block state for all physical and culling
+     * shapes. The machine keeps its own block entity and interaction logic,
+     * but does not invent a second set of block geometry rules.
+     */
+    private BlockState vanillaShapeState(BlockState state) {
+        return Blocks.ENCHANTING_TABLE.defaultBlockState();
+    }
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getShape(
+            BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return vanillaShapeState(state).getShape(level, pos, context);
+    }
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getCollisionShape(
+            BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return vanillaShapeState(state).getCollisionShape(level, pos, context);
+    }
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getOcclusionShape(
+            BlockState state, BlockGetter level, BlockPos pos) {
+        return vanillaShapeState(state).getOcclusionShape(level, pos);
+    }
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getBlockSupportShape(
+            BlockState state, BlockGetter level, BlockPos pos) {
+        return vanillaShapeState(state).getBlockSupportShape(level, pos);
+    }
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getInteractionShape(
+            BlockState state, BlockGetter level, BlockPos pos) {
+        return vanillaShapeState(state).getInteractionShape(level, pos);
+    }
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getVisualShape(
+            BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return vanillaShapeState(state).getVisualShape(level, pos, context);
+    }
+
+    @Override
+    protected int getLightBlock(BlockState state, BlockGetter level, BlockPos pos) {
+        return vanillaShapeState(state).getLightBlock(level, pos);
+    }
+
+    @Override
+    protected boolean useShapeForLightOcclusion(BlockState state) {
+        return vanillaShapeState(state).useShapeForLightOcclusion();
+    }
+
 }
