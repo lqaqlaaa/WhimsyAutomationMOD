@@ -59,11 +59,8 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
             if (slot < 0 || slot >= getSlots() || amount <= 0) return ItemStack.EMPTY;
-            ItemStack present = getStackInSlot(slot);
-            amount = Math.min(amount, present.getMaxStackSize());
-            // Preserve the original item's complete component patch. Rebuilding
-            // the extracted stack through a helper can make it differ from an
-            // otherwise identical stack in the player's inventory, preventing merges.
+            // Automation may request the full oversized machine stack. Player-facing
+            // extraction is limited by the menu, not by this shared machine handler.
             return super.extractItem(slot, amount, simulate);
         }
     };
