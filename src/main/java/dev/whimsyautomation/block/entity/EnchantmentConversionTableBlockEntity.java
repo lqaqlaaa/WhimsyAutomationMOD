@@ -86,6 +86,13 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         return true;
     }
 
+    /** Refill the visible output after menu operations that bypass ItemStackHandler.extractItem. */
+    public void refillOutputIfNeeded() {
+        if (level != null && !level.isClientSide) {
+            refillOutputBatch();
+        }
+    }
+
     private void refillOutputBatch() {
         if (pendingCount <= 0 || pendingTemplate.isEmpty()
                 || !inventory.getStackInSlot(OUTPUT_SLOT).isEmpty()) return;
