@@ -1,18 +1,18 @@
 {
   "variants": {
     "facing=north": {
-      "model": "minecraft:block/lectern"
+      "model": "whimsy_automation:block/enchantment_conversion_table"
     },
     "facing=east": {
-      "model": "minecraft:block/lectern",
+      "model": "whimsy_automation:block/enchantment_conversion_table",
       "y": 90
     },
     "facing=south": {
-      "model": "minecraft:block/lectern",
+      "model": "whimsy_automation:block/enchantment_conversion_table",
       "y": 180
     },
     "facing=west": {
-      "model": "minecraft:block/lectern",
+      "model": "whimsy_automation:block/enchantment_conversion_table",
       "y": 270
     }
   }
