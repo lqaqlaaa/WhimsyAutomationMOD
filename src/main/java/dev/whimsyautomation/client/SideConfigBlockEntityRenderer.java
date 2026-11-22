@@ -43,6 +43,15 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
                             },
                             RenderSystem::disableBlend))
                     .setCullState(new RenderStateShard.CullStateShard(false))
+                    // Apply a small depth bias to the overlay so coplanar frame
+                    // quads do not compete with the block surface in the depth buffer.
+                    .setLayeringState(new RenderStateShard.LayeringStateShard(
+                            "whimsy_side_frame_polygon_offset",
+                            () -> {
+                                RenderSystem.enablePolygonOffset();
+                                RenderSystem.polygonOffset(-1.0F, -1.0F);
+                            },
+                            RenderSystem::disablePolygonOffset))
                     .setDepthTestState(new RenderStateShard.DepthTestStateShard("whimsy_side_frame_depth", 515))
                     .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, false))
                     .createCompositeState(false));
