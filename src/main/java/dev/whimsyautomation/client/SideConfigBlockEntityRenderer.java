@@ -1,33 +1,51 @@
 package dev.whimsyautomation.client;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.logging.LogUtils;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import org.slf4j.Logger;
-
-import java.util.Collections;
-import java.util.Set;
-import java.util.WeakHashMap;
+import net.minecraft.world.phys.AABB;
+import org.joml.Matrix4f;
 
 /**
- * Temporary diagnostic renderer for the six-direction configuration overlay.
- *
- * While the overlay is active, this deliberately draws one unmistakable red
- * top-face frame. It isolates BER invocation, pose coordinates and line-strip
- * submission from the six-face color/mode logic.
+ * Draws a visible, slightly-outset rectangular frame on each enabled machine face.
+ * The frame is submitted as POSITION_COLOR quads instead of debug line primitives,
+ * so its width is stable and it does not depend on the debug-line render path.
  */
 public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implements BlockEntityRenderer<T> {
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Set<BlockEntity> LOGGED_ENTITIES = Collections.newSetFromMap(new WeakHashMap<>());
-    private static final AABB RENDER_BOUNDS = new AABB(-0.08, -0.08, -0.08, 1.08, 1.08, 1.08);
-    private static final int TEST_RED = 0xFFFF2020;
+    private static final float EDGE = 0.035F;
+    private static final float LOW = 0.02F;
+    private static final float HIGH = 0.98F;
+    private static final float OUTSET = 0.012F;
+    private static final AABB RENDER_BOUNDS = new AABB(-0.06, -0.06, -0.06, 1.06, 1.06, 1.06);
+
+    private static final RenderType SIDE_FRAME = RenderType.create(
+            "whimsy_automation_side_frame",
+            com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
+            com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+            256,
+            false,
+            false,
+            RenderType.CompositeState.builder()
+                    .setShaderState(new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorShader))
+                    .setTransparencyState(new RenderStateShard.TransparencyStateShard(
+                            "whimsy_side_frame_translucent",
+                            () -> {
+                                RenderSystem.enableBlend();
+                                RenderSystem.defaultBlendFunc();
+                            },
+                            RenderSystem::disableBlend))
+                    .setCullState(new RenderStateShard.CullStateShard(false))
+                    .setDepthTestState(new RenderStateShard.DepthTestStateShard("whimsy_side_frame_depth", 515))
+                    .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, false))
+                    .createCompositeState(false));
 
     public SideConfigBlockEntityRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -50,26 +68,86 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
     public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffers, int packedLight, int packedOverlay) {
         BlockPos pos = blockEntity.getBlockPos();
-        if (LOGGED_ENTITIES.add(blockEntity)) {
-            LOGGER.info("SideConfig BER render called for {} ({})", pos, blockEntity.getType());
-        }
         if (!SideConfigOverlay.isActiveAt(pos)) return;
 
-        // Diagnostic only: a 3px red closed line strip on the top face.
-        // If this does not appear, the failure is outside six-face color logic.
-        VertexConsumer line = buffers.getBuffer(RenderType.debugLineStrip(3.0D));
-        PoseStack.Pose pose = poseStack.last();
-        float y = 1.035F;
-        vertex(line, pose, 0.02F, y, 0.02F);
-        vertex(line, pose, 0.98F, y, 0.02F);
-        vertex(line, pose, 0.98F, y, 0.98F);
-        vertex(line, pose, 0.02F, y, 0.98F);
-        vertex(line, pose, 0.02F, y, 0.02F);
+        VertexConsumer out = buffers.getBuffer(SIDE_FRAME);
+        Matrix4f matrix = poseStack.last().pose();
+
+        for (int side = 0; side < 6; side++) {
+            if (!SideConfigOverlay.shouldShowFace(side)) continue;
+            int argb = SideConfigOverlay.color(side);
+            float r = ((argb >>> 16) & 0xFF) / 255.0F;
+            float g = ((argb >>> 8) & 0xFF) / 255.0F;
+            float b = (argb & 0xFF) / 255.0F;
+            drawFace(out, matrix, side, r, g, b, 1.0F);
+        }
     }
 
-    private static void vertex(VertexConsumer out, PoseStack.Pose pose, float x, float y, float z) {
-        out.addVertex(pose, x, y, z)
-                .setColor(TEST_RED)
-                .setNormal(pose, 0.0F, 1.0F, 0.0F);
+    // Direction ordinal order: DOWN, UP, NORTH, SOUTH, WEST, EAST.
+    private static void drawFace(VertexConsumer out, Matrix4f m, int side,
+                                 float r, float g, float b, float a) {
+        switch (side) {
+            case 0 -> { // DOWN: X/Z plane
+                float y = -OUTSET;
+                quad(out, m, LOW, y, LOW, HIGH, y, LOW, HIGH, y, LOW + EDGE, LOW, y, LOW + EDGE, r,g,b,a);
+                quad(out, m, LOW, y, HIGH - EDGE, HIGH, y, HIGH - EDGE, HIGH, y, HIGH, LOW, y, HIGH, r,g,b,a);
+                quad(out, m, LOW, y, LOW + EDGE, LOW + EDGE, y, LOW + EDGE, LOW + EDGE, y, HIGH - EDGE, LOW, y, HIGH - EDGE, r,g,b,a);
+                quad(out, m, HIGH - EDGE, y, LOW + EDGE, HIGH, y, LOW + EDGE, HIGH, y, HIGH - EDGE, HIGH - EDGE, y, HIGH - EDGE, r,g,b,a);
+            }
+            case 1 -> { // UP
+                float y = 1.0F + OUTSET;
+                quad(out, m, LOW, y, LOW, HIGH, y, LOW, HIGH, y, LOW + EDGE, LOW, y, LOW + EDGE, r,g,b,a);
+                quad(out, m, LOW, y, HIGH - EDGE, HIGH, y, HIGH - EDGE, HIGH, y, HIGH, LOW, y, HIGH, r,g,b,a);
+                quad(out, m, LOW, y, LOW + EDGE, LOW + EDGE, y, LOW + EDGE, LOW + EDGE, y, HIGH - EDGE, LOW, y, HIGH - EDGE, r,g,b,a);
+                quad(out, m, HIGH - EDGE, y, LOW + EDGE, HIGH, y, LOW + EDGE, HIGH, y, HIGH - EDGE, HIGH - EDGE, y, HIGH - EDGE, r,g,b,a);
+            }
+            case 2 -> { // NORTH: X/Y plane
+                float z = -OUTSET;
+                quad(out, m, LOW, LOW, z, HIGH, LOW, z, HIGH, LOW + EDGE, z, LOW, LOW + EDGE, z, r,g,b,a);
+                quad(out, m, LOW, HIGH - EDGE, z, HIGH, HIGH - EDGE, z, HIGH, HIGH, z, LOW, HIGH, z, r,g,b,a);
+                quad(out, m, LOW, LOW + EDGE, z, LOW + EDGE, LOW + EDGE, z, LOW + EDGE, HIGH - EDGE, z, LOW, HIGH - EDGE, z, r,g,b,a);
+                quad(out, m, HIGH - EDGE, LOW + EDGE, z, HIGH, LOW + EDGE, z, HIGH, HIGH - EDGE, z, HIGH - EDGE, HIGH - EDGE, z, r,g,b,a);
+            }
+            case 3 -> { // SOUTH
+                float z = 1.0F + OUTSET;
+                quad(out, m, LOW, LOW, z, HIGH, LOW, z, HIGH, LOW + EDGE, z, LOW, LOW + EDGE, z, r,g,b,a);
+                quad(out, m, LOW, HIGH - EDGE, z, HIGH, HIGH - EDGE, z, HIGH, HIGH, z, LOW, HIGH, z, r,g,b,a);
+                quad(out, m, LOW, LOW + EDGE, z, LOW + EDGE, LOW + EDGE, z, LOW + EDGE, HIGH - EDGE, z, LOW, HIGH - EDGE, z, r,g,b,a);
+                quad(out, m, HIGH - EDGE, LOW + EDGE, z, HIGH, LOW + EDGE, z, HIGH, HIGH - EDGE, z, HIGH - EDGE, HIGH - EDGE, z, r,g,b,a);
+            }
+            case 4 -> { // WEST: Y/Z plane
+                float x = -OUTSET;
+                quad(out, m, x, LOW, LOW, x, LOW, HIGH, x, LOW + EDGE, HIGH, x, LOW + EDGE, LOW, r,g,b,a);
+                quad(out, m, x, HIGH - EDGE, LOW, x, HIGH - EDGE, HIGH, x, HIGH, HIGH, x, HIGH, LOW, r,g,b,a);
+                quad(out, m, x, LOW + EDGE, LOW, x, LOW + EDGE, LOW + EDGE, x, HIGH - EDGE, LOW + EDGE, x, HIGH - EDGE, LOW, r,g,b,a);
+                quad(out, m, x, LOW + EDGE, HIGH - EDGE, x, LOW + EDGE, HIGH, x, HIGH - EDGE, HIGH, x, HIGH - EDGE, HIGH - EDGE, r,g,b,a);
+            }
+            case 5 -> { // EAST
+                float x = 1.0F + OUTSET;
+                quad(out, m, x, LOW, LOW, x, LOW, HIGH, x, LOW + EDGE, HIGH, x, LOW + EDGE, LOW, r,g,b,a);
+                quad(out, m, x, HIGH - EDGE, LOW, x, HIGH - EDGE, HIGH, x, HIGH, HIGH, x, HIGH, LOW, r,g,b,a);
+                quad(out, m, x, LOW + EDGE, LOW, x, LOW + EDGE, LOW + EDGE, x, HIGH - EDGE, LOW + EDGE, x, HIGH - EDGE, LOW, r,g,b,a);
+                quad(out, m, x, LOW + EDGE, HIGH - EDGE, x, LOW + EDGE, HIGH, x, HIGH - EDGE, HIGH, x, HIGH - EDGE, HIGH - EDGE, r,g,b,a);
+            }
+            default -> { }
+        }
+    }
+
+    private static void quad(VertexConsumer out, Matrix4f m,
+                             float x0, float y0, float z0,
+                             float x1, float y1, float z1,
+                             float x2, float y2, float z2,
+                             float x3, float y3, float z3,
+                             float r, float g, float b, float a) {
+        vertex(out, m, x0, y0, z0, r, g, b, a);
+        vertex(out, m, x1, y1, z1, r, g, b, a);
+        vertex(out, m, x2, y2, z2, r, g, b, a);
+        vertex(out, m, x3, y3, z3, r, g, b, a);
+    }
+
+    private static void vertex(VertexConsumer out, Matrix4f m,
+                               float x, float y, float z,
+                               float r, float g, float b, float a) {
+        out.addVertex(m, x, y, z).setColor(r, g, b, a);
     }
 }
