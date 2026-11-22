@@ -1,6 +1,7 @@
 package dev.whimsyautomation.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.logging.LogUtils;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -9,6 +10,10 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import org.slf4j.Logger;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Temporary diagnostic renderer for the six-direction configuration overlay.
@@ -18,6 +23,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
  * submission from the six-face color/mode logic.
  */
 public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implements BlockEntityRenderer<T> {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Set<BlockPos> LOGGED_POSITIONS = new HashSet<>();
     private static final AABB RENDER_BOUNDS = new AABB(-0.08, -0.08, -0.08, 1.08, 1.08, 1.08);
     private static final int TEST_RED = 0xFFFF2020;
 
@@ -41,7 +48,11 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
     @Override
     public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffers, int packedLight, int packedOverlay) {
-        if (!SideConfigOverlay.isActiveAt(blockEntity.getBlockPos())) return;
+        BlockPos pos = blockEntity.getBlockPos();
+        if (LOGGED_POSITIONS.add(pos.immutable())) {
+            LOGGER.info("SideConfig BER render called for {} ({})", pos, blockEntity.getType());
+        }
+        if (!SideConfigOverlay.isActiveAt(pos)) return;
 
         // Diagnostic only: a 3px red closed line strip on the top face.
         // If this does not appear, the failure is outside six-face color logic.
