@@ -1,7 +1,10 @@
 package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
+import dev.whimsyautomation.network.ConfirmItemCopyPayload;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -9,13 +12,36 @@ import net.minecraft.world.entity.player.Inventory;
 
 public final class EnchantmentConversionTableScreen extends AbstractContainerScreen<EnchantmentConversionTableMenu> {
     private static final ResourceLocation SLOT = ResourceLocation.withDefaultNamespace("container/slot");
+    private EditBox amountInput;
 
     public EnchantmentConversionTableScreen(EnchantmentConversionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 176;
-        imageHeight = 166;
-        inventoryLabelY = 72;
+        imageHeight = 186;
+        inventoryLabelY = 82;
         titleLabelY = 6;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        amountInput = new EditBox(font, leftPos + 57, topPos + 49, 58, 18,
+                Component.translatable("screen.whimsy_automation.copy_count"));
+        amountInput.setValue("64");
+        amountInput.setMaxLength(7);
+        amountInput.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
+        addRenderableWidget(amountInput);
+
+        addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.confirm_copy"), button -> {
+            try {
+                int count = Integer.parseInt(amountInput.getValue());
+                if (count >= 1 && count <= 1_000_000) {
+                    ConfirmItemCopyPayload.send(menu.containerId, menu.getBlockPos(), count);
+                }
+            } catch (NumberFormatException ignored) {
+                // An empty or out-of-range value is not sent to the server.
+            }
+        }).bounds(leftPos + 57, topPos + 72, 62, 20).build());
     }
 
     private static void panel(GuiGraphics g, int x, int y, int w, int h) {
@@ -33,20 +59,17 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        // Do not paint the complete vanilla smithing screen over this machine:
-        // it contains a decorative hammer/template glyph that covers our real
-        // slot. Build only the panel and the four slots this menu actually owns.
         panel(graphics, leftPos, topPos, imageWidth, imageHeight);
-        drawSlot(graphics, leftPos + 8, topPos + 48);
-        drawSlot(graphics, leftPos + 26, topPos + 48);
-        drawSlot(graphics, leftPos + 44, topPos + 48);
-        drawSlot(graphics, leftPos + 134, topPos + 48);
-
+        drawSlot(graphics, leftPos + 28, topPos + 50);
+        drawSlot(graphics, leftPos + 132, topPos + 50);
         for (int row = 0; row < 3; row++)
             for (int col = 0; col < 9; col++)
-                drawSlot(graphics, leftPos + 8 + col * 18, topPos + 84 + row * 18);
+                drawSlot(graphics, leftPos + 8 + col * 18, topPos + 104 + row * 18);
         for (int col = 0; col < 9; col++)
-            drawSlot(graphics, leftPos + 8 + col * 18, topPos + 142);
+            drawSlot(graphics, leftPos + 8 + col * 18, topPos + 162);
+        graphics.drawString(font, Component.translatable("screen.whimsy_automation.copy_count"),
+                leftPos + 57, topPos + 39, 0x404040, false);
+        graphics.drawString(font, Component.literal("→"), leftPos + 91, topPos + 52, 0x404040, false);
     }
 
     @Override
