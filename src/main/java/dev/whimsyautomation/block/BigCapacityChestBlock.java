@@ -7,6 +7,7 @@ import dev.whimsyautomation.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -38,35 +39,42 @@ public final class BigCapacityChestBlock extends ChestBlock {
         return new BigCapacityChestBlockEntity(pos, state);
     }
 
-    @Override
-    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (ChestBlock.isChestBlockedAt(level, pos)) {
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-        MenuProvider provider = getMenuProvider(state, level, pos);
-        if (provider != null) {
-            if (!level.isClientSide) {
-                player.openMenu(provider, buffer -> buffer.writeBlockPos(pos));
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-        return InteractionResult.PASS;
-    }
-
+    // Keep the vanilla chest interaction path; only the menu provider is specialized.
     @Override
     protected MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         if (ChestBlock.isChestBlockedAt(level, pos)) return null;
-        if (!(level.getBlockEntity(pos) instanceof BigCapacityChestBlockEntity first)) return null;
+        if (!(level.getBlockEntity(pos) instanceof BigCapacityChestBlockEntity clicked)) return null;
 
-        Component title = Component.translatable("container.whimsy_automation.big_capacity_chest");
-        if (state.getValue(BlockStateProperties.CHEST_TYPE) == ChestType.SINGLE) {
-            return new SimpleMenuProvider((id, inv, player) ->
-                    new BigCapacityChestMenu(id, inv, first, null, pos, 3), title);
+        int rows = state.getValue(BlockStateProperties.CHEST_TYPE) == ChestType.SINGLE ? 3 : 6;
+        Container vanillaContainer = ChestBlock.getContainer(this, state, level, pos, false);
+        if (vanillaContainer == null) return null;
+
+        BigCapacityChestBlockEntity first = clicked;
+        BigCapacityChestBlockEntity second = null;
+        BlockPos firstPos = pos;
+        BlockPos secondPos = null;
+        if (rows == 6) {
+            Direction connected = ChestBlock.getConnectedDirection(state);
+            secondPos = pos.relative(connected);
+            if (!(level.getBlockEntity(secondPos) instanceof BigCapacityChestBlockEntity partner)) return null;
+            second = partner;
+
+            // Vanilla double-chest inventory order is LEFT then RIGHT.
+            if (state.getValue(BlockStateProperties.CHEST_TYPE) == ChestType.RIGHT) {
+                first = partner;
+                second = clicked;
+                firstPos = secondPos;
+                secondPos = pos;
+            }
         }
 
-        Direction direction = ChestBlock.getConnectedDirection(state);
-        if (!(level.getBlockEntity(pos.relative(direction)) instanceof BigCapacityChestBlockEntity second)) return null;
+        Component title = Component.translatable("container.whimsy_automation.big_capacity_chest");
+        BigCapacityChestBlockEntity menuFirst = first;
+        BigCapacityChestBlockEntity menuSecond = second;
+        BlockPos menuFirstPos = firstPos;
+        BlockPos menuSecondPos = secondPos;
         return new SimpleMenuProvider((id, inv, player) ->
-                new BigCapacityChestMenu(id, inv, first, second, pos, 6), title);
+                new BigCapacityChestMenu(id, inv, vanillaContainer, menuFirst, menuSecond,
+                        menuFirstPos, menuSecondPos, rows), title);
     }
 }
