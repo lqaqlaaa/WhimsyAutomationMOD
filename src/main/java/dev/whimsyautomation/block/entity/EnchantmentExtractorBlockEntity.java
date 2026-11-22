@@ -3,6 +3,7 @@ package dev.whimsyautomation.block.entity;
 import dev.whimsyautomation.menu.EnchantmentExtractorMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
+import dev.whimsyautomation.util.OversizedItemStackCodec;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
