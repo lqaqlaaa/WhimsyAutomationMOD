@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.saveddata.DataFixTypes;
+import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.ArrayList;
@@ -73,7 +73,8 @@ public final class RemoteTransferNetworkData extends SavedData {
 
     public boolean addMember(UUID networkId, Endpoint endpoint) {
         Network network = networks.get(networkId);
-        if (network == null || network.members().contains(endpoint)) return false;
+        if (network == null || network.members().stream().anyMatch(member ->
+                member.dimension().equals(endpoint.dimension()) && member.pos().equals(endpoint.pos()) && member.kind() == endpoint.kind())) return false;
         network.members().add(endpoint);
         setDirty();
         return true;
