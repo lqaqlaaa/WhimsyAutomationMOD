@@ -12,6 +12,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.ChestType;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.math.BigInteger;
@@ -45,15 +49,75 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
     }
     @Override public int getContainerSize() { return 27; }
     @Override public int getMaxStackSize() { return Integer.MAX_VALUE; }
+    /**
+     * Container#getItem must return the live stack reference. Vanilla hopper insertion
+     * merges by mutating that returned stack in-place and then calling setChanged();
+     * returning a copy silently loses every merged item.
+     */
     @Override public ItemStack getItem(int slot) {
-        if (!valid(slot) || amounts[slot].signum() <= 0 || representatives.get(slot).isEmpty()) return ItemStack.EMPTY;
-        return representatives.get(slot).copyWithCount(1);
+        if (!valid(slot)) return ItemStack.EMPTY;
+        reconcileSlot(slot);
+        return representatives.get(slot);
     }
+
     public ItemStack getDisplayItem(int slot) {
-        if (!valid(slot) || amounts[slot].signum() <= 0 || representatives.get(slot).isEmpty()) return ItemStack.EMPTY;
+        if (!valid(slot)) return ItemStack.EMPTY;
+        reconcileSlot(slot);
+        if (amounts[slot].signum() <= 0 || representatives.get(slot).isEmpty()) return ItemStack.EMPTY;
         return representatives.get(slot).copyWithCount(amounts[slot].min(BigInteger.valueOf(64)).intValue());
     }
-    public BigInteger getExactCount(int slot) { return valid(slot) ? amounts[slot] : BigInteger.ZERO; }
+
+    public ItemStack getAutomationStack(int slot) {
+        if (!valid(slot)) return ItemStack.EMPTY;
+        reconcileSlot(slot);
+        if (amounts[slot].signum() <= 0 || representatives.get(slot).isEmpty()) return ItemStack.EMPTY;
+        return representatives.get(slot).copyWithCount(amounts[slot].min(BigInteger.valueOf(Integer.MAX_VALUE)).intValue());
+    }
+
+    public BigInteger getExactCount(int slot) {
+        if (!valid(slot)) return BigInteger.ZERO;
+        reconcileSlot(slot);
+        return amounts[slot];
+    }
+
+    private void reconcileSlot(int slot) {
+        if (!valid(slot)) return;
+        ItemStack stack = representatives.get(slot);
+        if (stack == ItemStack.EMPTY) {
+            if (amounts[slot].signum() <= 0) amounts[slot] = BigInteger.ZERO;
+            return;
+        }
+        int delta = stack.getCount() - 1;
+        if (delta == 0) return;
+        BigInteger next = amounts[slot].add(BigInteger.valueOf(delta)).max(BigInteger.ZERO).min(MAX_COUNT);
+        amounts[slot] = next;
+        if (next.signum() <= 0 || stack.isEmpty()) {
+            representatives.set(slot, ItemStack.EMPTY);
+            amounts[slot] = BigInteger.ZERO;
+        } else {
+            stack.setCount(1);
+        }
+    }
+
+    private void reconcileAll() {
+        for (int slot = 0; slot < 27; slot++) reconcileSlot(slot);
+    }
+
+    /** Returns a single- or double-chest automation view, ordered LEFT then RIGHT. */
+    public IItemHandler getAutomationItemHandler(net.minecraft.core.Direction side) {
+        if (level == null || !getBlockState().hasProperty(BlockStateProperties.CHEST_TYPE)
+                || getBlockState().getValue(BlockStateProperties.CHEST_TYPE) == ChestType.SINGLE) {
+            return new BigCapacityChestItemHandler(this, null);
+        }
+        BlockState state = getBlockState();
+        BlockPos partnerPos = worldPosition.relative(ChestBlock.getConnectedDirection(state));
+        if (!(level.getBlockEntity(partnerPos) instanceof BigCapacityChestBlockEntity partner)) {
+            return new BigCapacityChestItemHandler(this, null);
+        }
+        return state.getValue(BlockStateProperties.CHEST_TYPE) == ChestType.RIGHT
+                ? new BigCapacityChestItemHandler(partner, this)
+                : new BigCapacityChestItemHandler(this, partner);
+    }
     @Override public ItemStack removeItem(int slot, int amount) {
         if (!valid(slot) || amount <= 0 || amounts[slot].signum() <= 0) return ItemStack.EMPTY;
         int removed = amounts[slot].min(BigInteger.valueOf(amount)).intValue();
@@ -66,18 +130,10 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
     @Override public ItemStack removeItemNoUpdate(int slot) { return removeItem(slot, Integer.MAX_VALUE); }
     @Override public void setItem(int slot, ItemStack stack) {
         if (!valid(slot)) return;
+        reconcileSlot(slot);
         if (stack == null || stack.isEmpty()) {
             representatives.set(slot, ItemStack.EMPTY);
             amounts[slot] = BigInteger.ZERO;
-            setChanged();
-            return;
-        }
-        ItemStack old = representatives.get(slot);
-        if (!old.isEmpty() && ItemStack.isSameItemSameComponents(old, stack)) {
-            // Container slots expose one representative item; vanilla slot operations
-            // write back the new visible count. Only the increase is added.
-            int delta = Math.max(0, stack.getCount() - 1);
-            if (delta > 0) amounts[slot] = amounts[slot].add(BigInteger.valueOf(delta)).min(MAX_COUNT);
         } else {
             representatives.set(slot, stack.copyWithCount(1));
             amounts[slot] = BigInteger.valueOf(stack.getCount()).min(MAX_COUNT);
@@ -90,6 +146,7 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
      */
     public int insertExact(int slot, ItemStack stack, int requested) {
         if (!valid(slot) || stack == null || stack.isEmpty() || requested <= 0) return 0;
+        reconcileSlot(slot);
         ItemStack old = representatives.get(slot);
         if (!old.isEmpty() && !ItemStack.isSameItemSameComponents(old, stack)) return 0;
         int accepted = BigInteger.valueOf(requested)
@@ -108,6 +165,7 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
      */
     public void setGuiItem(int slot, ItemStack stack) {
         if (!valid(slot)) return;
+        reconcileSlot(slot);
         if (stack == null || stack.isEmpty()) {
             representatives.set(slot, ItemStack.EMPTY);
             amounts[slot] = BigInteger.ZERO;
@@ -137,6 +195,7 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
      */
     public void dropAllContents(Level level, BlockPos pos) {
         if (level == null || level.isClientSide) return;
+        reconcileAll();
         double x = pos.getX() + 0.5D;
         double y = pos.getY() + 0.5D;
         double z = pos.getZ() + 0.5D;
@@ -158,6 +217,7 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
         setChanged();
     }
     @Override public boolean isEmpty() {
+        reconcileAll();
         for (BigInteger amount : amounts) if (amount.signum() > 0) return false;
         return true;
     }
@@ -175,12 +235,14 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
     private boolean valid(int slot) { return slot >= 0 && slot < 27; }
 
     @Override public void setChanged() {
+        reconcileAll();
         super.setChanged();
         if (level != null && !level.isClientSide)
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
     }
 
     @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        reconcileAll();
         super.saveAdditional(tag, registries);
         CompoundTag exact = new CompoundTag();
         for (int i = 0; i < 27; i++) if (amounts[i].signum() > 0)
