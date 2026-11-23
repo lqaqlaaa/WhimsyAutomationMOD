@@ -144,7 +144,9 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         internalInventoryUpdate = true;
         try {
             inventory.setStackInSlot(INPUT_SLOT, ItemStack.EMPTY);
-            inventory.setStackInSlot(OUTPUT_SLOT, input.copyWithCount(count));
+            ItemStack output = input.copyWithCount(count);
+            dev.whimsyautomation.util.PlayerStackRules.normalizeStackLimit(output);
+            inventory.setStackInSlot(OUTPUT_SLOT, output);
         } finally { internalInventoryUpdate = false; }
         setChanged();
         return true;
