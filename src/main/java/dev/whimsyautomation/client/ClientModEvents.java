@@ -3,6 +3,7 @@ package dev.whimsyautomation.client;
 import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.client.BigCapacityChestScreen;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -16,6 +17,7 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
+        event.register(ModMenus.BIG_CAPACITY_CHEST.get(), BigCapacityChestScreen::new);
         event.register(ModMenus.ENCHANTMENT_EXTRACTOR.get(), EnchantmentExtractorScreen::new);
         event.register(ModMenus.DECONSTRUCTION_TABLE.get(), DeconstructionTableScreen::new);
         event.register(ModMenus.ENCHANTMENT_CONVERSION_TABLE.get(), EnchantmentConversionTableScreen::new);

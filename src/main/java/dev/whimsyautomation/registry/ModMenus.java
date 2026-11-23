@@ -2,6 +2,7 @@ package dev.whimsyautomation.registry;
 
 import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.menu.DeconstructionTableMenu;
+import dev.whimsyautomation.menu.BigCapacityChestMenu;
 import dev.whimsyautomation.menu.EnchantmentExtractorMenu;
 import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
 import net.minecraft.core.registries.Registries;
@@ -13,6 +14,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class ModMenus {
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(Registries.MENU, WhimsyAutomation.MOD_ID);
+
+    public static final DeferredHolder<MenuType<?>, MenuType<BigCapacityChestMenu>> BIG_CAPACITY_CHEST =
+            MENUS.register("big_capacity_chest", () -> IMenuTypeExtension.create(BigCapacityChestMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<EnchantmentExtractorMenu>> ENCHANTMENT_EXTRACTOR =
             MENUS.register("enchantment_extractor", () -> IMenuTypeExtension.create(EnchantmentExtractorMenu::new));
