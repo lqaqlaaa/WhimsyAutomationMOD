@@ -139,10 +139,9 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     protected void init() {
         super.init();
-        // Face-color guidance is enabled by default whenever this machine GUI opens.
-        // Previously isActive() was false on a fresh open, which silently hid all six colored face frames.
-        showFaceColors = menu.machine() != null;
-        syncSideOverlay();
+        // Read the preference directly from this machine's client-side block-entity instance.
+        showFaceColors = menu.machine() instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity machine
+                && machine.isFaceColorDisplayEnabled();
         topPos -= 27;
         layoutEditor = new UiLayoutEditor("enchantment_extractor");
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
@@ -246,15 +245,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
 
     }
 
-    private void syncSideOverlay() {
-        if (menu.machine() == null) return;
-        // Read the six modes from the menu's DataSlots. Those values are synced
-        // from the server and are authoritative on the client while the screen is open.
-        int[] sideModes = new int[6];
-        for (int side = 0; side < sideModes.length; side++) {
-            sideModes[side] = menu.getSideMode(side);
+    private void syncFaceColorDisplayPreference() {
+        if (menu.machine() instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity machine) {
+            machine.setFaceColorDisplayEnabled(showFaceColors);
         }
-        SideConfigOverlay.show(menu.machine(), sideModes, showFaceColors);
     }
 
     private void renderSideConfig(GuiGraphics graphics, double mouseX, double mouseY, float partialTick) {
@@ -289,10 +283,13 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
             if (action == 7) showSideConfig = false;
             else if (action >= 0 && action < 6) {
                 send(10 + action);
-                SideConfigOverlay.cycleFace(menu.machine(), action);
+                if (menu.machine() instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity machine) {
+                net.minecraft.core.Direction side = net.minecraft.core.Direction.values()[action];
+                machine.setSideModeForDisplay(side, (machine.getSideMode(side) + 1) % 3);
+            }
             } else if (action == 6) {
                 showFaceColors = !showFaceColors;
-                syncSideOverlay();
+                syncFaceColorDisplayPreference();
             }
             return true;
         }
