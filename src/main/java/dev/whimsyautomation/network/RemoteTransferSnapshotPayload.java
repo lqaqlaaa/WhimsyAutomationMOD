@@ -15,8 +15,12 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
     public static final Type<RemoteTransferSnapshotPayload> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath("whimsy_automation", "remote_transfer_snapshot"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RemoteTransferSnapshotPayload> STREAM_CODEC =
-            StreamCodec.of((buf, p) -> buf.writeNbt(p.data()), buf -> new RemoteTransferSnapshotPayload(
-                    buf.readNbt() == null ? new CompoundTag() : buf.readNbt()));
+            StreamCodec.of((buf, p) -> buf.writeNbt(p.data()), RemoteTransferSnapshotPayload::decode);
+    private static RemoteTransferSnapshotPayload decode(RegistryFriendlyByteBuf buf) {
+        CompoundTag tag = buf.readNbt();
+        return new RemoteTransferSnapshotPayload(tag == null ? new CompoundTag() : tag);
+    }
+
     @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static RemoteTransferSnapshotPayload from(RemoteTransferNetworkData source, UUID owner) {

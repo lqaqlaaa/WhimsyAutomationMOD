@@ -27,7 +27,6 @@ public final class RemoteTransferScreen extends Screen {
     public RemoteTransferScreen applySnapshot(CompoundTag data) {
         snapshot = data.copy();
         rebuildData();
-        if (minecraft != null) init(minecraft, width, height);
         return this;
     }
 
