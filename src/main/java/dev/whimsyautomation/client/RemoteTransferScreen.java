@@ -96,14 +96,14 @@ public final class RemoteTransferScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("应用输入过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null)
                     send(9,selectedNetwork,selectedConnection,null,(filterModeInput<<1)|(exactInput?8:0),filterBox.getValue()); })
-                .bounds(106,height-95,92,20).build());
+                .bounds(106,height-119,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输出过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null)
                     send(9,selectedNetwork,selectedConnection,null,1|(filterModeOutput<<1)|(exactOutput?8:0),filterBox.getValue()); })
-                .bounds(10,height-119,Math.max(70,width/2-16),20).build());
+                .bounds(10,height-119,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输入精确过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null) send(10,selectedNetwork,selectedConnection,null,0,""); })
-                .bounds(width/2+6,height-119,Math.max(70,width/2-16),20).build());
+                .bounds(width/2+6,height-143,Math.max(70,width/2-16),20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输出精确过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null) send(10,selectedNetwork,selectedConnection,null,1,""); })
                 .bounds(width/2+6,height-149,Math.max(70,width/2-130),20).build());
@@ -136,7 +136,7 @@ public final class RemoteTransferScreen extends Screen {
             String line=c.getString("Direction")+"  "+c.getUUID("Source").toString().substring(0,8)+" → "+c.getUUID("Target").toString().substring(0,8);
             g.drawString(font,line,width/2+7,y,0xCFCFCF); y+=16;
         }
-        g.drawString(font,Component.translatable("screen.whimsy_automation.remote.select_hint"),12,height-125,0xAAAAAA);
+        g.drawString(font,Component.translatable("screen.whimsy_automation.remote.select_hint"),12,height-149,0xAAAAAA);
         super.render(g,mouseX,mouseY,partialTick);
     }
 
