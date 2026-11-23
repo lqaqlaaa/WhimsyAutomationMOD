@@ -347,11 +347,11 @@ public final class RemoteTransferScreen extends Screen {
             UUID id = member.getUUID("Id");
             ItemStack stack = memberStack(member);
             g.renderItem(stack, contentX + 9, y + 5);
-            g.drawString(font, trim(memberLabel(member), 28), contentX + 31, y + 5,
+            g.drawString(font, trim(memberLabel(member), 16), contentX + 31, y + 5,
                     id.equals(selectedMember) ? 0xFF70AEFF : TEXT, false);
-            g.drawString(font, member.getString("Dimension") + "  " +
-                    BlockPos.of(member.getLong("Pos")).toShortString(), contentX + 31, y + 17, MUTED, false);
-            int color = COLORS[row % COLORS.length];
+            g.drawString(font, trim(member.getString("Dimension") + " " +
+                    BlockPos.of(member.getLong("Pos")).toShortString(), 22), contentX + 31, y + 17, MUTED, false);
+            int color = COLORS[(row + memberScroll) % COLORS.length];
             g.fill(contentX + contentW - 7, y + 2, contentX + contentW - 4, rowBottom - 2, color);
         }
         if (members.isEmpty()) g.drawString(font, "当前网络还没有成员。点击上方按钮后，Shift+右键选择方块或容器。",
@@ -408,6 +408,21 @@ public final class RemoteTransferScreen extends Screen {
     private static String trim(String value, int max) {
         if (value == null) return "";
         return value.length() <= max ? value : value.substring(0, Math.max(1, max - 1)) + "…";
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && activePage == 1 && mouseX >= contentX + 4
+                && mouseX < contentX + contentW - 58 && mouseY >= listTop && mouseY < height - 8) {
+            int row = (int) ((mouseY - listTop) / rowH);
+            int index = memberScroll + row;
+            if (index >= 0 && index < members.size()) {
+                selectedMember = members.get(index).getUUID("Id");
+                init();
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
