@@ -25,12 +25,14 @@ import java.util.UUID;
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class RemoteTransferTicker {
     private static final int MAX_ITEMS_PER_LINK_PER_TICK = 64;
+    private static long serverTickCounter;
 
     private RemoteTransferTicker() {}
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
+        long tick = ++serverTickCounter;
         RemoteTransferNetworkData data = RemoteTransferNetworkData.get(server);
         for (RemoteTransferNetworkData.Network network : data.networks()) {
             Map<UUID, RemoteTransferNetworkData.Endpoint> members = new HashMap<>();
@@ -43,13 +45,17 @@ public final class RemoteTransferTicker {
                 RemoteTransferNetworkData.Endpoint target = members.get(connection.targetMember());
                 if (source == null || target == null) continue;
 
-                if (connection.direction() == RemoteTransferNetworkData.TransferDirection.OUTPUT
-                        || connection.direction() == RemoteTransferNetworkData.TransferDirection.BIDIRECTIONAL) {
+                if (connection.direction() == RemoteTransferNetworkData.TransferDirection.OUTPUT) {
                     transfer(server, source, target, connection.outputFilter(), connection.inputFilter());
-                }
-                if (connection.direction() == RemoteTransferNetworkData.TransferDirection.INPUT
-                        || connection.direction() == RemoteTransferNetworkData.TransferDirection.BIDIRECTIONAL) {
+                } else if (connection.direction() == RemoteTransferNetworkData.TransferDirection.INPUT) {
                     transfer(server, target, source, connection.inputFilter(), connection.outputFilter());
+                } else {
+                    // Do not immediately pull back items just inserted in the
+                    // opposite direction during the same tick.
+                    if ((tick & 1L) == 0L)
+                        transfer(server, source, target, connection.outputFilter(), connection.inputFilter());
+                    else
+                        transfer(server, target, source, connection.inputFilter(), connection.outputFilter());
                 }
             }
         }

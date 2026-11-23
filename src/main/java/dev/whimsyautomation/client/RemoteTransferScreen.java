@@ -23,6 +23,7 @@ public final class RemoteTransferScreen extends Screen {
     private int connectionDirection;
     private int filterModeInput, filterModeOutput;
     private boolean exactInput, exactOutput;
+    private boolean showConnections;
     private List<CompoundTag> networks = List.of(), members = List.of(), links = List.of();
 
     public RemoteTransferScreen() { super(Component.translatable("screen.whimsy_automation.remote.title")); }
@@ -66,6 +67,9 @@ public final class RemoteTransferScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.remote.rename"),
                 b -> { if(selectedNetwork!=null) send(2, selectedNetwork, null, null, 0, nameBox.getValue()); })
                 .bounds(154,height-23,48,20).build());
+        addRenderableWidget(Button.builder(Component.literal("成员 / 连接"),
+                b -> { showConnections = !showConnections; b.setMessage(Component.literal(showConnections ? "显示成员" : "显示连接")); })
+                .bounds(width-92, 20, 82, 16).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.remote.delete"),
                 b -> { if(selectedNetwork!=null) { send(3,selectedNetwork,null,null,0,""); selectedNetwork=null; } })
                 .bounds(204,height-23,48,20).build());
@@ -147,16 +151,22 @@ public final class RemoteTransferScreen extends Screen {
                     selectedNetwork=networks.get(index).getUUID("Id");
                     selectedMember=null; selectedSecond=null; selectedConnection=null; rebuildData();
                 }
-            } else if(x<width-120 && y<38+members.size()*18) {
+            } else if(x>=width/2) {
                 int index=(int)((y-38)/18);
-                if(index>=0 && index<members.size()) {
+                if (!showConnections && index>=0 && index<members.size()) {
                     UUID id=members.get(index).getUUID("Id");
-                    if(selectedMember==null || selectedMember.equals(id)) selectedMember=id;
+                    if(id.equals(selectedMember)) selectedSecond=null;
+                    else if(id.equals(selectedSecond)) selectedSecond=null;
+                    else if(selectedMember==null) selectedMember=id;
                     else selectedSecond=id;
+                } else if(showConnections && index>=0 && index<links.size()) {
+                    selectedConnection=links.get(index).getUUID("Id");
+                    CompoundTag link=links.get(index);
+                    filterModeInput=java.util.Arrays.asList("NONE","WHITELIST","BLACKLIST").indexOf(link.getString("InputMode"));
+                    filterModeOutput=java.util.Arrays.asList("NONE","WHITELIST","BLACKLIST").indexOf(link.getString("OutputMode"));
+                    exactInput=link.getBoolean("InputExact"); exactOutput=link.getBoolean("OutputExact");
+                    filterBox.setValue(link.getString("InputItems"));
                 }
-            } else if(x>=width/2 && y>=Math.max(164,38+members.size()*18+18)) {
-                int index=(int)((y-Math.max(164,38+members.size()*18+18))/16);
-                if(index>=0 && index<links.size()) selectedConnection=links.get(index).getUUID("Id");
             }
         }
         return super.mouseClicked(x,y,button);
