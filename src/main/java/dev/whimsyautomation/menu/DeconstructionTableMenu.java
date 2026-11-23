@@ -114,7 +114,7 @@ public final class DeconstructionTableMenu extends AbstractContainerMenu {
                 int actual = actualSlot(slot);
                 machine.ensureOutputInventorySize(actual + 1);
                 ItemStack present = machine.getInventory().getStackInSlot(actual);
-                int playerAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
+                int playerAmount = Math.min(amount, PlayerStackRules.getPlayerMaxStackSize(present));
                 ItemStack extracted = machine.getInventory().extractItem(actual, playerAmount, simulate);
                 return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
             }
