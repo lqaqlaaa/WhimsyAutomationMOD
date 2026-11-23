@@ -139,7 +139,10 @@ public final class EnchantmentExtractorScreen extends AbstractContainerScreen<En
     @Override
     protected void init() {
         super.init();
-        showFaceColors = menu.machine() != null && SideConfigOverlay.isActive(menu.machine());
+        // Face-color guidance is enabled by default whenever this machine GUI opens.
+        // Previously isActive() was false on a fresh open, which silently hid all six colored face frames.
+        showFaceColors = menu.machine() != null;
+        syncSideOverlay();
         topPos -= 27;
         layoutEditor = new UiLayoutEditor("enchantment_extractor");
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
