@@ -9,6 +9,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
 
@@ -255,6 +257,10 @@ public final class RemoteTransferNetworkData extends SavedData {
                 case WHITELIST -> contains;
                 case BLACKLIST -> !contains;
             };
+        }
+
+        public boolean allows(ItemStack stack) {
+            return !stack.isEmpty() && allows(BuiltInRegistries.ITEM.getKey(stack.getItem()));
         }
     }
 
