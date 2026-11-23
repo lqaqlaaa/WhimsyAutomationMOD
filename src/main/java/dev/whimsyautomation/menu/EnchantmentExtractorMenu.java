@@ -117,7 +117,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 int actual = actualSlot(slot);
                 if (actual >= machine.getInventory().getSlots()) return ItemStack.EMPTY;
                 ItemStack present = machine.getInventory().getStackInSlot(actual);
-                int playerAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
+                int playerAmount = Math.min(amount, PlayerStackRules.getPlayerMaxStackSize(present));
                 ItemStack extracted = machine.getInventory().extractItem(actual, playerAmount, simulate);
                 return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
             }
@@ -160,7 +160,7 @@ public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
                 int actual = actualSlot(slot);
                 if (actual >= machine.getInputBuffer().getSlots()) return ItemStack.EMPTY;
                 ItemStack present = machine.getInputBuffer().getStackInSlot(actual);
-                int legalAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
+                int legalAmount = Math.min(amount, PlayerStackRules.getPlayerMaxStackSize(present));
                 ItemStack extracted = machine.getInputBuffer().extractItem(actual, legalAmount, simulate);
                 if (!simulate && !extracted.isEmpty()) machine.compactInputBuffer();
                 return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
