@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
  */
 public final class SideConfigPanel {
     private static final String[] NAMES = {"下", "上", "北", "南", "西", "东"};
+    private static final String[] COLOR_NAMES = {"红", "绿", "蓝", "黄", "紫", "青"};
     private static final String[] MODES = {"关闭", "输入", "输出"};
 
     private SideConfigPanel() {}
@@ -51,7 +52,7 @@ public final class SideConfigPanel {
             int color = SideConfigOverlay.color(i);
             graphics.fill(lx, ly + 1, lx + 8, ly + 9, 0xFF303030);
             graphics.fill(lx + 1, ly + 2, lx + 7, ly + 8, color);
-            graphics.drawString(font, Component.literal(NAMES[i]), lx + 11, ly, 0xFF202020, false);
+            graphics.drawString(font, Component.literal(NAMES[i] + " " + COLOR_NAMES[i]), lx + 11, ly, 0xFF202020, false);
         }
         Button.builder(Component.literal("显示六面颜色框：" + (showFaceColors ? "开启" : "关闭")), b -> {})
                 .bounds(panelX + 8, panelY + 143, 160, 18).build()
