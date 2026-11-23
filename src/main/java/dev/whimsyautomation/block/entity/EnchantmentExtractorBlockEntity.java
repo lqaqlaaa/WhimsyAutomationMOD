@@ -365,7 +365,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             int mode = sideModes[index];
             sidedHandlers[index] = new SidedMachineItemHandler(inventory, automationInputHandler, OUTPUT_START,
                     mode == 1, mode == 2,
-                    () -> mode == 2 && !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode || persistentOutputMode);
+                    () -> mode == 2 && !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> true);
         }
         return sidedHandlers[index];
     }
