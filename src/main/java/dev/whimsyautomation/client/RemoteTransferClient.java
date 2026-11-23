@@ -9,6 +9,7 @@ public final class RemoteTransferClient {
         Minecraft.getInstance().setScreen(new RemoteTransferScreen());
     }
     public static void applySnapshot(CompoundTag data) {
+        RemoteTransferOverlay.applySnapshot(data);
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen instanceof RemoteTransferScreen screen) screen.applySnapshot(data);
         else minecraft.setScreen(new RemoteTransferScreen(data));
