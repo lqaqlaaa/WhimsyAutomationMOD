@@ -75,7 +75,7 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
             @Override
             public ItemStack remove(int amount) {
                 ItemStack present = handler.getStackInSlot(EnchantmentConversionTableBlockEntity.OUTPUT_SLOT);
-                int playerAmount = Math.min(amount, dev.whimsyautomation.util.PlayerStackRules.getVanillaMaxStackSize(present));
+                int playerAmount = Math.min(amount, dev.whimsyautomation.util.PlayerStackRules.getPlayerMaxStackSize(present));
                 ItemStack extracted = handler.extractItem(EnchantmentConversionTableBlockEntity.OUTPUT_SLOT, playerAmount, false);
                 return dev.whimsyautomation.util.PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
             }
@@ -125,16 +125,16 @@ public final class EnchantmentConversionTableMenu extends AbstractContainerMenu 
             // Never shift-click an oversized machine stack directly into player
             // inventory slots. Transfer at most one legal stack and debit the
             // exact accepted amount from the authoritative oversized inventory.
-            int legalAmount = Math.min(source.getCount(), source.getMaxStackSize());
-            // Use a count-adjusted copy without stripping or rewriting components.
-            ItemStack moving = source.copyWithCount(legalAmount);
+            int legalAmount = Math.min(source.getCount(),
+                    dev.whimsyautomation.util.PlayerStackRules.getPlayerMaxStackSize(source));
+            ItemStack moving = dev.whimsyautomation.util.PlayerStackRules.copyForPlayer(source, legalAmount);
             if (!moveItemStackTo(moving, 2, slots.size(), true)) return ItemStack.EMPTY;
             int moved = legalAmount - moving.getCount();
             if (moved <= 0 || machine == null) return ItemStack.EMPTY;
             ItemStack extracted = machine.getInventory().extractItem(
                     EnchantmentConversionTableBlockEntity.OUTPUT_SLOT, moved, false);
             if (extracted.getCount() != moved) return ItemStack.EMPTY;
-            return original.copyWithCount(moved);
+            return dev.whimsyautomation.util.PlayerStackRules.copyForPlayer(original, moved);
         } else if (index >= 2) {
             if (!moveItemStackTo(source, EnchantmentConversionTableBlockEntity.INPUT_SLOT,
                     EnchantmentConversionTableBlockEntity.INPUT_SLOT + 1, false)) return ItemStack.EMPTY;
