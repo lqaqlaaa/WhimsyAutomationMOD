@@ -9,9 +9,6 @@ public final class ModCapabilities {
 
     public static void register(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK,
-                ModBlockEntities.BIG_CAPACITY_CHEST.get(),
-                (blockEntity, side) -> blockEntity.getAutomationItemHandler(side));
-        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.ENCHANTMENT_CONVERSION_TABLE.get(),
                 (blockEntity, side) -> blockEntity.getAutomationItemHandler(side));
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK,

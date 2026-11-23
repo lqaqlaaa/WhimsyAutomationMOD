@@ -3,13 +3,11 @@ package dev.whimsyautomation.client;
 import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.registry.ModMenus;
-import dev.whimsyautomation.client.BigCapacityChestScreen;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
-import net.minecraft.client.renderer.blockentity.ChestRenderer;
 
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientModEvents {
@@ -17,7 +15,6 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(ModMenus.BIG_CAPACITY_CHEST.get(), BigCapacityChestScreen::new);
         event.register(ModMenus.ENCHANTMENT_EXTRACTOR.get(), EnchantmentExtractorScreen::new);
         event.register(ModMenus.DECONSTRUCTION_TABLE.get(), DeconstructionTableScreen::new);
         event.register(ModMenus.ENCHANTMENT_CONVERSION_TABLE.get(), EnchantmentConversionTableScreen::new);
@@ -25,7 +22,6 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void registerBlockEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(ModBlockEntities.BIG_CAPACITY_CHEST.get(), ChestRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), SideConfigBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DECONSTRUCTION_TABLE.get(), SideConfigBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_CONVERSION_TABLE.get(), SideConfigBlockEntityRenderer::new);

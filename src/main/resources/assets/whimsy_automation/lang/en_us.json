@@ -62,7 +62,5 @@
   "screen.whimsy_automation.apply_book": "APPLY BOOK",
   "screen.whimsy_automation.mode_combined_short": "Combine All",
   "screen.whimsy_automation.mode_enchantments_short": "Split Enchants",
-  "screen.whimsy_automation.mode_levels_short": "Split Levels",
-  "block.whimsy_automation.big_capacity_chest": "Super Capacity Chest",
-  "tooltip.whimsy_automation.big_capacity_chest.count": "Count: %s"
+  "screen.whimsy_automation.mode_levels_short": "Split Levels"
 }
