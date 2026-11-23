@@ -158,7 +158,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
 
     /** Teleports only to an already-loaded, collision-free position with a solid floor and 2-block clearance. */
     private static void teleportNearMember(ServerPlayer player, RemoteTransferNetworkData.Endpoint member) {
-        ServerLevel targetLevel = player.server.getLevel(member.dimension());
+        ServerLevel targetLevel = player.serverLevel().getServer().getLevel(member.dimension());
         if (targetLevel == null || !targetLevel.hasChunkAt(member.pos())) {
             player.displayClientMessage(Component.literal("目标方块所在维度或区块当前不可用。"), true);
             return;
