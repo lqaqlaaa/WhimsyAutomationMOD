@@ -17,7 +17,7 @@ import java.util.UUID;
 public final class RemoteTransferScreen extends Screen {
     private CompoundTag snapshot = new CompoundTag();
     private UUID selectedNetwork, selectedMember, selectedSecond, selectedConnection;
-    private int scroll;
+    private int networkScroll, memberScroll, connectionScroll;
     private EditBox nameBox;
     private EditBox filterBox, outputFilterBox;
     private int connectionDirection;
@@ -119,8 +119,10 @@ public final class RemoteTransferScreen extends Screen {
         renderBackground(g, mouseX, mouseY, partialTick);
         g.drawCenteredString(font, title, width/2, 10, 0xFFFFFF);
         g.drawString(font, Component.translatable("screen.whimsy_automation.remote.networks"), 12, 24, 0xE0E0E0);
+        int rows = visibleRows();
         int y=38;
-        for (CompoundTag n : networks) {
+        for (int i=networkScroll; i<Math.min(networks.size(),networkScroll+rows); i++) {
+            CompoundTag n=networks.get(i);
             boolean selected=n.getUUID("Id").equals(selectedNetwork);
             g.fill(10,y-2,Math.min(width/2-8,190),y+14,selected?0xFF526B83:0xFF303030);
             g.drawString(font,n.getString("Name"),16,y,0xFFFFFF);
@@ -145,16 +147,28 @@ public final class RemoteTransferScreen extends Screen {
         super.render(g,mouseX,mouseY,partialTick);
     }
 
+    private int visibleRows() { return Math.max(1, (height - 147 - 38) / 18 + 1); }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        int rows = visibleRows();
+        int delta = scrollY < 0 ? 1 : scrollY > 0 ? -1 : 0;
+        if (mouseX < width / 2.0) networkScroll = Math.max(0, Math.min(Math.max(0, networks.size()-rows), networkScroll+delta));
+        else if (showConnections) connectionScroll = Math.max(0, Math.min(Math.max(0, links.size()-rows), connectionScroll+delta));
+        else memberScroll = Math.max(0, Math.min(Math.max(0, members.size()-rows), memberScroll+delta));
+        return true;
+    }
+
     @Override public boolean mouseClicked(double x,double y,int button) {
         if(button==0 && y>=36 && y<height-147) {
             if(x<width/2) {
-                int index=(int)((y-36)/18);
+                int index=networkScroll+(int)((y-36)/18);
                 if(index>=0 && index<networks.size()) {
                     selectedNetwork=networks.get(index).getUUID("Id");
                     selectedMember=null; selectedSecond=null; selectedConnection=null; rebuildData();
                 }
             } else if(x>=width/2) {
-                int index=(int)((y-38)/18);
+                int index=(showConnections ? connectionScroll : memberScroll)+(int)((y-38)/18);
                 if (!showConnections && index>=0 && index<members.size()) {
                     UUID id=members.get(index).getUUID("Id");
                     if(id.equals(selectedMember)) selectedSecond=null;
