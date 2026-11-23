@@ -57,7 +57,10 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     @Override
     protected void init() {
         super.init();
-        showFaceColors = SideConfigOverlay.isActive(menu.machine());
+        // Face-color guidance is enabled by default whenever this machine GUI opens.
+        // Previously isActive() was false on a fresh open, which silently hid all six colored face frames.
+        showFaceColors = menu.machine() != null;
+        syncSideOverlay();
         layoutEditor = new UiLayoutEditor("enchantment_conversion_table");
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
                 .bounds(leftPos + 144, topPos + 6, 26, 14).build();
