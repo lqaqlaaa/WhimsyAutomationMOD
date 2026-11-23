@@ -177,12 +177,14 @@ public final class RemoteTransferScreen extends Screen {
                 init();
             }).bounds(contentX + selectW + 10, y + 5, teleportW, 20).build());
             boolean canTeleport = minecraft != null && minecraft.player != null && minecraft.player.hasPermissions(2);
-            addRenderableWidget(Button.builder(Component.literal("传送"), b ->
+            Button teleportButton = Button.builder(Component.literal("传送"), b ->
                     send(11, selectedNetwork, id, null, 0, ""))
                     .bounds(contentX + selectW + teleportW + 12, y + 5, actionW, 20)
                     .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
                             canTeleport ? "传送到该方块附近（需要安全落脚位置）" : "需要开启作弊或管理员权限")))
-                    .build());
+                    .build();
+            teleportButton.active = canTeleport;
+            addRenderableWidget(teleportButton);
             addRenderableWidget(Button.builder(Component.literal("移除"), b ->
                     send(5, selectedNetwork, id, null, 0, ""))
                     .bounds(contentX + 6, y + 5, Math.min(42, selectW - 4), 20).build());
