@@ -53,7 +53,11 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                 }
             }
             case 4 -> {
-                if (owned(data, p.networkId(), player)) RemoteTransferSelection.begin(player.getUUID(), p.networkId());
+                if (owned(data, p.networkId(), player)) {
+                    RemoteTransferSelection.begin(player.getUUID(), p.networkId());
+                    player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                            "已进入添加目标模式：Shift+右键点击工作方块或容器。"), true);
+                }
             }
             case 5 -> {
                 if (owned(data, p.networkId(), player) && p.firstId() != null)

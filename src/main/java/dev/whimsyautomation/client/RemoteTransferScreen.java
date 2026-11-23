@@ -87,8 +87,14 @@ public final class RemoteTransferScreen extends Screen {
                 b -> { if(selectedNetwork!=null && selectedConnection!=null) send(7,selectedNetwork,selectedConnection,null,0,""); })
                 .bounds(232,height-47,Math.max(70,width-242),20).build());
         addRenderableWidget(Button.builder(Component.literal("方向："+new String[]{"输入","输出","双向"}[connectionDirection]),
-                b -> { connectionDirection=(connectionDirection+1)%3; b.setMessage(Component.literal("方向："+new String[]{"输入","输出","双向"}[connectionDirection])); })
-                .bounds(10,height-71,100,20).build());
+                b -> {
+                    if (showConnections && selectedConnection != null && selectedNetwork != null) {
+                        send(8, selectedNetwork, selectedConnection, null, 0, "");
+                    } else {
+                        connectionDirection=(connectionDirection+1)%3;
+                        b.setMessage(Component.literal("方向："+new String[]{"输入","输出","双向"}[connectionDirection]));
+                    }
+                }).bounds(10,height-71,100,20).build());
         filterBox = new EditBox(font, 116, height-71, Math.max(70,width-126), 18, Component.literal("物品ID，逗号分隔"));
         filterBox.setMaxLength(256); addRenderableWidget(filterBox);
         outputFilterBox = new EditBox(font, 116, height-95, Math.max(70,width-126), 18, Component.literal("输出物品ID，逗号分隔"));
