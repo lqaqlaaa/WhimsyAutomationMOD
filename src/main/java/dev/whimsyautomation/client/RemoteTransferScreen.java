@@ -20,6 +20,7 @@ public final class RemoteTransferScreen extends Screen {
     private int networkScroll, memberScroll, connectionScroll;
     private EditBox nameBox;
     private EditBox filterBox, outputFilterBox;
+    private Button inputModeButton, outputModeButton;
     private int connectionDirection;
     private int filterModeInput, filterModeOutput;
     private boolean exactInput, exactOutput;
@@ -99,7 +100,7 @@ public final class RemoteTransferScreen extends Screen {
         filterBox.setMaxLength(256); addRenderableWidget(filterBox);
         outputFilterBox = new EditBox(font, 116, height-95, Math.max(70,width-126), 18, Component.literal("输出物品ID，逗号分隔"));
         outputFilterBox.setMaxLength(256); addRenderableWidget(outputFilterBox);
-        addRenderableWidget(Button.builder(Component.literal("输入过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeInput]),
+        inputModeButton = Button.builder(Component.literal("输入过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeInput]+(exactInput?"·精确":"·普通")),
                 b -> {
                     filterModeInput++;
                     if (filterModeInput >= 3) { filterModeInput=0; exactInput=!exactInput; }
@@ -195,6 +196,8 @@ public final class RemoteTransferScreen extends Screen {
                     filterModeInput=java.util.Arrays.asList("NONE","WHITELIST","BLACKLIST").indexOf(link.getString("InputMode"));
                     filterModeOutput=java.util.Arrays.asList("NONE","WHITELIST","BLACKLIST").indexOf(link.getString("OutputMode"));
                     exactInput=link.getBoolean("InputExact"); exactOutput=link.getBoolean("OutputExact");
+                    inputModeButton.setMessage(Component.literal("输入过滤："+new String[]{"关闭","白名单","黑名单"}[Math.max(0,filterModeInput)]+(exactInput?"·精确":"·普通")));
+                    outputModeButton.setMessage(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[Math.max(0,filterModeOutput)]+(exactOutput?"·精确":"·普通")));
                     filterBox.setValue(link.getString("InputItems"));
                     outputFilterBox.setValue(link.getString("OutputItems"));
                 }
