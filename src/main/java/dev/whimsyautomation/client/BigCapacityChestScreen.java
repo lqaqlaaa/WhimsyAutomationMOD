@@ -50,9 +50,10 @@ public final class BigCapacityChestScreen extends AbstractContainerScreen<BigCap
         if (slot.index < menu.getRows() * 9 && !stack.isEmpty()) {
             int visible = menu.exactCount(slot.index).min(BigInteger.valueOf(64)).intValue();
             ItemStack display = stack.copyWithCount(Math.max(1, visible));
-            // Hide only the vanilla count badge in the chest slot. Do not alter
-            // AbstractContainerScreen's item-hover/tooltip pipeline.
-            super.renderSlotContents(graphics, display, slot, "");
+            // Keep the vanilla item-count badge visible. The old empty override
+            // explicitly suppressed the count, making every stored stack look like 1.
+            super.renderSlotContents(graphics, display, slot,
+                    visible > 1 ? Integer.toString(visible) : "");
             return;
         }
         super.renderSlotContents(graphics, stack, slot, countString);
@@ -70,11 +71,9 @@ public final class BigCapacityChestScreen extends AbstractContainerScreen<BigCap
             if (hoveredSlot.index < menu.getRows() * 9) {
                 BigInteger count = menu.exactCount(hoveredSlot.index);
                 String shown = count.equals(BigInteger.TEN.pow(308)) ? "1E308" : String.format("%,d", count);
-                if (!lines.isEmpty()) {
-                    // Preserve the complete vanilla/modded tooltip and insert
-                    // the exact stored quantity immediately below the item name.
-                    lines.add(1, Component.literal("数量：" + shown));
-                }
+                // Preserve the complete vanilla/modded tooltip and always show
+                // the exact BigInteger amount, independent of the 64-item icon projection.
+                lines.add(Math.min(1, lines.size()), Component.literal("数量：" + shown));
             } else {
                 // Player inventory slots retain their normal stack-count line.
                 lines = new ArrayList<>(StackCountDisplay.withCount(lines, stack));
