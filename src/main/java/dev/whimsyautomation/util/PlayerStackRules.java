@@ -4,23 +4,37 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Converts an internally oversized stack into a legal player-facing stack.
- * Machine storage may override MAX_STACK_SIZE for compact storage, but that
- * override must never leak into a player's inventory.
+ * Applies the same stack-size rules to player-facing stacks as the machine
+ * output planner: preserve legitimate item-defined limits (1..99), and remove
+ * only invalid/legacy oversized overrides.
  */
 public final class PlayerStackRules {
     private PlayerStackRules() {}
 
-    public static int getVanillaMaxStackSize(ItemStack stack) {
-        return stack.isEmpty() ? 0 : stack.getItem().getDefaultMaxStackSize();
+    public static int getPlayerMaxStackSize(ItemStack stack) {
+        if (stack.isEmpty()) return 0;
+        Integer declaredLimit = stack.get(DataComponents.MAX_STACK_SIZE);
+        if (declaredLimit != null && declaredLimit >= 1 && declaredLimit <= 99) {
+            return declaredLimit;
+        }
+        return stack.getItem().getDefaultMaxStackSize();
+    }
+
+    /** Remove only invalid or legacy machine-sized overrides; keep legitimate limits such as 99. */
+    public static void normalizeStackLimit(ItemStack stack) {
+        if (stack.isEmpty()) return;
+        Integer declaredLimit = stack.get(DataComponents.MAX_STACK_SIZE);
+        if (declaredLimit != null && (declaredLimit < 1 || declaredLimit > 99)) {
+            stack.remove(DataComponents.MAX_STACK_SIZE);
+        }
     }
 
     public static ItemStack copyForPlayer(ItemStack stack, int requestedCount) {
         if (stack.isEmpty() || requestedCount <= 0) return ItemStack.EMPTY;
-        int count = Math.min(stack.getCount(), Math.min(requestedCount, getVanillaMaxStackSize(stack)));
+        int count = Math.min(stack.getCount(), Math.min(requestedCount, getPlayerMaxStackSize(stack)));
         if (count <= 0) return ItemStack.EMPTY;
         ItemStack result = stack.copyWithCount(count);
-        result.remove(DataComponents.MAX_STACK_SIZE);
+        normalizeStackLimit(result);
         return result;
     }
 }
