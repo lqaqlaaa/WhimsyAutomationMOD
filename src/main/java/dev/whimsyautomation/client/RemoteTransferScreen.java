@@ -106,7 +106,7 @@ public final class RemoteTransferScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("应用输出过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null)
                     send(9,selectedNetwork,selectedConnection,null,1|(filterModeOutput<<1)|(exactOutput?8:0),outputFilterBox.getValue()); })
-                .bounds(106,height-119,92,20).build());
+                .bounds(202,height-119,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输入精确过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null) send(10,selectedNetwork,selectedConnection,null,0,""); })
                 .bounds(10,height-143,Math.max(70,width/2-16),20).build());
