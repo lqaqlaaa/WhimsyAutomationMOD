@@ -17,8 +17,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.api.distmarker.Dist;
 
 public final class RemoteTransferToolItem extends Item {
     public RemoteTransferToolItem(Properties properties) { super(properties.stacksTo(1)); }
@@ -28,7 +26,14 @@ public final class RemoteTransferToolItem extends Item {
                                                    InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> dev.whimsyautomation.client.RemoteTransferClient::open);
+            if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+                try {
+                    Class.forName("dev.whimsyautomation.client.RemoteTransferClient")
+                            .getMethod("open").invoke(null);
+                } catch (ReflectiveOperationException exception) {
+                    throw new IllegalStateException("Unable to open remote transfer screen", exception);
+                }
+            }
             PacketDistributor.sendToServer(new RemoteTransferActionPayload(0, null, null, null, 0, ""));
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);

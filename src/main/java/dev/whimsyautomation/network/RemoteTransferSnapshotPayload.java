@@ -60,9 +60,15 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
 
     public static void register(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(TYPE, STREAM_CODEC, (payload, context) -> {
-            context.enqueueWork(() -> net.neoforged.fml.DistExecutor.unsafeRunWhenOn(
-                    net.neoforged.api.distmarker.Dist.CLIENT,
-                    () -> () -> dev.whimsyautomation.client.RemoteTransferClient.applySnapshot(payload.data())));
+            context.enqueueWork(() -> {
+                if (net.neoforged.fml.loading.FMLEnvironment.dist != net.neoforged.api.distmarker.Dist.CLIENT) return;
+                try {
+                    Class<?> client = Class.forName("dev.whimsyautomation.client.RemoteTransferClient");
+                    client.getMethod("applySnapshot", CompoundTag.class).invoke(null, payload.data());
+                } catch (ReflectiveOperationException exception) {
+                    throw new IllegalStateException("Unable to update remote transfer screen", exception);
+                }
+            });
         });
     }
 }
