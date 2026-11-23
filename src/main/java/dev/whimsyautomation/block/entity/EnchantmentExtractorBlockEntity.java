@@ -212,7 +212,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private void dropInLegalStacks(ItemStack stack) {
         if (stack.isEmpty()) return;
         int remaining = stack.getCount();
-        int legalSize = Math.max(1, PlayerStackRules.getVanillaMaxStackSize(stack));
+        int legalSize = Math.max(1, PlayerStackRules.getPlayerMaxStackSize(stack));
         while (remaining > 0) {
             int batch = Math.min(remaining, legalSize);
             Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
@@ -255,7 +255,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             ItemStack present = getStackInSlot(slot);
             if (present.isEmpty()) return ItemStack.EMPTY;
             if (slot <= 0) {
-                int inputAmount = Math.min(amount, PlayerStackRules.getVanillaMaxStackSize(present));
+                int inputAmount = Math.min(amount, PlayerStackRules.getPlayerMaxStackSize(present));
                 ItemStack extractedInput = super.extractItem(slot, inputAmount, simulate);
                 return PlayerStackRules.copyForPlayer(extractedInput, extractedInput.getCount());
             }
