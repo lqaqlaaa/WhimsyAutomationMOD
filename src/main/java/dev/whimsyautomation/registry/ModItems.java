@@ -2,6 +2,7 @@ package dev.whimsyautomation.registry;
 
 import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.item.MachineBlockItem;
+import dev.whimsyautomation.item.RemoteTransferToolItem;
 import net.minecraft.world.item.BlockItem;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -21,6 +22,9 @@ public final class ModItems {
             ITEMS.register("deconstruction_table", () -> new MachineBlockItem(
                     ModBlocks.DECONSTRUCTION_TABLE.get(), new net.minecraft.world.item.Item.Properties(),
                     "tooltip.whimsy_automation.deconstruction_table"));
+
+    public static final DeferredItem<RemoteTransferToolItem> REMOTE_TRANSFER_TOOL =
+            ITEMS.register("remote_transfer_tool", () -> new RemoteTransferToolItem(new net.minecraft.world.item.Item.Properties()));
 
     private ModItems() {}
 
