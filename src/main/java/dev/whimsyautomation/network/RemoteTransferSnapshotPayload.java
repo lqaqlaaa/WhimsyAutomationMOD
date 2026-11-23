@@ -43,7 +43,14 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                 CompoundTag c = new CompoundTag();
                 c.putUUID("Id", link.id()); c.putUUID("Source", link.sourceMember());
                 c.putUUID("Target", link.targetMember()); c.putString("Direction", link.direction().name());
-                c.putBoolean("Enabled", link.enabled()); links.add(c);
+                c.putBoolean("Enabled", link.enabled());
+                c.putString("InputMode", link.inputFilter().mode().name());
+                c.putBoolean("InputExact", link.inputFilter().exactComponents());
+                c.putString("InputItems", String.join(",", link.inputFilter().items()));
+                c.putString("OutputMode", link.outputFilter().mode().name());
+                c.putBoolean("OutputExact", link.outputFilter().exactComponents());
+                c.putString("OutputItems", String.join(",", link.outputFilter().items()));
+                links.add(c);
             }
             n.put("Connections", links); networks.add(n);
         }

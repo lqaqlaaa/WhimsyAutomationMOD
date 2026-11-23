@@ -65,12 +65,8 @@ public final class RemoteTransferTicker {
         if (sourceLevel == null || targetLevel == null
                 || !sourceLevel.hasChunkAt(source.pos()) || !targetLevel.hasChunkAt(target.pos())) return;
 
-        Direction sourceFace = faceToward(source.pos(), target.pos());
-        Direction targetFace = faceToward(target.pos(), source.pos());
-        IItemHandler sourceHandler = sourceLevel.getCapability(
-                Capabilities.ItemHandler.BLOCK, source.pos(), sourceFace);
-        IItemHandler targetHandler = targetLevel.getCapability(
-                Capabilities.ItemHandler.BLOCK, target.pos(), targetFace);
+        IItemHandler sourceHandler = findHandler(sourceLevel, source, true);
+        IItemHandler targetHandler = findHandler(targetLevel, target, false);
         if (sourceHandler == null || targetHandler == null) return;
 
         int remainingBudget = MAX_ITEMS_PER_LINK_PER_TICK;
@@ -114,15 +110,25 @@ public final class RemoteTransferTicker {
         }
     }
 
-    private static Direction faceToward(BlockPos from, BlockPos to) {
-        int dx = to.getX() - from.getX();
-        int dy = to.getY() - from.getY();
-        int dz = to.getZ() - from.getZ();
-        if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) >= Math.abs(dz) && dx != 0)
-            return dx > 0 ? Direction.EAST : Direction.WEST;
-        if (Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) >= Math.abs(dz) && dy != 0)
-            return dy > 0 ? Direction.UP : Direction.DOWN;
-        if (dz != 0) return dz > 0 ? Direction.SOUTH : Direction.NORTH;
-        return Direction.UP;
+    private static IItemHandler findHandler(ServerLevel level,
+                                             RemoteTransferNetworkData.Endpoint endpoint,
+                                             boolean extracting) {
+        var blockEntity = level.getBlockEntity(endpoint.pos());
+        boolean workstation = endpoint.kind() == RemoteTransferNetworkData.EndpointKind.WORKSTATION;
+        for (Direction side : Direction.values()) {
+            if (workstation && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity config) {
+                int mode = config.getSideMode(side);
+                if (extracting ? mode != 2 : mode != 1) continue;
+            }
+            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK,
+                    endpoint.pos(), side);
+            if (handler != null) return handler;
+        }
+        if (workstation && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity config) {
+            // Remote links still respect the six-face input/output policy. A
+            // workstation with no configured eligible face is intentionally idle.
+            return null;
+        }
+        return level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), null);
     }
 }

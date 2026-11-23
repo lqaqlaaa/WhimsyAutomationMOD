@@ -70,6 +70,36 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                 if (owned(data, p.networkId(), player) && p.firstId() != null)
                     data.removeConnection(p.networkId(), p.firstId());
             }
+            case 8 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null) {
+                    var n = data.getNetwork(p.networkId());
+                    if (n != null) for (var old : n.connections()) if (old.id().equals(p.firstId())) {
+                        var next = RemoteTransferNetworkData.TransferDirection.values()[
+                                (old.direction().ordinal() + 1) % RemoteTransferNetworkData.TransferDirection.values().length];
+                        data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
+                                old.sourceMember(), old.targetMember(), next, old.enabled(), old.inputFilter(), old.outputFilter()));
+                        break;
+                    }
+                }
+            }
+            case 9 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null) {
+                    var n = data.getNetwork(p.networkId());
+                    if (n != null) for (var old : n.connections()) if (old.id().equals(p.firstId())) {
+                        int side = p.value() & 1;
+                        int mode = (p.value() >> 1) & 3;
+                        boolean exact = (p.value() & 8) != 0;
+                        var filter = new RemoteTransferNetworkData.Filter(
+                                RemoteTransferNetworkData.FilterMode.values()[Math.min(2, mode)],
+                                exact, java.util.Arrays.stream(p.text().split(","))
+                                        .map(String::trim).filter(s -> !s.isEmpty()).distinct().limit(64).toList());
+                        data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
+                                old.sourceMember(), old.targetMember(), old.direction(), old.enabled(),
+                                side == 0 ? filter : old.inputFilter(), side == 1 ? filter : old.outputFilter()));
+                        break;
+                    }
+                }
+            }
             default -> { return; }
         }
         PacketDistributor.sendToPlayer(player, RemoteTransferSnapshotPayload.from(data, player.getUUID()));

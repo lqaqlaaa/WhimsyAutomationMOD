@@ -114,6 +114,19 @@ public final class RemoteTransferNetworkData extends SavedData {
         return removed;
     }
 
+    public boolean updateConnection(UUID networkId, Connection replacement) {
+        Network network = networks.get(networkId);
+        if (network == null) return false;
+        for (int i = 0; i < network.connections().size(); i++) {
+            if (network.connections().get(i).id().equals(replacement.id())) {
+                network.connections().set(i, replacement);
+                setDirty();
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void markChanged() {
         setDirty();
     }

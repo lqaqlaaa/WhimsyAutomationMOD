@@ -19,6 +19,10 @@ public final class RemoteTransferScreen extends Screen {
     private UUID selectedNetwork, selectedMember, selectedSecond, selectedConnection;
     private int scroll;
     private EditBox nameBox;
+    private EditBox filterBox;
+    private int connectionDirection;
+    private int filterModeInput, filterModeOutput;
+    private boolean exactInput, exactOutput;
     private List<CompoundTag> networks = List.of(), members = List.of(), links = List.of();
 
     public RemoteTransferScreen() { super(Component.translatable("screen.whimsy_automation.remote.title")); }
@@ -69,7 +73,7 @@ public final class RemoteTransferScreen extends Screen {
                 .bounds(width-116,height-29,104,20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.remote.connect"),
                 b -> { if(selectedNetwork!=null && selectedMember!=null && selectedSecond!=null)
-                    send(6,selectedNetwork,selectedMember,selectedSecond,0,""); })
+                    send(6,selectedNetwork,selectedMember,selectedSecond,connectionDirection,""); })
                 .bounds(width-116,height-53,104,20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.remote.remove"),
                 b -> { if(selectedNetwork!=null && selectedMember!=null) send(5,selectedNetwork,selectedMember,null,0,""); })
@@ -77,6 +81,24 @@ public final class RemoteTransferScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.remote.remove_link"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null) send(7,selectedNetwork,selectedConnection,null,0,""); })
                 .bounds(width-116,height-101,104,20).build());
+        addRenderableWidget(Button.builder(Component.literal("方向："+new String[]{"输入","输出","双向"}[connectionDirection]),
+                b -> { connectionDirection=(connectionDirection+1)%3; b.setMessage(Component.literal("方向："+new String[]{"输入","输出","双向"}[connectionDirection])); })
+                .bounds(width-116,height-125,104,20).build());
+        filterBox = new EditBox(font, width/2+6, height-28, Math.max(70,width/2-130), 18, Component.literal("物品ID，逗号分隔"));
+        filterBox.setMaxLength(256); addRenderableWidget(filterBox);
+        addRenderableWidget(Button.builder(Component.literal("输入过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeInput]),
+                b -> { filterModeInput=(filterModeInput+1)%3; b.setMessage(Component.literal("输入过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeInput])); })
+                .bounds(width/2+6,height-53,96,20).build());
+        addRenderableWidget(Button.builder(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput]),
+                b -> { filterModeOutput=(filterModeOutput+1)%3; b.setMessage(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput])); })
+                .bounds(width/2+108,height-53,96,20).build());
+        addRenderableWidget(Button.builder(Component.literal("应用过滤"),
+                b -> {
+                    if(selectedNetwork!=null && selectedConnection!=null) {
+                        send(9,selectedNetwork,selectedConnection,null,(filterModeInput<<1)|(exactInput?8:0),filterBox.getValue());
+                        send(9,selectedNetwork,selectedConnection,null,1|(filterModeOutput<<1)|(exactOutput?8:0),filterBox.getValue());
+                    }
+                }).bounds(width/2+210,height-53,88,20).build());
     }
 
     @Override public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
@@ -118,14 +140,16 @@ public final class RemoteTransferScreen extends Screen {
                     selectedNetwork=networks.get(index).getUUID("Id");
                     selectedMember=null; selectedSecond=null; selectedConnection=null; rebuildData();
                 }
-            } else if(x<width-120) {
-                int memberStart=38;
-                int index=(int)((y-memberStart)/18);
+            } else if(x<width-120 && y<38+members.size()*18) {
+                int index=(int)((y-38)/18);
                 if(index>=0 && index<members.size()) {
                     UUID id=members.get(index).getUUID("Id");
                     if(selectedMember==null || selectedMember.equals(id)) selectedMember=id;
                     else selectedSecond=id;
                 }
+            } else if(x>=width/2 && y>=Math.max(164,38+members.size()*18+18)) {
+                int index=(int)((y-Math.max(164,38+members.size()*18+18))/16);
+                if(index>=0 && index<links.size()) selectedConnection=links.get(index).getUUID("Id");
             }
         }
         return super.mouseClicked(x,y,button);
