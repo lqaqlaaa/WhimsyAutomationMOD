@@ -211,7 +211,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             ItemStack stack = inventory.getStackInSlot(slot);
             if (!stack.isEmpty()) {
                 int remaining = stack.getCount();
-                int legalSize = Math.max(1, PlayerStackRules.getVanillaMaxStackSize(stack));
+                int legalSize = Math.max(1, PlayerStackRules.getPlayerMaxStackSize(stack));
                 while (remaining > 0) {
                     int batch = Math.min(remaining, legalSize);
                     Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
@@ -476,10 +476,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
     private static void normalizeStackLimit(ItemStack stack) {
         if (stack.isEmpty()) return;
-        Integer declaredLimit = stack.get(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE);
-        if (declaredLimit != null && (declaredLimit < 1 || declaredLimit > 99)) {
-            stack.remove(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE);
-        }
+        PlayerStackRules.normalizeStackLimit(stack);
     }
 
     @Override
