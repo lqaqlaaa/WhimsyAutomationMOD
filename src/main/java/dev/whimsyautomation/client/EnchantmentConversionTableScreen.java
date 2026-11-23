@@ -57,10 +57,9 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
     @Override
     protected void init() {
         super.init();
-        // Face-color guidance is enabled by default whenever this machine GUI opens.
-        // Previously isActive() was false on a fresh open, which silently hid all six colored face frames.
-        showFaceColors = menu.machine() != null;
-        syncSideOverlay();
+        // Read the preference directly from this machine's client-side block-entity instance.
+        showFaceColors = menu.machine() instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity machine
+                && machine.isFaceColorDisplayEnabled();
         layoutEditor = new UiLayoutEditor("enchantment_conversion_table");
         layoutDebugButton = Button.builder(Component.literal("布局"), b -> layoutEditor.toggle())
                 .bounds(leftPos + 144, topPos + 6, 26, 14).build();
@@ -192,11 +191,10 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
                 Component.translatable("container.inventory"), 8, inventoryLabelY, 0x404040);
     }
 
-    private void syncSideOverlay() {
-        if (menu.machine() == null) return;
-        int[] modes = new int[6];
-        for (int i = 0; i < modes.length; i++) modes[i] = menu.getSideMode(i);
-        SideConfigOverlay.show(menu.machine(), modes, showFaceColors);
+    private void syncFaceColorDisplayPreference() {
+        if (menu.machine() instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity machine) {
+            machine.setFaceColorDisplayEnabled(showFaceColors);
+        }
     }
 
     private void renderSideConfig(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -221,10 +219,13 @@ public final class EnchantmentConversionTableScreen extends AbstractContainerScr
                 setFocused(null);
             } else if (action >= 0 && action < 6) {
                 sendButton(10 + action);
-                SideConfigOverlay.cycleFace(menu.machine(), action);
+                if (menu.machine() instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity machine) {
+                net.minecraft.core.Direction side = net.minecraft.core.Direction.values()[action];
+                machine.setSideModeForDisplay(side, (machine.getSideMode(side) + 1) % 3);
+            }
             } else if (action == 6) {
                 showFaceColors = !showFaceColors;
-                syncSideOverlay();
+                syncFaceColorDisplayPreference();
             }
             return true;
         }
