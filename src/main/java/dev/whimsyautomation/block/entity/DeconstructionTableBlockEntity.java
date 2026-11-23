@@ -62,6 +62,9 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     private ItemStack jeiSnapshotInput = ItemStack.EMPTY;
     // 0=disabled, 1=input, 2=output; Direction ordinal order (DOWN, UP, NORTH, SOUTH, WEST, EAST).
     private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
+    // Client-only preference; not persisted or synchronized as machine gameplay data.
+    private boolean faceColorDisplayEnabled = true;
+
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
         @Override public int getSlotLimit(int slot) { return slot == 0 ? 64 : OversizedItemStackCodec.MAX_COUNT; }
@@ -231,6 +234,11 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     }
 
     public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
+    @Override public boolean isFaceColorDisplayEnabled() { return faceColorDisplayEnabled; }
+    @Override public void setFaceColorDisplayEnabled(boolean enabled) { faceColorDisplayEnabled = enabled; }
+    @Override public void setSideModeForDisplay(Direction side, int mode) {
+        sideModes[side.ordinal()] = Math.max(0, Math.min(2, mode));
+    }
     public void cycleSideMode(Direction side) {
         sideModes[side.ordinal()] = (sideModes[side.ordinal()] + 1) % 3;
         sidedHandlers[side.ordinal()] = null;
