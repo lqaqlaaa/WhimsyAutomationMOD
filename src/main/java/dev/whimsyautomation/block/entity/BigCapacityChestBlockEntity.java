@@ -91,10 +91,13 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
         if (delta == 0) return;
         BigInteger next = amounts[slot].add(BigInteger.valueOf(delta)).max(BigInteger.ZERO).min(MAX_COUNT);
         amounts[slot] = next;
-        if (next.signum() <= 0 || stack.isEmpty()) {
+        if (next.signum() <= 0) {
             representatives.set(slot, ItemStack.EMPTY);
             amounts[slot] = BigInteger.ZERO;
         } else {
+            // A vanilla inventory may shrink the live stack to zero while
+            // transferring one item. Restore its representative after recording
+            // the negative delta so the remaining virtual quantity is retained.
             stack.setCount(1);
         }
     }
@@ -119,7 +122,9 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
                 : new BigCapacityChestItemHandler(this, partner);
     }
     @Override public ItemStack removeItem(int slot, int amount) {
-        if (!valid(slot) || amount <= 0 || amounts[slot].signum() <= 0) return ItemStack.EMPTY;
+        if (!valid(slot) || amount <= 0) return ItemStack.EMPTY;
+        reconcileSlot(slot);
+        if (amounts[slot].signum() <= 0) return ItemStack.EMPTY;
         int removed = amounts[slot].min(BigInteger.valueOf(amount)).intValue();
         ItemStack result = representatives.get(slot).copyWithCount(removed);
         amounts[slot] = amounts[slot].subtract(BigInteger.valueOf(removed));
