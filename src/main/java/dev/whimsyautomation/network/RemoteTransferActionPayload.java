@@ -114,6 +114,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                         int side = p.value() & 1;
                         int mode = (p.value() >> 1) & 3;
                         boolean exact = (p.value() & 8) != 0;
+                        var current = side == 0 ? old.inputFilter() : old.outputFilter();
                         java.util.ArrayList<String> entries = new java.util.ArrayList<>();
                         if (exact) current.items().stream().filter(s -> s.contains("|")).forEach(entries::add);
                         java.util.Arrays.stream(p.text().split(","))
