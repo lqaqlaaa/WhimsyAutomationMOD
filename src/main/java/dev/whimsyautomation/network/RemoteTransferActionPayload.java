@@ -82,6 +82,27 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     }
                 }
             }
+            case 10 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null && !player.getMainHandItem().isEmpty()) {
+                    var n = data.getNetwork(p.networkId());
+                    if (n != null) for (var old : n.connections()) if (old.id().equals(p.firstId())) {
+                        boolean inputSide = p.value() == 0;
+                        var current = inputSide ? old.inputFilter() : old.outputFilter();
+                        String fingerprint = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(player.getMainHandItem().getItem())
+                                + "|" + player.getMainHandItem().getComponents();
+                        java.util.ArrayList<String> entries = new java.util.ArrayList<>(current.items());
+                        if (!entries.contains(fingerprint)) entries.add(fingerprint);
+                        var updated = new RemoteTransferNetworkData.Filter(
+                                current.mode() == RemoteTransferNetworkData.FilterMode.NONE
+                                        ? RemoteTransferNetworkData.FilterMode.WHITELIST : current.mode(),
+                                true, entries);
+                        data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
+                                old.sourceMember(), old.targetMember(), old.direction(), old.enabled(),
+                                inputSide ? updated : old.inputFilter(), inputSide ? old.outputFilter() : updated));
+                        break;
+                    }
+                }
+            }
             case 9 -> {
                 if (owned(data, p.networkId(), player) && p.firstId() != null) {
                     var n = data.getNetwork(p.networkId());

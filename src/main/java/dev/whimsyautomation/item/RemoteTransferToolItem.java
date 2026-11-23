@@ -1,6 +1,5 @@
 package dev.whimsyautomation.item;
 
-import dev.whimsyautomation.client.RemoteTransferScreen;
 import dev.whimsyautomation.network.RemoteTransferActionPayload;
 import dev.whimsyautomation.network.RemoteTransferSnapshotPayload;
 import dev.whimsyautomation.remote.RemoteTransferNetworkData;
@@ -8,7 +7,6 @@ import dev.whimsyautomation.remote.RemoteTransferSelection;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.block.entity.EnchantmentConversionTableBlockEntity;
 import dev.whimsyautomation.block.entity.EnchantmentExtractorBlockEntity;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -19,6 +17,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.fml.DistExecutor;
+import net.neoforged.api.distmarker.Dist;
 
 public final class RemoteTransferToolItem extends Item {
     public RemoteTransferToolItem(Properties properties) { super(properties.stacksTo(1)); }
@@ -28,7 +28,7 @@ public final class RemoteTransferToolItem extends Item {
                                                    InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide) {
-            Minecraft.getInstance().setScreen(new RemoteTransferScreen());
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> dev.whimsyautomation.client.RemoteTransferClient::open);
             PacketDistributor.sendToServer(new RemoteTransferActionPayload(0, null, null, null, 0, ""));
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);

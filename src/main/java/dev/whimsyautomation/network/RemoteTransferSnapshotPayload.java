@@ -60,9 +60,9 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
 
     public static void register(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(TYPE, STREAM_CODEC, (payload, context) -> {
-            context.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().setScreen(
-                    net.minecraft.client.Minecraft.getInstance().screen instanceof dev.whimsyautomation.client.RemoteTransferScreen screen
-                            ? screen.applySnapshot(payload.data()) : new dev.whimsyautomation.client.RemoteTransferScreen(payload.data())));
+            context.enqueueWork(() -> net.neoforged.fml.DistExecutor.unsafeRunWhenOn(
+                    net.neoforged.api.distmarker.Dist.CLIENT,
+                    () -> () -> dev.whimsyautomation.client.RemoteTransferClient.applySnapshot(payload.data())));
         });
     }
 }

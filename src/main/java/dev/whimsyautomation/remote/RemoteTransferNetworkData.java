@@ -273,7 +273,15 @@ public final class RemoteTransferNetworkData extends SavedData {
         }
 
         public boolean allows(ItemStack stack) {
-            return !stack.isEmpty() && allows(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+            if (stack.isEmpty()) return false;
+            ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            if (!exactComponents) return allows(itemId);
+            boolean containsExact = items.contains(itemId + "|" + stack.getComponents());
+            return switch (mode) {
+                case NONE -> true;
+                case WHITELIST -> containsExact;
+                case BLACKLIST -> !containsExact;
+            };
         }
     }
 
