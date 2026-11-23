@@ -105,10 +105,12 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         refreshGeneratedSlots();
         setChanged();
     }
-    /** Manual mode refreshes its preview; automatic mode performs a real extraction cycle. */
+    /** Runs exactly one real extraction cycle, without enabling continuous automatic mode. */
     public void processOnce() {
         if (level == null || level.isClientSide) return;
-        if (autoMode) processAutomaticInput(); else refreshGeneratedSlots();
+        ItemStack input = inventory.getStackInSlot(0);
+        if (input.isEmpty() || getStackEnchantments(input).isEmpty()) return;
+        processAutomaticInput();
     }
     private boolean hasStoredOutputs() {
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++)
@@ -145,7 +147,13 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         if (input.isEmpty()) return;
         ItemEnchantments enchantments = getStackEnchantments(input);
         List<ItemStack> plan = new ArrayList<>();
-        for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) plan.add(inventory.getStackInSlot(slot).copy());
+        // In manual mode the visible output slots are only a preview of the
+        // input enchantments, not stored items. Do not copy those preview books
+        // into the persistent output plan or a one-shot extraction duplicates them.
+        if (persistentOutputMode) {
+            for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++)
+                plan.add(inventory.getStackInSlot(slot).copy());
+        }
         if (!enchantments.isEmpty()) {
             if (combinedOutput) addToOutputPlan(plan, createCombinedBook(enchantments));
             else for (Object2IntMap.Entry<Holder<Enchantment>> entry : enchantments.entrySet()) {
