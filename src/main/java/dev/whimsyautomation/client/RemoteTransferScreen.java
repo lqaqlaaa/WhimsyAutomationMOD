@@ -59,7 +59,7 @@ public final class RemoteTransferScreen extends Screen {
 
     @Override protected void init() {
         int left = 12, top = 34;
-        nameBox = new EditBox(font, left, height - 28, 130, 18, Component.translatable("screen.whimsy_automation.remote.name"));
+        nameBox = new EditBox(font, 10, height - 23, 90, 18, Component.translatable("screen.whimsy_automation.remote.name"));
         nameBox.setMaxLength(48); nameBox.setValue("新建网络"); addRenderableWidget(nameBox);
         addRenderableWidget(Button.builder(Component.translatable("screen.whimsy_automation.remote.create"),
                 b -> send(1, null, null, null, 0, nameBox.getValue())).bounds(104, height-23, 48, 20).build());
@@ -92,21 +92,21 @@ public final class RemoteTransferScreen extends Screen {
                 .bounds(10,height-95,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput]),
                 b -> { filterModeOutput=(filterModeOutput+1)%3; b.setMessage(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput])); })
-                .bounds(202,height-95,Math.max(70,width-212),20).build());
+                .bounds(106,height-95,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输入过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null)
                     send(9,selectedNetwork,selectedConnection,null,(filterModeInput<<1)|(exactInput?8:0),filterBox.getValue()); })
-                .bounds(106,height-119,92,20).build());
+                .bounds(10,height-119,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输出过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null)
                     send(9,selectedNetwork,selectedConnection,null,1|(filterModeOutput<<1)|(exactOutput?8:0),filterBox.getValue()); })
-                .bounds(10,height-119,92,20).build());
+                .bounds(106,height-119,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输入精确过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null) send(10,selectedNetwork,selectedConnection,null,0,""); })
-                .bounds(width/2+6,height-143,Math.max(70,width/2-16),20).build());
+                .bounds(10,height-143,Math.max(70,width/2-16),20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输出精确过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null) send(10,selectedNetwork,selectedConnection,null,1,""); })
-                .bounds(width/2+6,height-149,Math.max(70,width/2-130),20).build());
+                .bounds(width/2+6,height-143,Math.max(70,width/2-16),20).build());
     }
 
     @Override public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
@@ -136,12 +136,11 @@ public final class RemoteTransferScreen extends Screen {
             String line=c.getString("Direction")+"  "+c.getUUID("Source").toString().substring(0,8)+" → "+c.getUUID("Target").toString().substring(0,8);
             g.drawString(font,line,width/2+7,y,0xCFCFCF); y+=16;
         }
-        g.drawString(font,Component.translatable("screen.whimsy_automation.remote.select_hint"),12,height-149,0xAAAAAA);
         super.render(g,mouseX,mouseY,partialTick);
     }
 
     @Override public boolean mouseClicked(double x,double y,int button) {
-        if(button==0 && y>=36 && y<height-34) {
+        if(button==0 && y>=36 && y<height-147) {
             if(x<width/2) {
                 int index=(int)((y-36)/18);
                 if(index>=0 && index<networks.size()) {
