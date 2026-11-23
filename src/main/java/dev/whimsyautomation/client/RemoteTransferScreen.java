@@ -19,7 +19,7 @@ public final class RemoteTransferScreen extends Screen {
     private UUID selectedNetwork, selectedMember, selectedSecond, selectedConnection;
     private int scroll;
     private EditBox nameBox;
-    private EditBox filterBox;
+    private EditBox filterBox, outputFilterBox;
     private int connectionDirection;
     private int filterModeInput, filterModeOutput;
     private boolean exactInput, exactOutput;
@@ -91,19 +91,21 @@ public final class RemoteTransferScreen extends Screen {
                 .bounds(10,height-71,100,20).build());
         filterBox = new EditBox(font, 116, height-71, Math.max(70,width-126), 18, Component.literal("物品ID，逗号分隔"));
         filterBox.setMaxLength(256); addRenderableWidget(filterBox);
+        outputFilterBox = new EditBox(font, 116, height-95, Math.max(70,width-126), 18, Component.literal("输出物品ID，逗号分隔"));
+        outputFilterBox.setMaxLength(256); addRenderableWidget(outputFilterBox);
         addRenderableWidget(Button.builder(Component.literal("输入过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeInput]),
                 b -> { filterModeInput=(filterModeInput+1)%3; b.setMessage(Component.literal("输入过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeInput])); })
                 .bounds(10,height-95,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput]),
                 b -> { filterModeOutput=(filterModeOutput+1)%3; b.setMessage(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput])); })
-                .bounds(106,height-95,92,20).build());
+                .bounds(10,height-119,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输入过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null)
                     send(9,selectedNetwork,selectedConnection,null,(filterModeInput<<1)|(exactInput?8:0),filterBox.getValue()); })
-                .bounds(10,height-119,92,20).build());
+                .bounds(106,height-119,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输出过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null)
-                    send(9,selectedNetwork,selectedConnection,null,1|(filterModeOutput<<1)|(exactOutput?8:0),filterBox.getValue()); })
+                    send(9,selectedNetwork,selectedConnection,null,1|(filterModeOutput<<1)|(exactOutput?8:0),outputFilterBox.getValue()); })
                 .bounds(106,height-119,92,20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输入精确过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null) send(10,selectedNetwork,selectedConnection,null,0,""); })
@@ -166,6 +168,7 @@ public final class RemoteTransferScreen extends Screen {
                     filterModeOutput=java.util.Arrays.asList("NONE","WHITELIST","BLACKLIST").indexOf(link.getString("OutputMode"));
                     exactInput=link.getBoolean("InputExact"); exactOutput=link.getBoolean("OutputExact");
                     filterBox.setValue(link.getString("InputItems"));
+                    outputFilterBox.setValue(link.getString("OutputItems"));
                 }
             }
         }
