@@ -9,8 +9,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.WorldlyContainer;
-import net.minecraft.core.Direction;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -20,7 +18,7 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 /** A vanilla chest container whose exact per-slot amounts are stored independently of ItemStack's int count. */
-public final class BigCapacityChestBlockEntity extends ChestBlockEntity implements WorldlyContainer {
+public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
     public static final BigInteger MAX_COUNT = BigInteger.TEN.pow(308);
     private NonNullList<ItemStack> representatives = NonNullList.withSize(27, ItemStack.EMPTY);
     private BigInteger[] amounts = emptyAmounts();
@@ -46,17 +44,6 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity implemen
         }
     }
     @Override public int getContainerSize() { return 27; }
-    @Override public int[] getSlotsForFace(Direction side) {
-        int[] slots = new int[27];
-        for (int i = 0; i < slots.length; i++) slots[i] = i;
-        return slots;
-    }
-    @Override public boolean canPlaceItemThroughFace(int slot, ItemStack stack, Direction side) {
-        return valid(slot) && stack != null && !stack.isEmpty();
-    }
-    @Override public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction side) {
-        return valid(slot) && stack != null && !stack.isEmpty() && amounts[slot].signum() > 0;
-    }
     @Override public int getMaxStackSize() { return Integer.MAX_VALUE; }
     @Override public ItemStack getItem(int slot) {
         if (!valid(slot) || amounts[slot].signum() <= 0 || representatives.get(slot).isEmpty()) return ItemStack.EMPTY;
