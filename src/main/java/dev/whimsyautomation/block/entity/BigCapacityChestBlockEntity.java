@@ -89,15 +89,11 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
     private void reconcileSlot(int slot) {
         if (!valid(slot)) return;
         ItemStack stack = representatives.get(slot);
-        if (stack.isEmpty()) {
-            if (inventory.count(slot).signum() > 0) {
-                // A vanilla path may replace the live view with EMPTY. Treat
-                // this as an explicit removal only when setItem/removeItem was
-                // not used (those methods update the inventory first).
-                inventory.set(slot, ItemStack.EMPTY, BigInteger.ZERO);
-            }
-            return;
-        }
+        // The shared EMPTY singleton means the slot was explicitly cleared.
+        // A formerly-live ItemStack whose count reached zero is different:
+        // record its -1 mutation and restore the representative if virtual
+        // items remain (the hopper/vanilla Container mutation path).
+        if (stack == ItemStack.EMPTY) return;
         int delta = stack.getCount() - 1;
         if (delta == 0) return;
         BigInteger next = inventory.count(slot).add(BigInteger.valueOf(delta))
