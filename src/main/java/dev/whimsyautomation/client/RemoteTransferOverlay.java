@@ -6,7 +6,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
@@ -71,13 +70,12 @@ public final class RemoteTransferOverlay {
         pose.pushPose();
         pose.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
 
-        int colorIndex = 0;
         for (int i = 0; i < members.size(); i++) {
             CompoundTag member = members.getCompound(i);
             if (!level.dimension().location().toString().equals(member.getString("Dimension"))) continue;
             BlockPos pos = BlockPos.of(member.getLong("Pos"));
             if (!level.hasChunkAt(pos)) continue;
-            int color = COLORS[colorIndex++ % COLORS.length];
+            int color = COLORS[i % COLORS.length];
             float red = ((color >> 16) & 255) / 255.0F;
             float green = ((color >> 8) & 255) / 255.0F;
             float blue = (color & 255) / 255.0F;
