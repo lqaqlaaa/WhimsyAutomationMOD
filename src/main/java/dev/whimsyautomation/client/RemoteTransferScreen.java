@@ -161,33 +161,29 @@ public final class RemoteTransferScreen extends Screen {
     }
 
     private void buildMemberWidgets() {
-        addRenderableWidget(Button.builder(Component.literal("＋ 进入添加目标模式（Shift+右键）"), b ->
+        int half = Math.max(40, (contentW - 18) / 2);
+        addRenderableWidget(Button.builder(Component.literal("＋ 添加方块 / 容器（Shift+右键）"), b ->
                 send(4, selectedNetwork, null, null, 0, ""))
-                .bounds(contentX + 6, 62, Math.min(contentW - 12, 208), 20).build());
+                .bounds(contentX + 6, 62, half, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("移除所选成员"), b -> {
+            if (selectedMember != null) send(5, selectedNetwork, selectedMember, null, 0, "");
+        }).bounds(contentX + 12 + half, 62, Math.max(40, contentW - half - 18), 20).build());
+
         int visible = visibleMemberRows();
         for (int row = 0; row < visible && row + memberScroll < members.size(); row++) {
             CompoundTag member = members.get(row + memberScroll);
             UUID id = member.getUUID("Id");
             int y = listTop + row * rowH;
-            int actionW = 44;
-            int teleportW = 48;
-            int selectW = Math.max(32, contentW - actionW - teleportW - 22);
-            addRenderableWidget(Button.builder(Component.literal(id.equals(selectedMember) ? "已选中" : "选择"), b -> {
-                selectedMember = id;
-                init();
-            }).bounds(contentX + selectW + 10, y + 5, teleportW, 20).build());
+            int actionW = 48;
             boolean canTeleport = minecraft != null && minecraft.player != null && minecraft.player.hasPermissions(2);
             Button teleportButton = Button.builder(Component.literal("传送"), b ->
                     send(11, selectedNetwork, id, null, 0, ""))
-                    .bounds(contentX + selectW + teleportW + 12, y + 5, actionW, 20)
+                    .bounds(contentX + contentW - actionW - 6, y + 5, actionW, 20)
                     .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
                             canTeleport ? "传送到该方块附近（需要安全落脚位置）" : "需要开启作弊或管理员权限")))
                     .build();
             teleportButton.active = canTeleport;
             addRenderableWidget(teleportButton);
-            addRenderableWidget(Button.builder(Component.literal("移除"), b ->
-                    send(5, selectedNetwork, id, null, 0, ""))
-                    .bounds(contentX + 6, y + 5, Math.min(42, selectW - 4), 20).build());
         }
     }
 
