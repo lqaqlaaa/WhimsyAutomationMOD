@@ -2,6 +2,7 @@ package dev.whimsyautomation.menu;
 
 import dev.whimsyautomation.block.entity.BigCapacityChestBlockEntity;
 import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.network.BigCapacityChestSyncPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
@@ -18,6 +19,8 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.ChestType;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class BigCapacityChestMenu extends ChestMenu {
     private final BigCapacityChestBlockEntity first;
@@ -26,6 +29,9 @@ public final class BigCapacityChestMenu extends ChestMenu {
     private final Level clientLevel;
     private final BlockPos firstPos;
     private final BlockPos secondPos;
+    private final Player viewer;
+    private BigInteger[] syncedCounts = new BigInteger[54];
+    private List<String> lastSentCounts = List.of();
 
     /** Server menu: receives the real vanilla chest container (BE or CompoundContainer). */
     public BigCapacityChestMenu(int id, Inventory inventory, Container vanillaContainer,
@@ -45,6 +51,8 @@ public final class BigCapacityChestMenu extends ChestMenu {
         this.clientLevel = clientLevel;
         this.firstPos = firstPos;
         this.secondPos = secondPos;
+        this.viewer = inventory.player;
+        java.util.Arrays.fill(this.syncedCounts, BigInteger.ZERO);
 
         // Replace only the server-side chest slots. Their visible ItemStack is a
         // 64-item projection, while all mutations go directly to the exact count.
@@ -179,10 +187,40 @@ public final class BigCapacityChestMenu extends ChestMenu {
         }
     }
 
+    @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+        if (first == null || !(viewer instanceof net.minecraft.server.level.ServerPlayer serverPlayer)
+                || serverPlayer.containerMenu != this) return;
+        List<String> current = new ArrayList<>(rows * 9);
+        for (int i = 0; i < rows * 9; i++) {
+            BigCapacityChestBlockEntity owner = i < 27 ? first : second;
+            int local = i < 27 ? i : i - 27;
+            current.add(owner == null ? "0" : owner.getExactCount(local).toString());
+        }
+        if (!current.equals(lastSentCounts)) {
+            lastSentCounts = List.copyOf(current);
+            BigCapacityChestSyncPayload.send(serverPlayer, containerId, current);
+        }
+    }
+
+    public void applySyncedCounts(List<String> values) {
+        java.util.Arrays.fill(syncedCounts, BigInteger.ZERO);
+        for (int i = 0; i < Math.min(values.size(), rows * 9); i++) {
+            try {
+                BigInteger parsed = new BigInteger(values.get(i));
+                syncedCounts[i] = parsed.signum() > 0 ? parsed.min(BigCapacityChestBlockEntity.MAX_COUNT) : BigInteger.ZERO;
+            } catch (NumberFormatException ignored) {
+                syncedCounts[i] = BigInteger.ZERO;
+            }
+        }
+    }
+
     public int getRows() { return rows; }
 
     public BigInteger exactCount(int menuSlot) {
         if (menuSlot < 0 || menuSlot >= rows * 9) return BigInteger.ZERO;
+        if (clientLevel != null) return syncedCounts[menuSlot];
         boolean useFirst = menuSlot < 27 || rows == 3;
         BigCapacityChestBlockEntity owner;
         if (useFirst) {
