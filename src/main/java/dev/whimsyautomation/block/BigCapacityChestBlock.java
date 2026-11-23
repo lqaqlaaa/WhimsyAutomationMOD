@@ -4,7 +4,7 @@ import com.mojang.serialization.MapCodec;
 import dev.whimsyautomation.block.entity.BigCapacityChestBlockEntity;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.core.stats.Stats;
+import net.minecraft.stats.Stats;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.monster.piglin.PiglinAi;
