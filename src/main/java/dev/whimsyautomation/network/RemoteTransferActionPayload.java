@@ -7,6 +7,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
@@ -86,6 +91,21 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     }
                 }
             }
+            case 11 -> {
+                if (!owned(data, p.networkId(), player) || p.firstId() == null) return;
+                if (!player.hasPermissions(2)) {
+                    player.displayClientMessage(Component.literal("需要开启作弊或拥有管理员权限才能传送到网络方块。"), true);
+                    return;
+                }
+                var network = data.getNetwork(p.networkId());
+                if (network == null) return;
+                for (var member : network.members()) {
+                    if (member.id().equals(p.firstId())) {
+                        teleportNearMember(player, member);
+                        break;
+                    }
+                }
+            }
             case 10 -> {
                 if (owned(data, p.networkId(), player) && p.firstId() != null && !player.getMainHandItem().isEmpty()) {
                     var n = data.getNetwork(p.networkId());
@@ -133,6 +153,43 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
             default -> { return; }
         }
         PacketDistributor.sendToPlayer(player, RemoteTransferSnapshotPayload.from(data, player.getUUID()));
+    }
+
+
+    /** Teleports only to an already-loaded, collision-free position with a solid floor and 2-block clearance. */
+    private static void teleportNearMember(ServerPlayer player, RemoteTransferNetworkData.Endpoint member) {
+        ServerLevel targetLevel = player.server.getLevel(member.dimension());
+        if (targetLevel == null || !targetLevel.hasChunkAt(member.pos())) {
+            player.displayClientMessage(Component.literal("目标方块所在维度或区块当前不可用。"), true);
+            return;
+        }
+
+        BlockPos origin = member.pos();
+        double width = player.getBbWidth();
+        double height = player.getBbHeight();
+        for (int radius = 0; radius <= 2; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) continue;
+                    for (int dy = 1; dy <= 4; dy++) {
+                        BlockPos feet = origin.offset(dx, dy, dz);
+                        if (!targetLevel.hasChunkAt(feet) || !targetLevel.hasChunkAt(feet.below())) continue;
+                        if (!targetLevel.getBlockState(feet.below()).isFaceSturdy(targetLevel, feet.below(), Direction.UP)) continue;
+                        double x = feet.getX() + 0.5D;
+                        double y = feet.getY();
+                        double z = feet.getZ() + 0.5D;
+                        AABB box = new AABB(x - width / 2.0D, y, z - width / 2.0D,
+                                x + width / 2.0D, y + height, z + width / 2.0D);
+                        if (!targetLevel.noCollision(player, box)) continue;
+                        player.teleportTo(targetLevel, x, y, z, java.util.Set.of(),
+                                player.getYRot(), player.getXRot());
+                        player.displayClientMessage(Component.literal("已传送到网络方块附近。"), true);
+                        return;
+                    }
+                }
+            }
+        }
+        player.displayClientMessage(Component.literal("目标方块附近没有安全位置（需要地面和至少两格空间）。"), true);
     }
 
     private static boolean owned(RemoteTransferNetworkData data, UUID id, ServerPlayer player) {
