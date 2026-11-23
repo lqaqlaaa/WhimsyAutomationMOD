@@ -105,15 +105,15 @@ public final class RemoteTransferScreen extends Screen {
                     filterModeInput++;
                     if (filterModeInput >= 3) { filterModeInput=0; exactInput=!exactInput; }
                     b.setMessage(Component.literal("输入过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeInput]+(exactInput?"·精确":"·普通")));
-                })
-                .bounds(10,height-95,92,20).build());
-        addRenderableWidget(Button.builder(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput]),
+                }).bounds(10,height-95,92,20).build();
+        addRenderableWidget(inputModeButton);
+        outputModeButton = Button.builder(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput]+(exactOutput?"·精确":"·普通")),
                 b -> {
                     filterModeOutput++;
                     if (filterModeOutput >= 3) { filterModeOutput=0; exactOutput=!exactOutput; }
                     b.setMessage(Component.literal("输出过滤："+new String[]{"关闭","白名单","黑名单"}[filterModeOutput]+(exactOutput?"·精确":"·普通")));
-                })
-                .bounds(10,height-119,92,20).build());
+                }).bounds(10,height-119,92,20).build();
+        addRenderableWidget(outputModeButton);
         addRenderableWidget(Button.builder(Component.literal("应用输入过滤"),
                 b -> { if(selectedNetwork!=null && selectedConnection!=null)
                     send(9,selectedNetwork,selectedConnection,null,(filterModeInput<<1)|(exactInput?8:0),filterBox.getValue()); })
