@@ -5,13 +5,14 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /** Client-side overlay state keyed by dimension and block position. */
 public final class SideConfigOverlay {
-    private record MachineKey(ResourceKey<Level> dimension, net.minecraft.core.BlockPos pos) {}
+    private record MachineKey(ResourceKey<Level> dimension, net.minecraft.core.BlockPos pos, BlockEntityType<?> type) {}
     private record OverlayState(boolean enabled, int[] sideModes, boolean[] visibleFaces) {}
 
     private static final Map<MachineKey, OverlayState> STATES = new HashMap<>();
@@ -20,7 +21,7 @@ public final class SideConfigOverlay {
 
     private static MachineKey key(BlockEntity machine) {
         if (machine == null || machine.getLevel() == null) return null;
-        return new MachineKey(machine.getLevel().dimension(), machine.getBlockPos().immutable());
+        return new MachineKey(machine.getLevel().dimension(), machine.getBlockPos().immutable(), machine.getType());
     }
 
     /** Stores the preview by world position, not BlockEntity object identity.
