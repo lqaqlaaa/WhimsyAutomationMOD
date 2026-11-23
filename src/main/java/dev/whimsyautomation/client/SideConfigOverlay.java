@@ -2,60 +2,58 @@ package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.block.entity.SideConfigurableBlockEntity;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 
-/** Client-side overlay state keyed by the actual block-entity instance. */
+/** Client-side overlay state keyed by dimension and block position. */
 public final class SideConfigOverlay {
+    private record MachineKey(ResourceKey<Level> dimension, net.minecraft.core.BlockPos pos) {}
     private record OverlayState(boolean enabled, int[] sideModes, boolean[] visibleFaces) {}
 
-    private static final Map<BlockEntity, OverlayState> STATES = new WeakHashMap<>();
+    private static final Map<MachineKey, OverlayState> STATES = new HashMap<>();
 
     private SideConfigOverlay() {}
 
-    /**
-     * Takes one snapshot when the player enables the overlay. The renderer never
-     * reads side configuration; it only consumes the precomputed face flags.
-     */
+    private static MachineKey key(BlockEntity machine) {
+        if (machine == null || machine.getLevel() == null) return null;
+        return new MachineKey(machine.getLevel().dimension(), machine.getBlockPos().immutable());
+    }
+
+    /** Stores the preview by world position, not BlockEntity object identity.
+     * A client chunk can recreate its BlockEntity while the screen remains open. */
     public static void show(BlockEntity machine, int[] sideModes, boolean enabled) {
-        if (machine == null) return;
+        MachineKey key = key(machine);
+        if (key == null) return;
         if (!enabled) {
-            STATES.remove(machine);
+            STATES.remove(key);
             return;
         }
         int[] modes = new int[Direction.values().length];
         if (sideModes != null) {
             System.arraycopy(sideModes, 0, modes, 0, Math.min(sideModes.length, modes.length));
         }
-        STATES.put(machine, new OverlayState(true, modes, calculateVisibleFaces(modes)));
+        STATES.put(key, new OverlayState(true, modes, calculateVisibleFaces(modes)));
     }
 
-    /**
-     * Predicts the same 0 -> 1 -> 2 -> 0 cycle sent to the server. This updates
-     * only the cached overlay for this machine; no menu/BE state is polled.
-     */
+    /** Predicts the same 0 -> 1 -> 2 -> 0 cycle sent to the server. */
     public static void cycleFace(BlockEntity machine, int side) {
-        if (machine == null || side < 0 || side >= Direction.values().length) return;
-        OverlayState state = STATES.get(machine);
+        MachineKey key = key(machine);
+        if (key == null || side < 0 || side >= Direction.values().length) return;
+        OverlayState state = STATES.get(key);
         if (state == null || !state.enabled()) return;
-
-        // Keep the underlying modes so a later face toggle can be predicted
-        // without reading the menu or block entity again.
         int[] modes = state.sideModes().clone();
         modes[side] = (modes[side] + 1) % 3;
-        STATES.put(machine, new OverlayState(true, modes, calculateVisibleFaces(modes)));
+        STATES.put(key, new OverlayState(true, modes, calculateVisibleFaces(modes)));
     }
 
     private static boolean[] calculateVisibleFaces(int[] sideModes) {
         int count = Direction.values().length;
-        int[] modes = new int[count];
-        if (sideModes != null) {
-            System.arraycopy(sideModes, 0, modes, 0, Math.min(sideModes.length, count));
-        }
         boolean anyConfigured = false;
-        for (int mode : modes) {
+        for (int mode : sideModes) {
             if (mode != 0) {
                 anyConfigured = true;
                 break;
@@ -63,32 +61,28 @@ public final class SideConfigOverlay {
         }
         boolean[] visible = new boolean[count];
         for (int side = 0; side < count; side++) {
-            visible[side] = !anyConfigured || modes[side] != 0;
+            visible[side] = !anyConfigured || sideModes[side] != 0;
         }
         return visible;
     }
 
     public static void clear(BlockEntity machine) {
-        if (machine != null) STATES.remove(machine);
+        MachineKey key = key(machine);
+        if (key != null) STATES.remove(key);
     }
 
     public static boolean isActive(BlockEntity machine) {
-        OverlayState state = STATES.get(machine);
+        MachineKey key = key(machine);
+        OverlayState state = key == null ? null : STATES.get(key);
         return state != null && state.enabled();
     }
 
-    /**
-     * Show only configured input/output faces when at least one is configured.
-     * When all six are disabled, the enabled preview shows all six faces.
-     */
     public static boolean shouldShowFace(BlockEntity machine, int side) {
-        if (!(machine instanceof SideConfigurableBlockEntity) || side < 0 || side >= Direction.values().length) {
-            return false;
-        }
-        OverlayState state = STATES.get(machine);
-        if (state == null || !state.enabled()) return false;
-
-        return state.visibleFaces()[side];
+        if (!(machine instanceof SideConfigurableBlockEntity)
+                || side < 0 || side >= Direction.values().length) return false;
+        MachineKey key = key(machine);
+        OverlayState state = key == null ? null : STATES.get(key);
+        return state != null && state.enabled() && state.visibleFaces()[side];
     }
 
     public static int color(int side) {
