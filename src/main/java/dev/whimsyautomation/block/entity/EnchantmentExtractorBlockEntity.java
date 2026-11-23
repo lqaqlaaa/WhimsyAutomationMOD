@@ -50,6 +50,9 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     private boolean autoExtractionPaused;
     // 0=disabled, 1=input, 2=output; Direction ordinal order.
     private final int[] sideModes = new int[] {0, 0, 0, 0, 0, 0};
+    // Client-only preference; not persisted or synchronized as machine gameplay data.
+    private boolean faceColorDisplayEnabled = true;
+
     private final IItemHandler[] sidedHandlers = new IItemHandler[6];
 
     private final DynamicInputBuffer inputBuffer = new DynamicInputBuffer(18);
@@ -311,6 +314,11 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
             () -> !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode || persistentOutputMode);
 
     public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
+    @Override public boolean isFaceColorDisplayEnabled() { return faceColorDisplayEnabled; }
+    @Override public void setFaceColorDisplayEnabled(boolean enabled) { faceColorDisplayEnabled = enabled; }
+    @Override public void setSideModeForDisplay(Direction side, int mode) {
+        sideModes[side.ordinal()] = Math.max(0, Math.min(2, mode));
+    }
     public void cycleSideMode(Direction side) {
         int index = side.ordinal();
         sideModes[index] = (sideModes[index] + 1) % 3;
