@@ -8,6 +8,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.minecraft.client.renderer.blockentity.ChestRenderer;
 
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientModEvents {
@@ -22,6 +23,7 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void registerBlockEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.BIG_CAPACITY_CHEST.get(), ChestRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), SideConfigBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DECONSTRUCTION_TABLE.get(), SideConfigBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ENCHANTMENT_CONVERSION_TABLE.get(), SideConfigBlockEntityRenderer::new);

@@ -15,6 +15,7 @@ public final class ModCreativeTabs {
                     .title(Component.translatable("itemGroup.whimsy_automation"))
                     .icon(() -> ModItems.ENCHANTMENT_EXTRACTOR.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
+                        output.accept(ModItems.BIG_CAPACITY_CHEST.get());
                         output.accept(ModItems.ENCHANTMENT_EXTRACTOR.get());
                         output.accept(ModItems.ENCHANTMENT_CONVERSION_TABLE.get());
                         output.accept(ModItems.DECONSTRUCTION_TABLE.get());
