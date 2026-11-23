@@ -91,7 +91,7 @@ public final class RemoteTransferScreen extends Screen {
         sideW = Math.max(78, Math.min(112, width / 4));
         contentX = sideW + 20;
         contentW = Math.max(90, width - contentX - 12);
-        listTop = 78;
+        listTop = 88;
         rowH = Math.max(30, Math.min(38, (height - 112) / 5));
 
         // Persistent network rail.
@@ -273,6 +273,11 @@ public final class RemoteTransferScreen extends Screen {
         outputFilterBox = new EditBox(font, outputX, fieldY + 24, labelW, 20, Component.literal("输出物品 ID"));
         outputFilterBox.setMaxLength(256);
         addRenderableWidget(outputFilterBox);
+        CompoundTag selectedLink = findSelectedLink();
+        if (selectedLink != null) {
+            inputFilterBox.setValue(selectedLink.getString("InputItems"));
+            outputFilterBox.setValue(selectedLink.getString("OutputItems"));
+        }
         addRenderableWidget(Button.builder(Component.literal("应用输入规则"), b ->
                 send(9, selectedNetwork, selectedConnection, null,
                         (filterModeInput << 1) | (exactInput ? 8 : 0), inputFilterBox.getValue()))
@@ -379,9 +384,15 @@ public final class RemoteTransferScreen extends Screen {
         return member.getString("Kind").equals("WORKSTATION") ? "工作方块（未加载）" : "容器（未加载）";
     }
 
+    private CompoundTag findSelectedLink() {
+        if (selectedConnection == null) return null;
+        for (CompoundTag link : links) if (link.getUUID("Id").equals(selectedConnection)) return link;
+        return null;
+    }
+
     private String connectionLabel(CompoundTag link) {
-        return shortId(link.getUUID("Source")) + " → " + shortId(link.getUUID("Target"))
-                + " · " + link.getString("Direction");
+        return trim(memberName(link.getUUID("Source")), 10) + " → "
+                + trim(memberName(link.getUUID("Target")), 10) + " · " + link.getString("Direction");
     }
 
     private String memberName(UUID id) {
