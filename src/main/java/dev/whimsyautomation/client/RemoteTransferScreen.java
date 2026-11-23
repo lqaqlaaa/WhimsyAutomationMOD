@@ -131,7 +131,9 @@ public final class RemoteTransferScreen extends Screen {
     }
 
     @Override public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
+        // Avoid vanilla's post-process blur: this screen contains dense lists and controls.
+        // A translucent fill keeps the world visible without blurring the GUI or its contents.
+        g.fill(0, 0, width, height, 0xC0101010);
         g.drawCenteredString(font, title, width/2, 10, 0xFFFFFF);
         g.drawString(font, Component.translatable("screen.whimsy_automation.remote.networks"), 12, 24, 0xE0E0E0);
         int rows = visibleRows();
