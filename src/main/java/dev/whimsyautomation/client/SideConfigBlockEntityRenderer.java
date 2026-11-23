@@ -57,7 +57,8 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
 
     @Override
     public boolean shouldRenderOffScreen(T blockEntity) {
-        return SideConfigOverlay.isActive(blockEntity);
+        return blockEntity instanceof SideConfigurableBlockEntity machine
+                && machine.isFaceColorDisplayEnabled();
     }
 
     @Override
@@ -73,14 +74,14 @@ public final class SideConfigBlockEntityRenderer<T extends BlockEntity> implemen
     @Override
     public void render(T blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffers, int packedLight, int packedOverlay) {
-        if (!SideConfigOverlay.isActive(blockEntity)
-                || !(blockEntity instanceof SideConfigurableBlockEntity)) return;
+        if (!(blockEntity instanceof SideConfigurableBlockEntity machine)
+                || !machine.isFaceColorDisplayEnabled()) return;
 
         VertexConsumer out = buffers.getBuffer(SIDE_FRAME);
         Matrix4f matrix = poseStack.last().pose();
 
         for (int side = 0; side < 6; side++) {
-            if (!SideConfigOverlay.shouldShowFace(blockEntity, side)) continue;
+            if (!machine.shouldShowFaceColor(net.minecraft.core.Direction.values()[side])) continue;
             int argb = SideConfigOverlay.color(side);
             float r = ((argb >>> 16) & 0xFF) / 255.0F;
             float g = ((argb >>> 8) & 0xFF) / 255.0F;
