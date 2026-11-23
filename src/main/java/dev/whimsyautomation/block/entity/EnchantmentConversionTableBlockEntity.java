@@ -25,6 +25,9 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     private boolean autoMode;
     private int copyCount = 64;
     private final int[] sideModes = new int[6];
+    // Client-only preference; not persisted or synchronized as machine gameplay data.
+    private boolean faceColorDisplayEnabled = true;
+
     private final IItemHandler[] sidedHandlers = new IItemHandler[6];
     private boolean internalInventoryUpdate;
     public static final int INPUT_SLOT = 0;
@@ -83,6 +86,11 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         if (enabled && level != null && !level.isClientSide) confirmCopy(copyCount);
     }
     @Override public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
+    @Override public boolean isFaceColorDisplayEnabled() { return faceColorDisplayEnabled; }
+    @Override public void setFaceColorDisplayEnabled(boolean enabled) { faceColorDisplayEnabled = enabled; }
+    @Override public void setSideModeForDisplay(Direction side, int mode) {
+        sideModes[side.ordinal()] = Math.max(0, Math.min(2, mode));
+    }
     public void cycleSideMode(Direction side) {
         int index = side.ordinal();
         sideModes[index] = (sideModes[index] + 1) % 3;
