@@ -114,10 +114,14 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                         int side = p.value() & 1;
                         int mode = (p.value() >> 1) & 3;
                         boolean exact = (p.value() & 8) != 0;
+                        java.util.ArrayList<String> entries = new java.util.ArrayList<>();
+                        if (exact) current.items().stream().filter(s -> s.contains("|")).forEach(entries::add);
+                        java.util.Arrays.stream(p.text().split(","))
+                                .map(String::trim).filter(s -> !s.isEmpty()).distinct().limit(64)
+                                .forEach(entries::add);
                         var filter = new RemoteTransferNetworkData.Filter(
                                 RemoteTransferNetworkData.FilterMode.values()[Math.min(2, mode)],
-                                exact, java.util.Arrays.stream(p.text().split(","))
-                                        .map(String::trim).filter(s -> !s.isEmpty()).distinct().limit(64).toList());
+                                exact, entries);
                         data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
                                 old.sourceMember(), old.targetMember(), old.direction(), old.enabled(),
                                 side == 0 ? filter : old.inputFilter(), side == 1 ? filter : old.outputFilter()));

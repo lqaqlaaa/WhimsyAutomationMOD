@@ -24,7 +24,7 @@ import java.util.UUID;
  */
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class RemoteTransferTicker {
-    private static final int MAX_ITEMS_PER_LINK_PER_TICK = 64;
+    private static final int MAX_ITEMS_PER_LINK_PER_TICK = Integer.MAX_VALUE;
     private static long serverTickCounter;
 
     private RemoteTransferTicker() {}
