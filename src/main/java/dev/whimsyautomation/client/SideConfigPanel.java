@@ -41,10 +41,20 @@ public final class SideConfigPanel {
                     .bounds(bx, by, 50, 20).build()
                     .render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
         }
-        graphics.drawString(font, Component.literal("关闭总开关时，仅显示已启用输入或输出的面"),
+        graphics.drawString(font, Component.literal("边框颜色对应方向："),
                 x + 8, y + 91, 0xFF505050, false);
+        // Keep this legend tied to the renderer's canonical palette. The small
+        // swatches use exactly the same ARGB values as the in-world face frames.
+        for (int i = 0; i < 6; i++) {
+            int lx = x + 8 + (i % 3) * 55;
+            int ly = y + 104 + (i / 3) * 14;
+            int color = SideConfigOverlay.color(i);
+            graphics.fill(lx, ly + 1, lx + 8, ly + 9, 0xFF303030);
+            graphics.fill(lx + 1, ly + 2, lx + 7, ly + 8, color);
+            graphics.drawString(font, Component.literal(NAMES[i]), lx + 11, ly, 0xFF202020, false);
+        }
         Button.builder(Component.literal("显示六面颜色框：" + (showFaceColors ? "开启" : "关闭")), b -> {})
-                .bounds(panelX + 8, panelY + 123, 160, 18).build()
+                .bounds(panelX + 8, panelY + 143, 160, 18).build()
                 .render(graphics, (int) mouseX - leftPos, (int) mouseY - topPos, partialTick);
         Button.builder(Component.literal("×"), b -> {})
                 .bounds(panelX + 150, panelY + 4, 20, 16).build()
@@ -60,7 +70,7 @@ public final class SideConfigPanel {
             int y = panelY + 34 + (i / 3) * 25;
             if (localX >= x && localX < x + 50 && localY >= y && localY < y + 20) return i;
         }
-        if (localX >= panelX + 8 && localX < panelX + 168 && localY >= panelY + 123 && localY < panelY + 141) return 6;
+        if (localX >= panelX + 8 && localX < panelX + 168 && localY >= panelY + 143 && localY < panelY + 161) return 6;
         if (localX >= panelX && localX < panelX + 176 && localY >= panelY && localY < panelY + 166) return -2;
         return -1;
     }
