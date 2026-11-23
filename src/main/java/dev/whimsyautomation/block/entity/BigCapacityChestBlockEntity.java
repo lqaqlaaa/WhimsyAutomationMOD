@@ -108,18 +108,7 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
 
     /** Returns a single- or double-chest automation view, ordered LEFT then RIGHT. */
     public IItemHandler getAutomationItemHandler(net.minecraft.core.Direction side) {
-        if (level == null || !getBlockState().hasProperty(BlockStateProperties.CHEST_TYPE)
-                || getBlockState().getValue(BlockStateProperties.CHEST_TYPE) == ChestType.SINGLE) {
-            return new BigCapacityChestItemHandler(this, null);
-        }
-        BlockState state = getBlockState();
-        BlockPos partnerPos = worldPosition.relative(ChestBlock.getConnectedDirection(state));
-        if (!(level.getBlockEntity(partnerPos) instanceof BigCapacityChestBlockEntity partner)) {
-            return new BigCapacityChestItemHandler(this, null);
-        }
-        return state.getValue(BlockStateProperties.CHEST_TYPE) == ChestType.RIGHT
-                ? new BigCapacityChestItemHandler(partner, this)
-                : new BigCapacityChestItemHandler(this, partner);
+        return new BigCapacityChestItemHandler(this);
     }
     @Override public ItemStack removeItem(int slot, int amount) {
         if (!valid(slot) || amount <= 0) return ItemStack.EMPTY;
