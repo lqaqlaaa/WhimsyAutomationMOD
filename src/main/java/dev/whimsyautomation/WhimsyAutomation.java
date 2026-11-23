@@ -4,6 +4,7 @@ import dev.whimsyautomation.init.ModCapabilities;
 import dev.whimsyautomation.network.DeconstructionRecipeSnapshotPayload;
 import dev.whimsyautomation.network.ConfirmItemCopyPayload;
 import dev.whimsyautomation.network.ConfigureItemCopyPayload;
+import dev.whimsyautomation.network.BigCapacityChestSyncPayload;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.registry.ModBlocks;
 import dev.whimsyautomation.registry.ModCreativeTabs;
@@ -26,5 +27,6 @@ public final class WhimsyAutomation {
         modEventBus.addListener(DeconstructionRecipeSnapshotPayload::register);
         modEventBus.addListener(ConfirmItemCopyPayload::register);
         modEventBus.addListener(ConfigureItemCopyPayload::register);
+        modEventBus.addListener(BigCapacityChestSyncPayload::register);
     }
 }
