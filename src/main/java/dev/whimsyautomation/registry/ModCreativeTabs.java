@@ -18,7 +18,6 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.ENCHANTMENT_EXTRACTOR.get());
                         output.accept(ModItems.ENCHANTMENT_CONVERSION_TABLE.get());
                         output.accept(ModItems.DECONSTRUCTION_TABLE.get());
-                        output.accept(ModItems.BIG_CAPACITY_CHEST.get());
                     })
                     .build());
 

@@ -4,7 +4,6 @@ import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.menu.DeconstructionTableMenu;
 import dev.whimsyautomation.menu.EnchantmentExtractorMenu;
 import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
-import dev.whimsyautomation.menu.BigCapacityChestMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
@@ -23,9 +22,6 @@ public final class ModMenus {
 
     public static final DeferredHolder<MenuType<?>, MenuType<DeconstructionTableMenu>> DECONSTRUCTION_TABLE =
             MENUS.register("deconstruction_table", () -> IMenuTypeExtension.create(DeconstructionTableMenu::new));
-
-    public static final DeferredHolder<MenuType<?>, MenuType<BigCapacityChestMenu>> BIG_CAPACITY_CHEST_3 = MENUS.register("big_capacity_chest_3", () -> IMenuTypeExtension.create(BigCapacityChestMenu::new));
-    public static final DeferredHolder<MenuType<?>, MenuType<BigCapacityChestMenu>> BIG_CAPACITY_CHEST_6 = MENUS.register("big_capacity_chest_6", () -> IMenuTypeExtension.create(BigCapacityChestMenu::new));
 
     private ModMenus() {}
 

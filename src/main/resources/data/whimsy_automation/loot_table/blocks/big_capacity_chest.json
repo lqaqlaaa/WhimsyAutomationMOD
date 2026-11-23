@@ -1,1 +1,0 @@
-{"type":"minecraft:block","pools":[{"rolls":1,"entries":[{"type":"minecraft:item","name":"whimsy_automation:big_capacity_chest"}],"conditions":[{"condition":"minecraft:survives_explosion"}]}]}

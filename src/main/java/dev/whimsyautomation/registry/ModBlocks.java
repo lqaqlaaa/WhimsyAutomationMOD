@@ -4,12 +4,9 @@ import dev.whimsyautomation.WhimsyAutomation;
 import dev.whimsyautomation.block.DeconstructionTableBlock;
 import dev.whimsyautomation.block.EnchantmentExtractorBlock;
 import dev.whimsyautomation.block.EnchantmentConversionTableBlock;
-import dev.whimsyautomation.block.BigCapacityChestBlock;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredBlock;
-
-import java.util.function.Supplier;
 
 public final class ModBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(WhimsyAutomation.MOD_ID);
@@ -20,8 +17,6 @@ public final class ModBlocks {
             BLOCKS.register("enchantment_conversion_table", EnchantmentConversionTableBlock::new);
     public static final DeferredBlock<Block> DECONSTRUCTION_TABLE =
             BLOCKS.register("deconstruction_table", DeconstructionTableBlock::new);
-
-    public static final DeferredBlock<Block> BIG_CAPACITY_CHEST = BLOCKS.register("big_capacity_chest", BigCapacityChestBlock::new);
 
     private ModBlocks() {}
 
