@@ -12,6 +12,9 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.wrapper.CombinedInvWrapper;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -62,12 +65,37 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
     }
 
     public IItemHandler getAutomationItemHandler(@Nullable net.minecraft.core.Direction side) {
+        if (level == null || !getBlockState().hasProperty(ChestBlock.TYPE)
+                || getBlockState().getValue(ChestBlock.TYPE) == ChestType.SINGLE) {
+            return inventory;
+        }
+        BlockPos partnerPos = worldPosition.relative(ChestBlock.getConnectedDirection(getBlockState()));
+        if (level.getBlockEntity(partnerPos) instanceof BigCapacityChestBlockEntity partner) {
+            return new CombinedInvWrapper(inventory, partner.inventory);
+        }
         return inventory;
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+        // ChestBlockEntity's vanilla serializer uses the vanilla stack codec.
+        // Temporarily save one-count display copies there, then persist the real
+        // integer counts through the dedicated codec below.
+        NonNullList<ItemStack> stacks = inventory.backingStacks();
+        int[] realCounts = new int[stacks.size()];
+        for (int slot = 0; slot < stacks.size(); slot++) {
+            ItemStack stack = stacks.get(slot);
+            realCounts[slot] = stack.getCount();
+            if (!stack.isEmpty()) stack.setCount(1);
+        }
+        try {
+            super.saveAdditional(tag, registries);
+        } finally {
+            for (int slot = 0; slot < stacks.size(); slot++) {
+                ItemStack stack = stacks.get(slot);
+                if (!stack.isEmpty()) stack.setCount(realCounts[slot]);
+            }
+        }
         tag.put(BIG_INVENTORY_TAG, OversizedItemStackCodec.serialize(inventory, registries));
     }
 
@@ -101,6 +129,16 @@ public final class BigCapacityChestBlockEntity extends ChestBlockEntity {
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             return slot >= 0 && slot < SLOT_COUNT && !stack.isEmpty();
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            if (slot < 0 || slot >= SLOT_COUNT || amount <= 0) return ItemStack.EMPTY;
+            ItemStack present = getStackInSlot(slot);
+            if (present.isEmpty()) return ItemStack.EMPTY;
+            // IItemHandler extraction is a transport batch, not a way to place
+            // an oversized stack into another mod's ordinary ItemStack slot.
+            return super.extractItem(slot, Math.min(amount, present.getMaxStackSize()), simulate);
         }
 
         @Override

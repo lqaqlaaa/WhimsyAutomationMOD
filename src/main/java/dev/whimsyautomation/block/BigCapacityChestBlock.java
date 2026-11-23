@@ -3,7 +3,7 @@ package dev.whimsyautomation.block;
 import com.mojang.serialization.MapCodec;
 import dev.whimsyautomation.block.entity.BigCapacityChestBlockEntity;
 import dev.whimsyautomation.registry.ModBlockEntities;
-import net.minecraft.world.level.block.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
