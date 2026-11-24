@@ -27,13 +27,16 @@ import java.util.UUID;
  * the right workspace separates overview, endpoints, connections and filters.
  */
 public final class RemoteTransferScreen extends Screen {
-    private static final int BG = 0xF20B111D;
-    private static final int PANEL = 0xE6101B2B;
-    private static final int ROW = 0xB5223046;
+    // Opaque surfaces are intentional: translucent panels let the world's blur show
+    // through and make manually rendered labels/items look washed out on mobile.
+    private static final int BG = 0xFF101722;
+    private static final int PANEL = 0xFF192638;
+    private static final int ROW = 0xFF26384D;
+    private static final int ROW_SELECTED = 0xFF304E70;
     private static final int ACCENT = 0xFF398BFF;
-    private static final int TEXT = 0xFFE6EDF7;
-    private static final int MUTED = 0xFF91A2B8;
-    private static final int BORDER = 0xFF344C6D;
+    private static final int TEXT = 0xFFFFFFFF;
+    private static final int MUTED = 0xFFD0D9E5;
+    private static final int BORDER = 0xFF58718F;
 
     private CompoundTag snapshot = new CompoundTag();
     private UUID selectedNetwork, selectedMember, selectedSecond, selectedConnection;
@@ -343,19 +346,49 @@ public final class RemoteTransferScreen extends Screen {
             CompoundTag member = members.get(row + memberScroll);
             int y = listTop + row * rowH;
             int rowBottom = Math.min(height - 8, y + rowH - 2);
-            g.fill(contentX + 4, y, contentX + contentW - 4, rowBottom, ROW);
             UUID id = member.getUUID("Id");
-            ItemStack stack = memberStack(member);
-            g.renderItem(stack, contentX + 9, y + 5);
-            g.drawString(font, trim(memberLabel(member), 16), contentX + 31, y + 5,
-                    id.equals(selectedMember) ? 0xFF70AEFF : TEXT, false);
-            g.drawString(font, trim(member.getString("Dimension") + " " +
-                    BlockPos.of(member.getLong("Pos")).toShortString(), 22), contentX + 31, y + 17, MUTED, false);
+            boolean selected = id.equals(selectedMember);
             int color = COLORS[(row + memberScroll) % COLORS.length];
-            g.fill(contentX + contentW - 7, y + 2, contentX + contentW - 4, rowBottom - 2, color);
+
+            // Each endpoint is a fully opaque card with a persistent per-member color.
+            g.fill(contentX + 4, y, contentX + contentW - 4, rowBottom,
+                    selected ? ROW_SELECTED : ROW);
+            g.renderOutline(contentX + 4, y, contentW - 8, rowBottom - y,
+                    selected ? 0xFF8FC5FF : BORDER);
+            g.fill(contentX + 5, y + 2, contentX + 8, rowBottom - 2, color);
+
+            ItemStack stack = memberStack(member);
+            g.renderItem(stack, contentX + 12, y + Math.max(3, (rowH - 16) / 2));
+
+            BlockPos pos = BlockPos.of(member.getLong("Pos"));
+            String blockName = memberLabel(member);
+            String dimension = member.getString("Dimension");
+            boolean loaded = minecraft != null && minecraft.level != null
+                    && minecraft.level.dimension().location().toString().equals(dimension)
+                    && minecraft.level.hasChunkAt(pos);
+
+            int textX = contentX + 34;
+            int textRight = contentX + contentW - 66;
+            int maxChars = Math.max(8, (textRight - textX) / 6);
+            g.drawString(font, trim(blockName, maxChars), textX, y + 4,
+                    selected ? 0xFFFFFFFF : TEXT, false);
+            g.drawString(font, dimension + "  " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ(),
+                    textX, y + 16, MUTED, false);
+            if (rowH >= 36) {
+                String state = loaded ? "已加载" : "未加载";
+                g.drawString(font, state + " · ID " + shortId(id), textX, y + 27,
+                        loaded ? 0xFF8FE0A0 : 0xFFFFC078, false);
+            }
+
+            if (mouseX >= contentX + 4 && mouseX < contentX + contentW - 4
+                    && mouseY >= y && mouseY < rowBottom) {
+                g.renderOutline(contentX + 3, y - 1, contentW - 6, rowBottom - y + 2, 0xFFFFFFFF);
+            }
         }
-        if (members.isEmpty()) g.drawString(font, "当前网络还没有成员。点击上方按钮后，Shift+右键选择方块或容器。",
-                contentX + 8, listTop + 8, MUTED, false);
+        if (members.isEmpty()) {
+            g.drawString(font, "当前网络没有成员。点击“添加方块 / 容器”，再按住 Shift 右键选择目标。",
+                    contentX + 8, listTop + 8, TEXT, false);
+        }
     }
 
     private static final int[] COLORS = {0xFFFF5555, 0xFFFFAA33, 0xFFFFFF55, 0xFF55FF77,
