@@ -34,6 +34,7 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
             if (!network.owner().equals(owner)) continue;
             CompoundTag n = new CompoundTag();
             n.putUUID("Id", network.id()); n.putString("Name", network.name());
+            n.putBoolean("MemberBordersVisible", network.memberBordersVisible());
             net.minecraft.nbt.ListTag members = new net.minecraft.nbt.ListTag();
             for (var member : network.members()) {
                 CompoundTag m = new CompoundTag();
@@ -82,6 +83,27 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                 slotBindings.add(slot);
             }
             n.put("SlotBindings", slotBindings);
+            net.minecraft.nbt.ListTag slotFilters = new net.minecraft.nbt.ListTag();
+            for (var filterEntry : network.slotFilters().entrySet()) {
+                String[] key = filterEntry.getKey().split(":", 2);
+                if (key.length != 2) continue;
+                try {
+                    CompoundTag filterTag = new CompoundTag();
+                    filterTag.putUUID("Workstation", UUID.fromString(key[0]));
+                    filterTag.putInt("Slot", Integer.parseInt(key[1]));
+                    var filter = filterEntry.getValue();
+                    filterTag.putString("Mode", filter.mode().name());
+                    filterTag.putBoolean("Exact", filter.exactComponents());
+                    filterTag.putBoolean("IgnoreDurability", filter.ignoreDurability());
+                    filterTag.putBoolean("IgnoreNbt", filter.ignoreNbt());
+                    filterTag.putBoolean("MatchTags", filter.matchTags());
+                    net.minecraft.nbt.ListTag filterItems = new net.minecraft.nbt.ListTag();
+                    for (String item : filter.items()) filterItems.add(net.minecraft.nbt.StringTag.valueOf(item));
+                    filterTag.put("Items", filterItems);
+                    slotFilters.add(filterTag);
+                } catch (RuntimeException ignored) {}
+            }
+            n.put("SlotFilters", slotFilters);
             networks.add(n);
         }
         root.put("Networks", networks);
