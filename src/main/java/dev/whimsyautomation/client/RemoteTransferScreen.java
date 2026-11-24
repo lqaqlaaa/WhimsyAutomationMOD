@@ -168,13 +168,9 @@ public final class RemoteTransferScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("删除当前网络"), b ->
                 send(3, selectedNetwork, null, null, 0, ""))
                 .bounds(contentX + 8, 148, Math.min(110, contentW - 16), 20).build());
-        int bindW = Math.max(44, (contentW - 22) / 2);
-        addRenderableWidget(Button.builder(Component.literal("绑定输入"), b ->
-                send(4, selectedNetwork, null, null, 0, ""))
-                .bounds(contentX + 8, 178, bindW, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("绑定输出"), b ->
-                send(4, selectedNetwork, null, null, 1, ""))
-                .bounds(contentX + 14 + bindW, 178, bindW, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("添加网络成员方块"), b ->
+                send(15, selectedNetwork, null, null, 0, ""))
+                .bounds(contentX + 8, 178, Math.min(150, contentW - 16), 20).build());
         addRenderableWidget(Button.builder(Component.literal("打开成员管理 ›"), b -> {
             activePage = 1; init();
         }).bounds(contentX + 8, 208, Math.min(130, contentW - 16), 20).build());
@@ -187,16 +183,13 @@ public final class RemoteTransferScreen extends Screen {
     }
 
     private void buildMemberWidgets() {
-        int third = Math.max(28, (contentW - 24) / 3);
-        addRenderableWidget(Button.builder(Component.literal("绑定输入"), b ->
-                send(4, selectedNetwork, null, null, 0, ""))
-                .bounds(contentX + 6, 62, third, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("绑定输出"), b ->
-                send(4, selectedNetwork, null, null, 1, ""))
-                .bounds(contentX + 12 + third, 62, third, 20).build());
+        int half = Math.max(36, (contentW - 18) / 2);
+        addRenderableWidget(Button.builder(Component.literal("添加成员方块"), b ->
+                send(15, selectedNetwork, null, null, 0, ""))
+                .bounds(contentX + 6, 62, half, 20).build());
         addRenderableWidget(Button.builder(Component.literal("移除成员"), b -> {
             if (selectedMember != null) send(5, selectedNetwork, selectedMember, null, 0, "");
-        }).bounds(contentX + 18 + third * 2, 62, Math.max(28, contentW - third * 2 - 24), 20).build());
+        }).bounds(contentX + 12 + half, 62, half, 20).build());
 
         int visible = visibleMemberRows();
         for (int row = 0; row < visible && row + memberScroll < members.size(); row++) {
@@ -437,7 +430,7 @@ public final class RemoteTransferScreen extends Screen {
         } else if (activePage == 1) {
             drawMemberForeground(g, mouseX, mouseY);
         } else if (activePage == 2) {
-            g.drawString(font, "先选择输入或输出，再依次 Shift+右键工作方块和连接容器。",
+            g.drawString(font, "选择工作方块的具体库存槽位，再为该槽位设置输入或输出目标。",
                     contentX + 6, 52, MUTED, false);
             g.drawString(font, "选中容器后，可直接调整输入/输出、传输开关和连接线显示。",
                     contentX + 6, height - 48, TEXT, false);
@@ -504,7 +497,7 @@ public final class RemoteTransferScreen extends Screen {
             }
         }
         if (members.isEmpty()) {
-            g.drawString(font, "当前网络没有成员。点击“绑定输入”或“绑定输出”，再依次 Shift+右键工作方块和容器。",
+            g.drawString(font, "当前网络没有成员。点击“添加成员方块”，再 Shift+右键任意方块即可加入。",
                     contentX + 8, listTop + 8, TEXT, false);
         }
     }
