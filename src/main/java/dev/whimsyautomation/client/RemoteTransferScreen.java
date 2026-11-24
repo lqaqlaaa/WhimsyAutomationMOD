@@ -175,6 +175,12 @@ public final class RemoteTransferScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("打开成员管理 ›"), b -> {
             activePage = 1; init();
         }).bounds(contentX + 8, 208, Math.min(130, contentW - 16), 20).build());
+        addRenderableWidget(Button.builder(Component.literal(RemoteTransferOverlay.connectionsVisible()
+                ? "关闭连接线显示" : "开启连接线显示"), b -> {
+            RemoteTransferOverlay.toggleConnectionsVisible();
+            b.setMessage(Component.literal(RemoteTransferOverlay.connectionsVisible()
+                    ? "关闭连接线显示" : "开启连接线显示"));
+        }).bounds(contentX + 8, Math.min(height - 28, 238), Math.min(130, contentW - 16), 20).build());
     }
 
     private void buildMemberWidgets() {
@@ -208,76 +214,31 @@ public final class RemoteTransferScreen extends Screen {
     }
 
     private void buildConnectionWidgets() {
-        int usableW = Math.max(1, contentW - 12);
-        int columns = RemoteTransferGuiLayout.cols(usableW, 104);
-        int half = columns == 2 ? (usableW - 6) / 2 : usableW;
-        int x = contentX + 6;
-        int y = 66;
-
-        addRenderableWidget(Button.builder(Component.literal("连接方向：" +
-                new String[]{"输入", "输出", "双向"}[connectionDirection]), b -> {
-            connectionDirection = (connectionDirection + 1) % 3;
-            b.setMessage(Component.literal("连接方向：" +
-                    new String[]{"输入", "输出", "双向"}[connectionDirection]));
-        }).bounds(x, y, half, 20).build());
-
-        int createY = columns == 2 ? y : y + 24;
-        int createX = columns == 2 ? x + half + 6 : x;
-        int createW = columns == 2 ? half : usableW;
-        addRenderableWidget(Button.builder(Component.literal("建立所选连接"), b -> {
-            if (selectedMember != null && selectedSecond != null && !selectedMember.equals(selectedSecond))
-                send(6, selectedNetwork, selectedMember, selectedSecond, connectionDirection, "");
-        }).bounds(createX, createY, createW, 20).build());
-
-        int memberY = createY + 30;
-        int pickerRowH = columns == 2 ? 24 : 46;
-        addRenderableWidget(Button.builder(Component.literal("选择 A：" + memberName(selectedMember)), b ->
-                minecraft.setScreen(new RemoteTransferMemberPickerScreen(this, members, selectedMember, id -> {
-                    selectedMember = id;
-                    init();
-                }))).bounds(x, memberY, half, 20).build());
-        int secondPickerY = columns == 2 ? memberY : memberY + 22;
-        int secondPickerX = columns == 2 ? x + half + 6 : x;
-        addRenderableWidget(Button.builder(Component.literal("选择 B：" + memberName(selectedSecond)), b ->
-                minecraft.setScreen(new RemoteTransferMemberPickerScreen(this, members, selectedSecond, id -> {
-                    selectedSecond = id;
-                    init();
-                }))).bounds(secondPickerX, secondPickerY, half, 20).build());
-        memberY += pickerRowH;
-        int memberRows = columns == 2 ? Math.max(1, Math.min(4, (height - memberY - 44) / 22)) : 0;
-        for (int i = memberScroll; i < Math.min(members.size(), memberScroll + memberRows); i++) {
-            CompoundTag m = members.get(i);
-            UUID id = m.getUUID("Id");
-            int yRow = memberY + (i - memberScroll) * 22;
-            String prefix = id.equals(selectedMember) ? "A✓ " : id.equals(selectedSecond) ? "B✓ " : "";
-            addRenderableWidget(Button.builder(Component.literal(prefix + memberLabel(m)), b -> {
-                if (id.equals(selectedMember)) selectedMember = null;
-                else if (id.equals(selectedSecond)) selectedSecond = null;
-                else if (selectedMember == null) selectedMember = id;
-                else if (selectedSecond == null) selectedSecond = id;
-                else { selectedMember = selectedSecond; selectedSecond = id; }
-                init();
-            }).bounds(x, yRow, half, 20).build());
-        }
-
-        int linkX = columns == 2 ? x + half + 6 : x;
-        int linkY = columns == 2 ? memberY : memberY + memberRows * 22 + 6;
-        int linkW = columns == 2 ? half : usableW;
-        int linkRows = Math.max(1, Math.min(5, (height - linkY - 34) / 22));
-        for (int i = connectionScroll; i < Math.min(links.size(), connectionScroll + linkRows); i++) {
-            CompoundTag link = links.get(i);
+        int visible = Math.max(1, Math.min(7, (height - 132) / 24));
+        for (int row = 0; row < visible && row + connectionScroll < links.size(); row++) {
+            CompoundTag link = links.get(row + connectionScroll);
             UUID id = link.getUUID("Id");
-            int yRow = linkY + (i - connectionScroll) * 22;
+            int y = 70 + row * 24;
+            String state = link.getBoolean("Enabled") ? "运行中" : "已关闭";
             addRenderableWidget(Button.builder(Component.literal(
-                    (id.equals(selectedConnection) ? "▸ " : "") + connectionLabel(link)), b -> {
+                    (id.equals(selectedConnection) ? "▸ " : "") + connectionLabel(link) + " · " + state), b -> {
                 selectedConnection = id;
                 loadSelectedFilter(link);
                 init();
-            }).bounds(linkX, yRow, linkW, 20).build());
+            }).bounds(contentX + 6, y, Math.max(48, contentW - 12), 20).build());
         }
-        addRenderableWidget(Button.builder(Component.literal("移除所选连接"), b -> {
-            if (selectedConnection != null) send(7, selectedNetwork, selectedConnection, null, 0, "");
-        }).bounds(linkX, height - 30, linkW, 20).build());
+        if (selectedConnection == null) return;
+        CompoundTag selected = findSelectedLink();
+        if (selected == null) return;
+        int actionY = Math.max(76, Math.min(height - 56, 76 + visible * 24));
+        int half = Math.max(40, (contentW - 18) / 2);
+        addRenderableWidget(Button.builder(Component.literal(
+                selected.getBoolean("Enabled") ? "关闭此连接" : "开启此连接"), b ->
+                send(12, selectedNetwork, selectedConnection, null, 0, ""))
+                .bounds(contentX + 6, actionY, half, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("移除此连接"), b ->
+                send(7, selectedNetwork, selectedConnection, null, 0, ""))
+                .bounds(contentX + 12 + half, actionY, Math.max(40, contentW - half - 18), 20).build());
     }
 
     private void buildFilterWidgets() {

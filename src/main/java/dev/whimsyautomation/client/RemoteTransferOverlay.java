@@ -67,6 +67,8 @@ public final class RemoteTransferOverlay {
 
     public static void selectNetwork(UUID id) { selectedNetwork = id; }
     public static void setConnectionsVisible(boolean visible) { connectionsVisible = visible; }
+    public static boolean connectionsVisible() { return connectionsVisible; }
+    public static void toggleConnectionsVisible() { connectionsVisible = !connectionsVisible; }
 
     private static CompoundTag findSelectedNetwork() {
         ListTag list = snapshot.getList("Networks", Tag.TAG_COMPOUND);
