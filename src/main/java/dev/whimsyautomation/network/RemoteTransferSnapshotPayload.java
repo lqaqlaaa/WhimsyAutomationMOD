@@ -84,6 +84,50 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
         return new RemoteTransferSnapshotPayload(root);
     }
 
+    /** Adds a server-authoritative view of the selected member's real ItemHandler slots. */
+    public static RemoteTransferSnapshotPayload withInventory(RemoteTransferNetworkData source,
+                                                                ServerPlayer player,
+                                                                UUID networkId, UUID memberId) {
+        CompoundTag root = from(source, player.getUUID()).data().copy();
+        CompoundTag inventory = new CompoundTag();
+        inventory.putBoolean("Available", false);
+        var network = source.getNetwork(networkId);
+        var member = network == null || !network.owner().equals(player.getUUID()) ? null
+                : network.members().stream().filter(m -> m.id().equals(memberId)).findFirst().orElse(null);
+        if (member != null) {
+            var level = player.server.getLevel(member.dimension());
+            if (level != null && level.hasChunkAt(member.pos())) {
+                net.neoforged.neoforge.items.IItemHandler handler =
+                        level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                member.pos(), null);
+                if (handler == null) {
+                    for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
+                        handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                member.pos(), side);
+                        if (handler != null) break;
+                    }
+                }
+                if (handler != null) {
+                    inventory.putBoolean("Available", true);
+                    inventory.putUUID("Member", member.id());
+                    net.minecraft.nbt.ListTag slots = new net.minecraft.nbt.ListTag();
+                    for (int i = 0; i < handler.getSlots(); i++) {
+                        net.minecraft.world.item.ItemStack stack = handler.getStackInSlot(i);
+                        CompoundTag slot = new CompoundTag();
+                        slot.putInt("Index", i);
+                        slot.putString("Item", stack.isEmpty() ? "" :
+                                net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+                        slot.putInt("Count", stack.getCount());
+                        slots.add(slot);
+                    }
+                    inventory.put("Slots", slots);
+                }
+            }
+        }
+        root.put("Inventory", inventory);
+        return new RemoteTransferSnapshotPayload(root);
+    }
+
     public static void register(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(TYPE, STREAM_CODEC, (payload, context) -> {
             context.enqueueWork(() -> {
