@@ -25,6 +25,11 @@ public final class RemoteTransferToolItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, net.minecraft.world.entity.player.Player player,
                                                    InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        // Sneaking with the configurator is reserved for block binding. Never open
+        // the network screen from the fallback item-use callback in this case.
+        if (player.isShiftKeyDown()) {
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        }
         if (level.isClientSide) {
             if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
                 try {
@@ -41,7 +46,9 @@ public final class RemoteTransferToolItem extends Item {
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
-        if (!context.getPlayer().isShiftKeyDown()) return InteractionResult.PASS;
+        if (context.getPlayer() == null || !context.getPlayer().isShiftKeyDown()) return InteractionResult.PASS;
+        // Consume the interaction on the client so the target block's menu/use
+        // callback cannot run after the configurator has claimed this click.
         if (context.getLevel().isClientSide) return InteractionResult.SUCCESS;
         if (!(context.getPlayer() instanceof ServerPlayer player)) return InteractionResult.PASS;
         var level = context.getLevel();
@@ -61,22 +68,47 @@ public final class RemoteTransferToolItem extends Item {
             player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.not_container"), true);
             return InteractionResult.FAIL;
         }
-        var networkId = RemoteTransferSelection.get(player.getUUID());
-        if (networkId == null) {
+        var pending = RemoteTransferSelection.get(player.getUUID());
+        if (pending == null) {
             player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.select_network_first"), true);
-            return InteractionResult.FAIL;
+            return InteractionResult.SUCCESS;
         }
+        var networkId = pending.networkId();
         var data = RemoteTransferNetworkData.get(player.server);
         var network = data.getNetwork(networkId);
         if (network == null || !network.owner().equals(player.getUUID())) {
             RemoteTransferSelection.clear(player.getUUID());
-            return InteractionResult.FAIL;
+            return InteractionResult.SUCCESS;
         }
-        boolean added = data.addMember(networkId, RemoteTransferNetworkData.Endpoint.create(level, pos, kind));
-        RemoteTransferSelection.clear(player.getUUID());
-        player.displayClientMessage(Component.translatable(added
-                ? "message.whimsy_automation.remote.target_added"
-                : "message.whimsy_automation.remote.target_exists"), true);
+
+        if (pending.workstationId() == null) {
+            if (kind != RemoteTransferNetworkData.EndpointKind.WORKSTATION) {
+                player.displayClientMessage(Component.literal("请先 Shift+右键选择工作方块。"), true);
+                return InteractionResult.SUCCESS;
+            }
+            var workstation = RemoteTransferNetworkData.Endpoint.create(level, pos, kind);
+            if (!data.addMember(networkId, workstation)) {
+                player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.target_exists"), true);
+                return InteractionResult.SUCCESS;
+            }
+            RemoteTransferSelection.setWorkstation(player.getUUID(), pending, workstation.id());
+            player.displayClientMessage(Component.literal("工作方块已标记，请继续 Shift+右键选择连接容器。"), true);
+        } else {
+            if (kind != RemoteTransferNetworkData.EndpointKind.CONTAINER) {
+                player.displayClientMessage(Component.literal("第二个方块必须是连接容器。"), true);
+                return InteractionResult.SUCCESS;
+            }
+            var container = RemoteTransferNetworkData.Endpoint.create(level, pos, kind);
+            if (!data.addMember(networkId, container)) {
+                player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.target_exists"), true);
+                return InteractionResult.SUCCESS;
+            }
+            data.addConnection(networkId, RemoteTransferNetworkData.Connection.create(
+                    pending.workstationId(), container.id(), pending.direction()));
+            RemoteTransferSelection.clear(player.getUUID());
+            player.displayClientMessage(Component.literal(pending.direction() == RemoteTransferNetworkData.TransferDirection.INPUT
+                    ? "输入连接已建立。" : "输出连接已建立。"), true);
+        }
         PacketDistributor.sendToPlayer(player, RemoteTransferSnapshotPayload.from(data, player.getUUID()));
         return InteractionResult.SUCCESS;
     }
