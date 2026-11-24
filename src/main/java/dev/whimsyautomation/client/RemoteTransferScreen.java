@@ -214,6 +214,37 @@ public final class RemoteTransferScreen extends Screen {
             teleportButton.active = canTeleport;
             addRenderableWidget(teleportButton);
         }
+        CompoundTag selectedContainerLink = findConnectionForContainer(selectedMember);
+        if (selectedContainerLink != null) {
+            int controlY = height - 30;
+            int controlW = Math.max(34, (contentW - 24) / 3);
+            UUID linkId = selectedContainerLink.getUUID("Id");
+            addRenderableWidget(Button.builder(Component.literal(
+                    "方向：" + ("INPUT".equals(selectedContainerLink.getString("Direction")) ? "输入" : "输出")), b ->
+                    send(13, selectedNetwork, linkId, null, 0, ""))
+                    .bounds(contentX + 6, controlY, controlW, 20).build());
+            addRenderableWidget(Button.builder(Component.literal(
+                    selectedContainerLink.getBoolean("ShowLine") ? "连接线：开" : "连接线：关"), b ->
+                    send(14, selectedNetwork, linkId, null, 0, ""))
+                    .bounds(contentX + 12 + controlW, controlY, controlW, 20).build());
+            addRenderableWidget(Button.builder(Component.literal(
+                    selectedContainerLink.getBoolean("Enabled") ? "传输：开" : "传输：关"), b ->
+                    send(12, selectedNetwork, linkId, null, 0, ""))
+                    .bounds(contentX + 18 + controlW * 2, controlY, Math.max(34, contentW - controlW * 2 - 24), 20).build());
+        }
+    }
+
+    private CompoundTag findConnectionForContainer(UUID memberId) {
+        if (memberId == null) return null;
+        CompoundTag member = null;
+        for (CompoundTag candidate : members) {
+            if (candidate.getUUID("Id").equals(memberId)) { member = candidate; break; }
+        }
+        if (member == null || !"CONTAINER".equals(member.getString("Kind"))) return null;
+        for (CompoundTag link : links) {
+            if (link.getUUID("Target").equals(memberId)) return link;
+        }
+        return null;
     }
 
     private void buildConnectionWidgets() {
@@ -527,7 +558,10 @@ public final class RemoteTransferScreen extends Screen {
         CompoundTag n = findNetwork();
         return n == null ? "未选择网络" : n.getString("Name");
     }
-    private int visibleMemberRows() { return Math.max(1, (height - listTop - 12) / rowH); }
+    private int visibleMemberRows() {
+        boolean reserveControls = activePage == 1 && findConnectionForContainer(selectedMember) != null;
+        return Math.max(1, (height - listTop - (reserveControls ? 38 : 12)) / rowH);
+    }
     private static String trim(String value, int max) {
         if (value == null) return "";
         return value.length() <= max ? value : value.substring(0, Math.max(1, max - 1)) + "…";
