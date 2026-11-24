@@ -62,7 +62,23 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                 c.putString("OutputItems", link.outputFilter().items().stream().map(s -> s.contains("|") ? s.substring(0, s.indexOf('|')) : s).distinct().collect(java.util.stream.Collectors.joining(",")));
                 links.add(c);
             }
-            n.put("Connections", links); networks.add(n);
+            n.put("Connections", links);
+
+            net.minecraft.nbt.ListTag slotBindings = new net.minecraft.nbt.ListTag();
+            for (var binding : network.slotBindings()) {
+                CompoundTag slot = new CompoundTag();
+                slot.putUUID("Id", binding.id());
+                slot.putUUID("Workstation", binding.workstationMember());
+                slot.putInt("WorkstationSlot", binding.workstationSlot());
+                slot.putString("Direction", binding.direction().name());
+                slot.putUUID("Target", binding.targetMember());
+                slot.putInt("TargetFace", binding.targetFace() == null ? -1 : binding.targetFace().ordinal());
+                slot.putInt("TargetSlot", binding.targetSlot());
+                slot.putBoolean("Enabled", binding.enabled());
+                slotBindings.add(slot);
+            }
+            n.put("SlotBindings", slotBindings);
+            networks.add(n);
         }
         root.put("Networks", networks);
         return new RemoteTransferSnapshotPayload(root);
