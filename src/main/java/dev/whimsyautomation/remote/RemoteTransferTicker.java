@@ -1,8 +1,11 @@
 package dev.whimsyautomation.remote;
 
+import com.mojang.logging.LogUtils;
 import dev.whimsyautomation.WhimsyAutomation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -17,6 +20,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.HashSet;
+import java.util.Set;
+import org.slf4j.Logger;
 
 /**
  * Executes saved remote-network links on the logical server.
@@ -27,6 +33,8 @@ import java.util.UUID;
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class RemoteTransferTicker {
     private static final int MAX_ITEMS_PER_LINK_PER_TICK = Integer.MAX_VALUE;
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Set<String> INVALID_STACK_WARNINGS = new HashSet<>();
     private static long serverTickCounter;
 
     private RemoteTransferTicker() {}
@@ -114,8 +122,8 @@ public final class RemoteTransferTicker {
         if (sourceHandler == null) return;
 
         int remainingBudget = MAX_ITEMS_PER_LINK_PER_TICK;
-        int firstSourceSlot = source.slotIndex() >= 0 ? source.slotIndex() : 0;
-        int lastSourceSlot = source.slotIndex() >= 0 ? source.slotIndex() + 1 : sourceHandler.getSlots();
+        int firstSourceSlot = getFirstHandlerSlot(sourceHandler, source);
+        int lastSourceSlot = source.slotIndex() >= 0 ? firstSourceSlot + 1 : sourceHandler.getSlots();
         if (lastSourceSlot > sourceHandler.getSlots()) return;
         for (int slot = firstSourceSlot; slot < lastSourceSlot && remainingBudget > 0; slot++) {
             ItemStack offered = sourceHandler.getStackInSlot(slot);
@@ -127,15 +135,16 @@ public final class RemoteTransferTicker {
             int request = Math.min(Math.min(remainingBudget, offered.getCount()),
                     Math.min(99, offered.getMaxStackSize()));
             ItemStack simulated = sourceHandler.extractItem(slot, request, true);
-            if (simulated.isEmpty() || !targetFilter.allows(simulated)) continue;
+            if (simulated.isEmpty() || simulated.getCount() > request || !targetFilter.allows(simulated)) continue;
+            if (!isSerializablePrototype(simulated, sourceLevel)) continue;
             // Pick the target face that can actually accept this item in the
             // requested slot. This is required for sided inventories such as
             // vanilla furnaces (top=input, sides=fuel, bottom=output).
             IItemHandler targetHandler = findHandler(targetLevel, target, false, simulated);
             if (targetHandler == null) continue;
 
-            int firstTargetSlot = target.slotIndex() >= 0 ? target.slotIndex() : 0;
-            int lastTargetSlot = target.slotIndex() >= 0 ? target.slotIndex() + 1 : targetHandler.getSlots();
+            int firstTargetSlot = getFirstHandlerSlot(targetHandler, target);
+            int lastTargetSlot = target.slotIndex() >= 0 ? firstTargetSlot + 1 : targetHandler.getSlots();
             if (lastTargetSlot > targetHandler.getSlots()) continue;
 
             // Never pass an oversized stack directly into a third-party handler.
@@ -196,6 +205,48 @@ public final class RemoteTransferTicker {
         }
     }
 
+    /**
+     * Storage Drawers exposes capability slot 0 as a virtual full-inventory
+     * insertion slot. Its real drawers start at capability slot 1. Treating
+     * slot 0 as a physical slot makes slot-local simulation/capacity checks lie.
+     */
+    private static int getHandlerSlotOffset(IItemHandler handler) {
+        for (Class<?> type = handler.getClass(); type != null; type = type.getSuperclass()) {
+            if (type.getName().equals(
+                    "com.jaquadro.minecraft.storagedrawers.capabilities.DrawerItemHandler")) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    private static int getFirstHandlerSlot(IItemHandler handler,
+                                           RemoteTransferNetworkData.Endpoint endpoint) {
+        int offset = getHandlerSlotOffset(handler);
+        return endpoint.slotIndex() >= 0 ? endpoint.slotIndex() + offset : offset;
+    }
+
+    /**
+     * Validate the exact one-item prototype Storage Drawers will persist.
+     * ItemStack.save validates both the count and every serialized component;
+     * checking a count-99 transfer batch alone cannot detect an invalid
+     * component carried by the item itself.
+     */
+    private static boolean isSerializablePrototype(ItemStack stack, ServerLevel level) {
+        try {
+            stack.copyWithCount(1).save(level.registryAccess(), new CompoundTag());
+            return true;
+        } catch (RuntimeException exception) {
+            String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+            if (INVALID_STACK_WARNINGS.add(itemId)) {
+                LOGGER.error("Remote transfer skipped non-serializable item prototype {}. "
+                        + "The source item contains data that Minecraft 1.21.1 cannot encode.",
+                        itemId, exception);
+            }
+            return false;
+        }
+    }
+
     /** Long-backed machine slots expose a capped ItemStack view but retain independent long capacity. */
     private static int getAvailableSpace(IItemHandler handler, int slot, ItemStack present, int slotLimit) {
         if (handler instanceof LongCountItemStackHandler longHandler) {
@@ -203,15 +254,15 @@ public final class RemoteTransferTicker {
             return (int) Math.min((long) Integer.MAX_VALUE, Long.MAX_VALUE - stored);
         }
         int occupied = present.isEmpty() ? 0 : present.getCount();
-        // Third-party handlers may advertise Integer.MAX_VALUE as their slot
-        // limit, but SophisticatedCore 1.5.33 serializes each physical slot
-        // through a [1, 99] count codec. Capping only the incoming batch is not
-        // enough: repeated inserts can merge 99 + 99 into 198 and crash while
-        // the handler serializes the changed slot. Keep the resulting external
-        // slot stack within the codec range as well. Our own long-backed
-        // handlers are handled above and retain their full long capacity.
-        int externalLimit = Math.min(slotLimit, 99);
-        return Math.max(0, externalLimit - occupied);
+        // Sophisticated Core stores the complete count in an ItemStack and
+        // validates that stack against Minecraft's [1, 99] codec while saving.
+        // Storage Drawers is different: its physical drawer stores the amount
+        // in a separate int field and serializes a one-item prototype. Applying
+        // the Sophisticated limit to every capability incorrectly treats those
+        // independent storage models as if they were identical.
+        int effectiveLimit = RemoteTransferInsertion.requiresBoundedStoredStack(handler)
+                ? Math.min(slotLimit, 99) : slotLimit;
+        return Math.max(0, effectiveLimit - occupied);
     }
 
     /**
@@ -279,8 +330,8 @@ public final class RemoteTransferTicker {
                                     RemoteTransferNetworkData.Endpoint endpoint,
                                     boolean extracting, ItemStack probe) {
         if (handler == null) return false;
-        int first = endpoint.slotIndex() >= 0 ? endpoint.slotIndex() : 0;
-        int last = endpoint.slotIndex() >= 0 ? endpoint.slotIndex() + 1 : handler.getSlots();
+        int first = getFirstHandlerSlot(handler, endpoint);
+        int last = endpoint.slotIndex() >= 0 ? first + 1 : handler.getSlots();
         if (last > handler.getSlots()) return false;
         for (int slot = first; slot < last; slot++) {
             if (extracting) {
