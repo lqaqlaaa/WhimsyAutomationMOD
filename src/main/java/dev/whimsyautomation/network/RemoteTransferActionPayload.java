@@ -168,6 +168,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     }
                 }
             }
+            // Keep the per-container line visibility flag intact while changing filters.
             case 9 -> {
                 if (owned(data, p.networkId(), player) && p.firstId() != null) {
                     var n = data.getNetwork(p.networkId());
