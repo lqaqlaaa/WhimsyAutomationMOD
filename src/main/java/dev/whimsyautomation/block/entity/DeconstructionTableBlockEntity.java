@@ -46,7 +46,7 @@ import java.util.Map;
  * Reverse-processes supported registered recipes. Recipe preview, recipe lock and
  * automation are deliberately separate states.
  */
-public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity {
+public final class DeconstructionTableBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity, dev.whimsyautomation.remote.RemoteTransferInventoryProvider {
         
     
     public static final int OUTPUT_START = 1;
@@ -120,6 +120,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         super(ModBlockEntities.DECONSTRUCTION_TABLE.get(), pos, state);
     }
 
+    @Override public IItemHandler getRemoteTransferInventory() { normalizeOutputInventory(); return inventory; }
     public ItemStackHandler getInventory() { return inventory; }
 
     /** Expands the real output inventory on demand; it never discards existing stacks. */
