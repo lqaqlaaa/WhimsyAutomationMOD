@@ -95,6 +95,17 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     }
                 }
             }
+            case 12 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null) {
+                    var network = data.getNetwork(p.networkId());
+                    if (network != null) for (var old : network.connections()) if (old.id().equals(p.firstId())) {
+                        data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
+                                old.sourceMember(), old.targetMember(), old.direction(), !old.enabled(),
+                                old.inputFilter(), old.outputFilter()));
+                        break;
+                    }
+                }
+            }
             case 11 -> {
                 if (!owned(data, p.networkId(), player) || p.firstId() == null) return;
                 if (!player.hasPermissions(2)) {
