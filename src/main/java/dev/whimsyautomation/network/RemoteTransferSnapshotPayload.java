@@ -88,6 +88,13 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
         return new RemoteTransferSnapshotPayload(root);
     }
 
+    /** Snapshot marker used after a successful world interaction that should return to the network UI. */
+    public static RemoteTransferSnapshotPayload openConfigurator(RemoteTransferNetworkData source, UUID owner) {
+        CompoundTag root = from(source, owner).data().copy();
+        root.putBoolean("OpenConfigurator", true);
+        return new RemoteTransferSnapshotPayload(root);
+    }
+
     /** Adds a server-authoritative view of the selected member's real ItemHandler slots. */
     public static RemoteTransferSnapshotPayload withInventory(RemoteTransferNetworkData source,
                                                                 ServerPlayer player,
