@@ -133,6 +133,7 @@ public final class RemoteTransferScreen extends Screen {
             String label = trim(n.getString("Name"), 14);
             addRenderableWidget(Button.builder(Component.literal((id.equals(selectedNetwork) ? "▸ " : "  ") + label), b -> {
                 selectedNetwork = id;
+                send(20, id, null, null, 0, "");
                 selectedMember = selectedSecond = selectedConnection = null;
                 memberScroll = connectionScroll = 0;
                 rebuildData();
