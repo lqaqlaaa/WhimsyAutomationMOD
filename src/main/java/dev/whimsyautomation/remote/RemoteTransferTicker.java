@@ -304,10 +304,6 @@ public final class RemoteTransferTicker {
     private static IItemHandler findHandler(ServerLevel level,
                                              RemoteTransferNetworkData.Endpoint endpoint,
                                              boolean extracting, ItemStack probe) {
-        if (endpoint.kind() == RemoteTransferNetworkData.EndpointKind.AE2_NETWORK
-                || endpoint.kind() == RemoteTransferNetworkData.EndpointKind.REFINED_STORAGE_NETWORK) {
-            return ExternalStorageBridge.getHandler(level, endpoint.pos(), endpoint.kind());
-        }
         var blockEntity = level.getBlockEntity(endpoint.pos());
         boolean workstation = endpoint.kind() == RemoteTransferNetworkData.EndpointKind.WORKSTATION;
         // A workstation binding addresses the machine's real GUI inventory slot.

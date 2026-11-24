@@ -415,7 +415,7 @@ public final class RemoteTransferNetworkData extends SavedData {
         return normalized.length() > 48 ? normalized.substring(0, 48) : normalized;
     }
 
-    public enum EndpointKind { WORKSTATION, CONTAINER, AE2_NETWORK, REFINED_STORAGE_NETWORK }
+    public enum EndpointKind { WORKSTATION, CONTAINER }
     public enum TransferDirection { INPUT, OUTPUT, BIDIRECTIONAL }
 
     /** One independently routed inventory slot on a workstation. */

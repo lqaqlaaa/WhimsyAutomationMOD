@@ -3,7 +3,6 @@ package dev.whimsyautomation.item;
 import dev.whimsyautomation.network.RemoteTransferActionPayload;
 import dev.whimsyautomation.network.RemoteTransferSnapshotPayload;
 import dev.whimsyautomation.remote.RemoteTransferNetworkData;
-import dev.whimsyautomation.remote.ExternalStorageBridge;
 import dev.whimsyautomation.remote.RemoteTransferSelection;
 import dev.whimsyautomation.block.entity.DeconstructionTableBlockEntity;
 import dev.whimsyautomation.block.entity.EnchantmentConversionTableBlockEntity;
@@ -70,8 +69,6 @@ public final class RemoteTransferToolItem extends Item {
 
     private static net.neoforged.neoforge.items.IItemHandler findAnyHandler(
             Level level, net.minecraft.core.BlockPos pos) {
-        RemoteTransferNetworkData.EndpointKind externalKind = ExternalStorageBridge.detectKind(level, pos);
-        if (externalKind != null) return ExternalStorageBridge.getHandler(level, pos, externalKind);
         var capability = net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK;
         var handler = level.getCapability(capability, pos, null);
         if (handler != null) return handler;
@@ -118,39 +115,20 @@ public final class RemoteTransferToolItem extends Item {
 
         boolean reopenConfigurator = false;
         if (pending.mode() == RemoteTransferSelection.Mode.ADD_MEMBER) {
-            RemoteTransferNetworkData.EndpointKind detectedKind = ExternalStorageBridge.detectKind(level, pos);
-            RemoteTransferNetworkData.EndpointKind endpointKind = detectedKind == null
-                    ? RemoteTransferNetworkData.EndpointKind.CONTAINER : detectedKind;
-            if (detectedKind != null && ExternalStorageBridge.getHandler(level, pos, detectedKind) == null) {
-                player.displayClientMessage(Component.literal(ExternalStorageBridge.unavailableMessage(detectedKind)), true);
-                return InteractionResult.SUCCESS;
-            }
-            var existingAtPosition = network.members().stream()
+            var existing = network.members().stream()
                     .filter(member -> member.dimension().equals(level.dimension()) && member.pos().equals(pos))
                     .findFirst().orElse(null);
-            var existingNetwork = existingAtPosition == null && detectedKind != null
-                    ? network.members().stream()
-                        .filter(member -> member.kind() == detectedKind
-                                && member.dimension().equals(level.dimension())
-                                && !member.pos().equals(pos) && level.hasChunkAt(member.pos()))
-                        .filter(member -> ExternalStorageBridge.sameNetwork(level, pos, member.pos(), detectedKind))
-                        .findFirst().orElse(null)
-                    : null;
-            var existing = existingAtPosition != null ? existingAtPosition : existingNetwork;
             if (existing == null) {
-                var member = RemoteTransferNetworkData.Endpoint.create(level, pos, endpointKind);
+                var member = RemoteTransferNetworkData.Endpoint.create(
+                        level, pos, RemoteTransferNetworkData.EndpointKind.CONTAINER);
                 if (!data.addMember(pending.networkId(), member)) {
                     player.displayClientMessage(Component.literal("该方块已经在当前网络中。"), true);
                     return InteractionResult.SUCCESS;
                 }
-            } else if (existingAtPosition != null && detectedKind != null && existing.kind() != detectedKind) {
-                data.setMemberKind(pending.networkId(), existing.id(), detectedKind);
             }
             RemoteTransferSelection.clear(player.getUUID());
             reopenConfigurator = true;
-            player.displayClientMessage(Component.literal(existingNetwork != null
-                    ? "这个科技存储网络已经绑定，无需重复添加。"
-                    : detectedKind == null ? "方块已加入网络成员。" : ExternalStorageBridge.connectedMessage(detectedKind)), true);
+            player.displayClientMessage(Component.literal("方块已加入网络成员。"), true);
         } else if (pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT
                 || pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT_BATCH) {
             var workstation = network.members().stream()
@@ -165,13 +143,7 @@ public final class RemoteTransferToolItem extends Item {
                 player.displayClientMessage(Component.literal("目标容器不能与工作方块是同一个方块。"), true);
                 return InteractionResult.SUCCESS;
             }
-            RemoteTransferNetworkData.EndpointKind detectedTargetKind = ExternalStorageBridge.detectKind(level, pos);
-            if (detectedTargetKind != null) {
-                if (ExternalStorageBridge.getHandler(level, pos, detectedTargetKind) == null) {
-                    player.displayClientMessage(Component.literal(ExternalStorageBridge.unavailableMessage(detectedTargetKind)), true);
-                    return InteractionResult.SUCCESS;
-                }
-            } else if (findAnyHandler(level, pos) == null) {
+            if (findAnyHandler(level, pos) == null) {
                 player.displayClientMessage(Component.literal("这个方块没有可用的物品库存接口，不能作为槽位绑定容器。"), true);
                 return InteractionResult.SUCCESS;
             }
@@ -179,26 +151,13 @@ public final class RemoteTransferToolItem extends Item {
             var target = network.members().stream()
                     .filter(member -> member.dimension().equals(level.dimension()) && member.pos().equals(pos))
                     .findFirst().orElse(null);
-            if (target == null && detectedTargetKind != null) {
-                target = network.members().stream()
-                        .filter(member -> member.kind() == detectedTargetKind
-                                && member.dimension().equals(level.dimension())
-                                && level.hasChunkAt(member.pos()))
-                        .filter(member -> ExternalStorageBridge.sameNetwork(level, pos, member.pos(), detectedTargetKind))
-                        .findFirst().orElse(null);
-            }
             if (target == null) {
-                target = RemoteTransferNetworkData.Endpoint.create(level, pos, detectedTargetKind == null
-                        ? RemoteTransferNetworkData.EndpointKind.CONTAINER : detectedTargetKind);
+                target = RemoteTransferNetworkData.Endpoint.create(
+                        level, pos, RemoteTransferNetworkData.EndpointKind.CONTAINER);
                 if (!data.addMember(pending.networkId(), target)) {
                     player.displayClientMessage(Component.literal("无法将目标方块加入网络。"), true);
                     return InteractionResult.SUCCESS;
                 }
-            } else if (detectedTargetKind != null && target.kind() != detectedTargetKind) {
-                java.util.UUID targetId = target.id();
-                data.setMemberKind(pending.networkId(), targetId, detectedTargetKind);
-                target = network.members().stream().filter(member -> member.id().equals(targetId))
-                        .findFirst().orElse(target);
             }
 
             java.util.List<Integer> slotsToBind = pending.workstationSlots().isEmpty()
