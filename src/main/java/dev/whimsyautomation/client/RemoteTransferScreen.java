@@ -57,13 +57,13 @@ public final class RemoteTransferScreen extends Screen {
     public RemoteTransferScreen(CompoundTag data) { this(); applySnapshot(data); }
 
     public RemoteTransferScreen applySnapshot(CompoundTag data) {
-        if (data != null && data.contains("Inventory")
-                && minecraft != null && minecraft.screen == this) {
+        boolean openInventory = data != null && data.contains("Inventory");
+        snapshot = data == null ? new CompoundTag() : data.copy();
+        rebuildData();
+        if (openInventory && minecraft != null && minecraft.screen == this) {
             minecraft.setScreen(new RemoteTransferInventoryScreen(this, data));
             return this;
         }
-        snapshot = data == null ? new CompoundTag() : data.copy();
-        rebuildData();
         if (minecraft != null && minecraft.screen == this) init();
         return this;
     }
