@@ -345,12 +345,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
             insertCountIntoOutputPlan(outputPlan, result, remaining);
         }
 
-        inventory.resize(OUTPUT_START + outputPlan.size());
-        for (int i = 0; i < outputPlan.size(); i++) {
-            ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
-            ItemStack after = outputPlan.get(i);
-            if (!ItemStack.matches(before, after)) inventory.setStackInSlot(OUTPUT_START + i, after);
-        }
+        applyOutputPlan(outputPlan);
         input.shrink(processedItems);
         inventory.setStackInSlot(0, input.isEmpty() ? ItemStack.EMPTY : input);
         setChanged();
@@ -370,14 +365,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         // merely because the visible output page is full.
         insertIntoOutputPlan(outputPlan, input.copy());
 
-        inventory.resize(OUTPUT_START + outputPlan.size());
-        for (int i = 0; i < outputPlan.size(); i++) {
-            ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
-            ItemStack after = outputPlan.get(i);
-            if (!ItemStack.matches(before, after)) {
-                inventory.setStackInSlot(OUTPUT_START + i, after);
-            }
-        }
+        applyOutputPlan(outputPlan);
 
         inventory.setStackInSlot(0, ItemStack.EMPTY);
         setChanged();
@@ -385,23 +373,35 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
     /** Repairs legacy output entries and caps each internal machine stack at the shared oversized limit. */
     private void normalizeOutputInventory() {
-        List<ItemStack> outputPlan = new ArrayList<>();
         for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) {
-            outputPlan.add(inventory.getStackInSlot(slot).copy());
-        }
-        normalizeOutputPlan(outputPlan);
-        int oldSize = inventory.getSlots();
-        inventory.resize(OUTPUT_START + outputPlan.size());
-        if (inventory.getSlots() != oldSize) setChanged();
-        for (int i = 0; i < outputPlan.size(); i++) {
-            ItemStack before = inventory.getStackInSlot(OUTPUT_START + i);
-            ItemStack after = outputPlan.get(i);
-            if (!ItemStack.matches(before, after)) {
-                inventory.setStackInSlot(OUTPUT_START + i, after);
-            }
+            ItemStack template = inventory.getStoredTemplate(slot);
+            long count = inventory.getStoredCount(slot);
+            if (template.isEmpty() || count <= 0L) continue;
+            normalizeStackLimit(template);
+            inventory.setStoredStack(slot, template, count);
         }
     }
 
+    private void applyOutputPlan(List<ItemStack> plan) {
+        inventory.resize(OUTPUT_START + plan.size());
+        for (int i = 0; i < plan.size(); i++) {
+            int slot = OUTPUT_START + i;
+            ItemStack before = inventory.getStackInSlot(slot);
+            ItemStack after = plan.get(i);
+            if (before.isEmpty() || after.isEmpty() || !ItemStack.isSameItemSameComponents(before, after)) {
+                if (!ItemStack.matches(before, after)) inventory.setStackInSlot(slot, after);
+                continue;
+            }
+            long remaining = (long) after.getCount() - before.getCount();
+            while (remaining > 0L) {
+                int batch = (int) Math.min(99L, remaining);
+                ItemStack remainder = inventory.insertItem(slot, after.copyWithCount(batch), false);
+                int accepted = batch - remainder.getCount();
+                if (accepted <= 0) break;
+                remaining -= accepted;
+            }
+        }
+    }
     private void normalizeOutputPlan(List<ItemStack> plan) {
         for (int i = 0; i < plan.size(); i++) {
             ItemStack stack = plan.get(i);
