@@ -200,6 +200,8 @@ public final class RemoteTransferScreen extends Screen {
             RemoteTransferOverlay.toggleConnectionsVisible();
             b.setMessage(Component.literal(RemoteTransferOverlay.connectionsVisible()
                     ? "关闭连接线显示" : "开启连接线显示"));
+            send(21, selectedNetwork, null, null,
+                    RemoteTransferOverlay.connectionsVisible() ? 1 : 0, "");
         }).bounds(contentX + 8, Math.min(height - 28, 238), Math.min(130, contentW - 16), 20).build());
     }
 
