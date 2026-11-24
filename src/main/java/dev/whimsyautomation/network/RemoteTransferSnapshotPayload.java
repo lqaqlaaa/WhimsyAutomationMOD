@@ -36,6 +36,8 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                 m.putUUID("Id", member.id()); m.putString("Dimension", member.dimension().location().toString());
                 m.putLong("Pos", member.pos().asLong()); m.putString("Kind", member.kind().name());
                 m.putString("Block", member.blockId());
+                m.putInt("Slot", member.slotIndex());
+                m.putInt("Face", member.face() == null ? -1 : member.face().ordinal());
                 members.add(m);
             }
             n.put("Members", members);
