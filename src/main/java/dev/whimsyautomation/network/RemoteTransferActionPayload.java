@@ -171,7 +171,10 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) continue;
-                    for (int dy = 1; dy <= 4; dy++) {
+                    // dy=0 is essential for adjacent ground-level positions:
+                    // the floor is then at originY-1. dy=1 is the position directly
+                    // above the target block itself.
+                    for (int dy = 0; dy <= 4; dy++) {
                         BlockPos feet = origin.offset(dx, dy, dz);
                         if (!targetLevel.hasChunkAt(feet) || !targetLevel.hasChunkAt(feet.below())) continue;
                         if (!targetLevel.getBlockState(feet.below()).isFaceSturdy(targetLevel, feet.below(), Direction.UP)) continue;
