@@ -57,15 +57,26 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     RemoteTransferSelection.clear(player.getUUID());
                 }
             }
-            case 4 -> {
-                if (owned(data, p.networkId(), player) && (p.value() == 0 || p.value() == 1)) {
-                    var direction = p.value() == 0
-                            ? RemoteTransferNetworkData.TransferDirection.INPUT
-                            : RemoteTransferNetworkData.TransferDirection.OUTPUT;
-                    RemoteTransferSelection.begin(player.getUUID(), p.networkId(), direction);
-                    player.displayClientMessage(Component.literal(p.value() == 0
-                            ? "输入绑定已启动：先 Shift+右键工作方块，再 Shift+右键连接容器。"
-                            : "输出绑定已启动：先 Shift+右键工作方块，再 Shift+右键连接容器。"), true);
+            case 4, 15 -> {
+                if (owned(data, p.networkId(), player)) {
+                    RemoteTransferSelection.beginAddMember(player.getUUID(), p.networkId());
+                    player.displayClientMessage(Component.literal("添加成员模式已启动：Shift+右键任意方块即可加入当前网络。"), true);
+                }
+            }
+            case 16 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null && p.value() >= 0
+                        && ("INPUT".equals(p.text()) || "OUTPUT".equals(p.text()))) {
+                    var network = data.getNetwork(p.networkId());
+                    var workstation = network == null ? null : network.members().stream()
+                            .filter(member -> member.id().equals(p.firstId())).findFirst().orElse(null);
+                    if (workstation != null) {
+                        var direction = "INPUT".equals(p.text())
+                                ? RemoteTransferNetworkData.TransferDirection.INPUT
+                                : RemoteTransferNetworkData.TransferDirection.OUTPUT;
+                        RemoteTransferSelection.beginSlotBinding(player.getUUID(), p.networkId(),
+                                workstation.id(), p.value(), direction);
+                        player.displayClientMessage(Component.literal("槽位绑定模式已启动：Shift+右键选择目标容器。"), true);
+                    }
                 }
             }
             case 5 -> {
