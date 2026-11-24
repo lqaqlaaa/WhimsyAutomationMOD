@@ -239,9 +239,10 @@ public final class RemoteTransferTicker {
         } catch (RuntimeException exception) {
             String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
             if (INVALID_STACK_WARNINGS.add(itemId)) {
-                LOGGER.error("Remote transfer skipped non-serializable item prototype {}. "
+                LOGGER.error("Remote transfer skipped non-serializable item prototype {} "
+                        + "(source count={}, effective max stack size={}). "
                         + "The source item contains data that Minecraft 1.21.1 cannot encode.",
-                        itemId, exception);
+                        itemId, stack.getCount(), stack.getMaxStackSize(), exception);
             }
             return false;
         }
