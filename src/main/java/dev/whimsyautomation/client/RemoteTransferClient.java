@@ -11,7 +11,8 @@ public final class RemoteTransferClient {
     public static void applySnapshot(CompoundTag data) {
         RemoteTransferOverlay.applySnapshot(data);
         Minecraft minecraft = Minecraft.getInstance();
+        // Server snapshots update an open configurator, but must not reopen the
+        // screen after the player has closed it to perform a world interaction.
         if (minecraft.screen instanceof RemoteTransferScreen screen) screen.applySnapshot(data);
-        else minecraft.setScreen(new RemoteTransferScreen(data));
     }
 }
