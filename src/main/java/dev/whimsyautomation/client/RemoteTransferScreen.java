@@ -202,10 +202,10 @@ public final class RemoteTransferScreen extends Screen {
             activePage = 1; init();
         }).bounds(contentX + 6, row2, half, 20).build());
         addRenderableWidget(Button.builder(Component.literal(RemoteTransferOverlay.connectionsVisible()
-                ? "连接线：关" : "连接线：开"), b -> {
+                ? "连接线：开" : "连接线：关"), b -> {
             RemoteTransferOverlay.toggleConnectionsVisible();
             b.setMessage(Component.literal(RemoteTransferOverlay.connectionsVisible()
-                    ? "连接线：关" : "连接线：开"));
+                    ? "连接线：开" : "连接线：关"));
             send(21, selectedNetwork, null, null,
                     RemoteTransferOverlay.connectionsVisible() ? 1 : 0, "");
         }).bounds(contentX + 12 + half, row2, Math.max(38, contentW - half - 18), 20).build());
