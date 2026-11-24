@@ -191,12 +191,10 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     public void dropAllContents() {
         if (level == null || level.isClientSide) return;
         dropStoredInLegalStacks(0);
-        if (persistentOutputMode) for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++)
-            dropStoredInLegalStacks(slot);
+        if (persistentOutputMode) for (int slot = OUTPUT_START; slot < inventory.getSlots(); slot++) dropStoredInLegalStacks(slot);
         for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
             ItemStack queued = inputBuffer.getStackInSlot(slot);
-            if (!queued.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5,
-                    worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, queued);
+            if (!queued.isEmpty()) Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, queued);
         }
         internalInventoryUpdate = true;
         for (int slot = 0; slot < inventory.getSlots(); slot++) inventory.setStackInSlot(slot, ItemStack.EMPTY);
@@ -211,11 +209,149 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         int legalSize = Math.max(1, PlayerStackRules.getPlayerMaxStackSize(template));
         while (remaining > 0L) {
             int batch = (int) Math.min(remaining, (long) legalSize);
-            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
-                    worldPosition.getZ() + 0.5, PlayerStackRules.copyForPlayer(template, batch));
+            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, PlayerStackRules.copyForPlayer(template, batch));
             remaining -= batch;
         }
     }
+    private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : 99; }
+        @Override public boolean isItemValid(int slot, ItemStack stack) {
+            if (stack.isEmpty()) return false;
+            // The extractor must accept every non-empty input. Items without
+            // enchantments are valid pass-through items and are exposed to the
+            // bottom automation handler once there is nothing to extract.
+            if (slot == 0) return true;
+            // Output slots are a virtual projection of the input item's enchantments.
+            // Restoration is handled explicitly by the menu's page handler; allowing
+            // direct writes here lets stale/client slot updates overwrite the projection.
+            return false;
+        }
+        @Override protected void onContentsChanged(int slot) {
+            if (internalInventoryUpdate || extractingGeneratedOutput) { setChanged(); return; }
+            // Menu slot synchronization also writes stacks into the client-side
+            // ItemStackHandler. The client must never apply an incoming enchanted
+            // book to the input or clear the synchronized generated output slot.
+            if (level == null || level.isClientSide) { setChanged(); return; }
+            if (slot == 0 && !autoMode && !persistentOutputMode) refreshGeneratedSlots();
+            // Manual mode uses virtual projections; persistent automatic outputs
+            // are real stacks and must never be rebuilt from the input,
+            // which consumes exactly the amount actually accepted. Never infer a
+            // player insertion from a raw slot mutation: that path used to apply
+            // one book and erase an entire stacked input, or rebuild stale output.
+            setChanged();
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            if (slot < 0 || slot >= getSlots() || amount <= 0) return ItemStack.EMPTY;
+            ItemStack present = getStackInSlot(slot);
+            if (present.isEmpty()) return ItemStack.EMPTY;
+            if (slot <= 0) {
+                int inputAmount = Math.min(amount, PlayerStackRules.getPlayerMaxStackSize(present));
+                ItemStack extractedInput = super.extractItem(slot, inputAmount, simulate);
+                return PlayerStackRules.copyForPlayer(extractedInput, extractedInput.getCount());
+            }
+            // Output extraction is an automation contract: honor the caller's
+            // requested amount up to the actual stored count, even above 64/99.
+            int requestedCount = Math.min(amount, present.getCount());
+            ItemStack requested = present.copyWithCount(requestedCount);
+            if (!persistentOutputMode && !canConsumeGeneratedBook(slot, requested)) return ItemStack.EMPTY;
+            if (simulate) {
+                return super.extractItem(slot, requestedCount, true);
+            }
+            extractingGeneratedOutput = true;
+            ItemStack extracted;
+            try {
+                extracted = super.extractItem(slot, requestedCount, false);
+            } finally {
+                extractingGeneratedOutput = false;
+            }
+            if (!extracted.isEmpty() && !persistentOutputMode) removeGeneratedBook(slot, extracted, true);
+            if (persistentOutputMode) compactOutputInventory();
+            if (persistentOutputMode && !autoMode && !hasStoredOutputs()) {
+                persistentOutputMode = false;
+                refreshGeneratedSlots();
+            }
+            return extracted;
+        }
+
+        @Override
+        public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
+            // Preserve the saved dynamic output size. Legacy saves keep their
+            // original contents and are resized again when outputs are rebuilt.
+            super.deserializeNBT(registries, tag);
+        }
+    };
+
+    private static class DynamicItemStackHandler extends LongCountItemStackHandler {
+        private DynamicItemStackHandler(int size) { super(size); }
+
+        @Override protected int getStackLimit(int slot, ItemStack stack) {
+            return slot == 0 ? 1 : OversizedItemStackCodec.MAX_COUNT;
+        }
+
+        private void resize(int size) {
+            int targetSize = Math.max(OUTPUT_START + PAGE_SIZE * 10, size);
+            resizeSlots(targetSize);
+        }
+    }
+
+    private final IItemHandler unsidedHandler = new SidedMachineItemHandler(inventory, automationInputHandler,
+            OUTPUT_START, true, true,
+            () -> !autoMode && !persistentOutputMode && getStackEnchantments(inventory.getStackInSlot(0)).isEmpty(), () -> autoMode || persistentOutputMode);
+
+    public int getSideMode(Direction side) { return sideModes[side.ordinal()]; }
+    @Override public boolean isFaceColorDisplayEnabled() { return faceColorDisplayEnabled; }
+    @Override public void setFaceColorDisplayEnabled(boolean enabled) { faceColorDisplayEnabled = enabled; }
+    @Override public void setSideModeForDisplay(Direction side, int mode) {
+        sideModes[side.ordinal()] = Math.max(0, Math.min(2, mode));
+    }
+    public void cycleSideMode(Direction side) {
+        int index = side.ordinal();
+        sideModes[index] = (sideModes[index] + 1) % 3;
+        sidedHandlers[index] = null;
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
+    public EnchantmentExtractorBlockEntity(BlockPos pos, BlockState state) {
+        super(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), pos, state);
+    }
+
+    @Override public IItemHandler getRemoteTransferInventory() { return inventory; }
+    public ItemStackHandler getInventory() { return inventory; }
+    public ItemStackHandler getInputBuffer() { return inputBuffer; }
+
+    /** Grows the dynamic output inventory without moving or replacing existing stacks. */
+    public void ensureOutputInventorySize(int size) {
+        if (size > inventory.getSlots()) {
+            inventory.resize(size);
+            setChanged();
+        }
+    }
+
+    /** Allocated output positions, including intentionally emptied stable slots. */
+    public int getGeneratedOutputCount() {
+        return Math.max(0, inventory.getSlots() - OUTPUT_START);
+    }
+
+    /** Release trailing unused pages while retaining the original ten-page base allocation. */
+    private void compactOutputInventory() {
+        int lastUsed = OUTPUT_START;
+        for (int slot = inventory.getSlots() - 1; slot >= OUTPUT_START; slot--) {
+            if (!inventory.getStackInSlot(slot).isEmpty()) { lastUsed = slot + 1; break; }
+        }
+        int used = Math.max(PAGE_SIZE * 10, lastUsed - OUTPUT_START);
+        int target = OUTPUT_START + ((used + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+        if (target < inventory.getSlots()) {
+            inventory.resize(target);
+            setChanged();
+        }
+    }
+
+    public void compactInputBuffer() { inputBuffer.compact(); }
+
+    @Override
     public Component getDisplayName() {
         return Component.translatable("container.whimsy_automation.enchantment_extractor");
     }
