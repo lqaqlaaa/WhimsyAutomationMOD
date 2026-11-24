@@ -4,7 +4,6 @@ import dev.whimsyautomation.network.RemoteTransferActionPayload;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -249,15 +248,12 @@ public final class RemoteTransferInventoryScreen extends Screen {
             int y = panelY + slotY(index);
             if (x < panelX || x + SLOT_SIZE > panelX + panelWidth) continue;
             boolean selected = index == selectedSlot;
-            // Use the same vanilla slot sprite as normal container screens.
-            // A flat dark rectangle is too easy to mistake for empty panel space.
-            g.blitSprite(RenderType::guiTextured,
-                    ResourceLocation.withDefaultNamespace("container/slot"),
-                    x, y, SLOT_SIZE, SLOT_SIZE);
-            if (selected) {
-                g.fill(x + 1, y + 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1, 0x553B9BFF);
-                g.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFF8FC5FF);
-            }
+            // High-contrast two-layer slot wells remain visible even when empty.
+            g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, 0xFF080D14);
+            g.fill(x + 1, y + 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1,
+                    selected ? 0xFF315C88 : 0xFF71849A);
+            g.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE,
+                    selected ? 0xFFFFFFFF : 0xFFE0E8F0);
             ItemStack stack = slotStack(slot);
             if (!stack.isEmpty()) {
                 g.renderItem(stack, x + 1, y + 1);
