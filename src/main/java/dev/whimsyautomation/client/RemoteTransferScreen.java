@@ -361,15 +361,26 @@ public final class RemoteTransferScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Match WardConfigScreen: render the world/background first, then opaque
+        // screen surfaces, then widgets, and finally custom foreground content.
+        renderBackground(g, mouseX, mouseY, partialTick);
+
         g.fill(0, 0, width, height, BG);
         g.fill(6, 6, sideW + 14, height - 6, PANEL);
         g.fill(contentX - 4, 28, width - 6, height - 6, 0xFF101724);
         g.renderOutline(6, 6, sideW + 8, height - 12, BORDER);
         g.renderOutline(contentX - 4, 28, width - contentX + 2, height - 34, BORDER);
         g.fill(6, 6, 9, height - 6, ACCENT);
+
+        if (activePage == 1) drawMemberBackgrounds(g, mouseX, mouseY);
+
+        // Native buttons and edit boxes must be rendered before custom labels/items.
+        super.render(g, mouseX, mouseY, partialTick);
+
         g.drawString(font, "远程网络", 14, 14, 0xFF70AEFF, false);
         g.drawString(font, "网络列表", 12, 30, MUTED, false);
-        g.drawString(font, selectedNetwork == null ? "请选择或创建网络" : networkName(), contentX + 4, 14, TEXT, false);
+        g.drawString(font, selectedNetwork == null ? "请选择或创建网络" : networkName(),
+                contentX + 4, 14, TEXT, false);
         g.drawString(font, new String[]{"网络概览", "成员方块", "连接管理", "过滤规则"}[activePage],
                 contentX + 4, 62, 0xFF70AEFF, false);
 
@@ -377,22 +388,47 @@ public final class RemoteTransferScreen extends Screen {
             g.fill(contentX + 6, 78, contentX + contentW - 6, 104, ROW);
             g.drawString(font, "网络成员：" + members.size() + " 个", contentX + 14, 86, TEXT, false);
             g.drawString(font, "连接规则：" + links.size() + " 条", contentX + 14, 96, MUTED, false);
-            g.drawString(font, "选择成员管理可以查看方块名称、坐标、图标和传送入口。", contentX + 8, 246 < height ? 246 : height - 18, MUTED, false);
+            g.drawString(font, "选择成员管理可以查看方块名称、坐标、图标和传送入口。",
+                    contentX + 8, 246 < height ? 246 : height - 18, MUTED, false);
         } else if (activePage == 1) {
-            drawMembers(g, mouseX, mouseY);
+            drawMemberForeground(g, mouseX, mouseY);
         } else if (activePage == 2) {
-            g.drawString(font, "左侧选择两个成员作为 A / B，右侧选择并管理已有连接。", contentX + 6, 52, MUTED, false);
+            g.drawString(font, "左侧选择两个成员作为 A / B，右侧选择并管理已有连接。",
+                    contentX + 6, 52, MUTED, false);
             g.drawString(font, "A：" + memberName(selectedMember) + "   B：" + memberName(selectedSecond),
                     contentX + 6, height - 48, TEXT, false);
-            g.drawString(font, "已有连接", contentX + Math.max(44, (contentW - 14) / 2) + 12, 82, MUTED, false);
+            g.drawString(font, "已有连接",
+                    contentX + Math.max(44, (contentW - 14) / 2) + 12, 82, MUTED, false);
         } else if (activePage == 3) {
-            g.drawString(font, "先选择一条连接，再分别配置输入端与输出端。", contentX + 6, 52, MUTED, false);
-            g.drawString(font, "规则格式：minecraft:stone,minecraft:dirt", contentX + 6, height - 16, MUTED, false);
+            g.drawString(font, "先选择一条连接，再分别配置输入端与输出端。",
+                    contentX + 6, 52, MUTED, false);
+            g.drawString(font, "规则格式：minecraft:stone,minecraft:dirt",
+                    contentX + 6, height - 16, MUTED, false);
         }
-        super.render(g, mouseX, mouseY, partialTick);
     }
 
-    private void drawMembers(GuiGraphics g, int mouseX, int mouseY) {
+    private void drawMemberBackgrounds(GuiGraphics g, int mouseX, int mouseY) {
+        int visible = visibleMemberRows();
+        for (int row = 0; row < visible && row + memberScroll < members.size(); row++) {
+            int y = listTop + row * rowH;
+            int rowBottom = Math.min(height - 8, y + rowH - 2);
+            UUID id = members.get(row + memberScroll).getUUID("Id");
+            boolean selected = id.equals(selectedMember);
+            g.fill(contentX + 4, y, contentX + contentW - 4, rowBottom,
+                    selected ? ROW_SELECTED : ROW);
+            g.renderOutline(contentX + 4, y, contentW - 8, rowBottom - y,
+                    selected ? 0xFF8FC5FF : BORDER);
+            g.fill(contentX + 5, y + 2, contentX + 8, rowBottom - 2,
+                    COLORS[(row + memberScroll) % COLORS.length]);
+            if (mouseX >= contentX + 4 && mouseX < contentX + contentW - 4
+                    && mouseY >= y && mouseY < rowBottom) {
+                g.renderOutline(contentX + 3, y - 1, contentW - 6,
+                        rowBottom - y + 2, 0xFFFFFFFF);
+            }
+        }
+    }
+
+    private void drawMemberForeground(GuiGraphics g, int mouseX, int mouseY) {
         int visible = visibleMemberRows();
         for (int row = 0; row < visible && row + memberScroll < members.size(); row++) {
             CompoundTag member = members.get(row + memberScroll);
@@ -400,15 +436,6 @@ public final class RemoteTransferScreen extends Screen {
             int rowBottom = Math.min(height - 8, y + rowH - 2);
             UUID id = member.getUUID("Id");
             boolean selected = id.equals(selectedMember);
-            int color = COLORS[(row + memberScroll) % COLORS.length];
-
-            // Each endpoint is a fully opaque card with a persistent per-member color.
-            g.fill(contentX + 4, y, contentX + contentW - 4, rowBottom,
-                    selected ? ROW_SELECTED : ROW);
-            g.renderOutline(contentX + 4, y, contentW - 8, rowBottom - y,
-                    selected ? 0xFF8FC5FF : BORDER);
-            g.fill(contentX + 5, y + 2, contentX + 8, rowBottom - 2, color);
-
             ItemStack stack = memberStack(member);
             g.renderItem(stack, contentX + 12, y + Math.max(3, (rowH - 16) / 2));
 
@@ -430,11 +457,6 @@ public final class RemoteTransferScreen extends Screen {
                 String state = loaded ? "已加载" : "未加载";
                 g.drawString(font, state + " · ID " + shortId(id), textX, y + 27,
                         loaded ? 0xFF8FE0A0 : 0xFFFFC078, false);
-            }
-
-            if (mouseX >= contentX + 4 && mouseX < contentX + contentW - 4
-                    && mouseY >= y && mouseY < rowBottom) {
-                g.renderOutline(contentX + 3, y - 1, contentW - 6, rowBottom - y + 2, 0xFFFFFFFF);
             }
         }
         if (members.isEmpty()) {
