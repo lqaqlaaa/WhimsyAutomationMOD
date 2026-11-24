@@ -50,7 +50,7 @@ public final class RemoteTransferScreen extends Screen {
     private boolean ignoreDurabilityInput, ignoreDurabilityOutput;
     private boolean ignoreNbtInput, ignoreNbtOutput;
     private boolean matchTagsInput, matchTagsOutput;
-    private List<CompoundTag> networks = List.of(), members = List.of(), links = List.of();
+    private List<CompoundTag> networks = List.of(), members = List.of(), links = List.of(), slotBindings = List.of();
     private int sideW, contentX, contentW, listTop, rowH;
 
     public RemoteTransferScreen() { super(Component.literal("远程传输网络")); }
@@ -78,6 +78,7 @@ public final class RemoteTransferScreen extends Screen {
         CompoundTag selected = findNetwork();
         members = selected == null ? List.of() : compounds(selected.getList("Members", Tag.TAG_COMPOUND));
         links = selected == null ? List.of() : compounds(selected.getList("Connections", Tag.TAG_COMPOUND));
+        slotBindings = selected == null ? List.of() : compounds(selected.getList("SlotBindings", Tag.TAG_COMPOUND));
         if (selectedNetwork != null && selected == null) selectedNetwork = null;
         if (selectedMember != null && members.stream().noneMatch(m -> m.getUUID("Id").equals(selectedMember))) selectedMember = null;
         if (selectedSecond != null && members.stream().noneMatch(m -> m.getUUID("Id").equals(selectedSecond))) selectedSecond = null;
@@ -438,7 +439,7 @@ public final class RemoteTransferScreen extends Screen {
         if (activePage == 0 && selectedNetwork != null) {
             g.fill(contentX + 6, 78, contentX + contentW - 6, 104, ROW);
             g.drawString(font, "网络成员：" + members.size() + " 个", contentX + 14, 86, TEXT, false);
-            g.drawString(font, "连接规则：" + links.size() + " 条", contentX + 14, 96, MUTED, false);
+            g.drawString(font, "槽位绑定：" + slotBindings.size() + " 条", contentX + 14, 96, MUTED, false);
             g.drawString(font, "选择成员管理可以查看方块名称、坐标、图标和传送入口。",
                     contentX + 8, 246 < height ? 246 : height - 18, MUTED, false);
         } else if (activePage == 1) {
