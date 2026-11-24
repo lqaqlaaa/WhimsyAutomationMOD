@@ -157,31 +157,25 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
 
     public void dropAllContents() {
         if (level == null || level.isClientSide) return;
-
-        ItemStack output = inventory.getStackInSlot(OUTPUT_SLOT);
-        dropInLegalStacks(output);
+        dropStoredInLegalStacks(OUTPUT_SLOT);
         inventory.setStackInSlot(OUTPUT_SLOT, ItemStack.EMPTY);
-
-        ItemStack input = inventory.getStackInSlot(INPUT_SLOT);
-        dropInLegalStacks(input);
+        dropStoredInLegalStacks(INPUT_SLOT);
         inventory.setStackInSlot(INPUT_SLOT, ItemStack.EMPTY);
         setChanged();
     }
 
-    private void dropInLegalStacks(ItemStack stack) {
-        if (stack.isEmpty()) return;
-        int remaining = stack.getCount();
-        int legalStackSize = Math.max(1, stack.getMaxStackSize());
-        while (remaining > 0) {
-            int batchSize = Math.min(remaining, legalStackSize);
-            ItemStack batch = stack.copyWithCount(batchSize);
+    private void dropStoredInLegalStacks(int slot) {
+        ItemStack template = inventory.getStoredTemplate(slot);
+        long remaining = inventory.getStoredCount(slot);
+        if (template.isEmpty() || remaining <= 0L) return;
+        int legalSize = Math.max(1, Math.min(99, template.getMaxStackSize()));
+        while (remaining > 0L) {
+            int batch = (int) Math.min(remaining, (long) legalSize);
             Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
-                    worldPosition.getZ() + 0.5, batch);
-            remaining -= batchSize;
+                    worldPosition.getZ() + 0.5, template.copyWithCount(batch));
+            remaining -= batch;
         }
     }
-
-    @Override
     public Component getDisplayName() {
         return Component.translatable("container.whimsy_automation.enchantment_conversion_table");
     }
