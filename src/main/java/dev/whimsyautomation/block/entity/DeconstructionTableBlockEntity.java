@@ -68,7 +68,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
-        @Override public int getSlotLimit(int slot) { return slot == 0 ? 64 : OversizedItemStackCodec.MAX_COUNT; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 64 : 99; }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
