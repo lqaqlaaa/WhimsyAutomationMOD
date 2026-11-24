@@ -25,9 +25,9 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
             StreamCodec.of((buf, p) -> {
                 buf.writeVarInt(p.action());
                 writeUuid(buf, p.networkId()); writeUuid(buf, p.firstId()); writeUuid(buf, p.secondId());
-                buf.writeVarInt(p.value()); buf.writeUtf(p.text(), 256);
+                buf.writeVarInt(p.value()); buf.writeUtf(p.text(), 32767);
             }, buf -> new RemoteTransferActionPayload(buf.readVarInt(), readUuid(buf), readUuid(buf),
-                    readUuid(buf), buf.readVarInt(), buf.readUtf(256)));
+                    readUuid(buf), buf.readVarInt(), buf.readUtf(32767)));
 
     private static void writeUuid(RegistryFriendlyByteBuf buf, UUID id) {
         buf.writeBoolean(id != null); if (id != null) buf.writeUUID(id);
@@ -54,6 +54,34 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     RemoteTransferSelection.setActiveNetwork(player.getUUID(), p.networkId());
             }
             case 21 -> RemoteTransferSelection.setConnectionsVisible(player.getUUID(), p.value() != 0);
+            case 22 -> {
+                if (owned(data, p.networkId(), player))
+                    data.setMemberBordersVisible(p.networkId(), p.value() != 0);
+            }
+            case 23 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null && p.value() >= 0) {
+                    try {
+                        String[] parts = p.text().split("\\|", 3);
+                        var mode = RemoteTransferNetworkData.FilterMode.valueOf(parts[0]);
+                        int flags = Integer.parseInt(parts[1]);
+                        java.util.ArrayList<String> entries = new java.util.ArrayList<>();
+                        if (parts.length > 2 && !parts[2].isBlank()) {
+                            for (String encoded : parts[2].split(",")) {
+                                if (entries.size() >= 10) break;
+                                if (!encoded.isBlank()) entries.add(new String(
+                                        java.util.Base64.getDecoder().decode(encoded),
+                                        java.nio.charset.StandardCharsets.UTF_8));
+                            }
+                        }
+                        var filter = new RemoteTransferNetworkData.Filter(mode, true, entries,
+                                !entries.isEmpty() && mode != RemoteTransferNetworkData.FilterMode.NONE,
+                                (flags & 2) == 0, (flags & 8) == 0, (flags & 4) != 0);
+                        data.setSlotFilter(p.networkId(), p.firstId(), p.value(), filter);
+                    } catch (RuntimeException ignored) {
+                        player.displayClientMessage(Component.literal("过滤规则格式无效，未保存。"), true);
+                    }
+                }
+            }
             case 1 -> data.createNetwork(player.getUUID(), p.text().isBlank()
                     ? "新建网络" : p.text());
             case 2 -> {
