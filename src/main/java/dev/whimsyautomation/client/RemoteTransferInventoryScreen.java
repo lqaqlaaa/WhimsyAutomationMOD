@@ -1,6 +1,7 @@
 package dev.whimsyautomation.client;
 
 import dev.whimsyautomation.network.RemoteTransferActionPayload;
+import dev.whimsyautomation.remote.RemoteTransferNetworkData;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -14,6 +15,8 @@ import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
+import java.util.HashMap;
+import java.util.Map;
 
 /** Displays the selected member's live server-side ItemHandler slots. */
 public final class RemoteTransferInventoryScreen extends Screen {
@@ -33,6 +36,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
     private final boolean pagedMachineLayout;
     private int page;
     private int selectedSlot = -1;
+    private final Map<Integer, RemoteTransferNetworkData.Filter> localFilters = new HashMap<>();
     private int panelX, panelY, panelWidth = 176, panelHeight = 166;
 
     public RemoteTransferInventoryScreen(RemoteTransferScreen parent, CompoundTag snapshot) {
@@ -75,23 +79,28 @@ public final class RemoteTransferInventoryScreen extends Screen {
         panelY = Math.max(42, (height - panelHeight) / 2 - 12);
 
         int buttonY = height - 28;
-        int gap = 4;
-        int buttonW = Math.max(54, Math.min(112, (width - 24 - gap * 2) / 3));
-        int totalW = buttonW * 3 + gap * 2;
+        int gap = 3;
+        int buttonW = Math.max(42, Math.min(96, (width - 24 - gap * 3) / 4));
+        int totalW = buttonW * 4 + gap * 3;
         int startX = (width - totalW) / 2;
-        addRenderableWidget(Button.builder(Component.literal("返回成员列表"),
+        addRenderableWidget(Button.builder(Component.literal("返回"),
                 b -> minecraft.setScreen(parent))
                 .bounds(startX, buttonY, buttonW, 20).build());
-        Button input = Button.builder(Component.literal("绑定为输入"),
+        Button input = Button.builder(Component.literal("绑定输入"),
                 b -> beginBinding("INPUT"))
                 .bounds(startX + buttonW + gap, buttonY, buttonW, 20).build();
         input.active = selectedSlot >= 0 && available;
         addRenderableWidget(input);
-        Button output = Button.builder(Component.literal("绑定为输出"),
+        Button output = Button.builder(Component.literal("绑定输出"),
                 b -> beginBinding("OUTPUT"))
                 .bounds(startX + (buttonW + gap) * 2, buttonY, buttonW, 20).build();
         output.active = selectedSlot >= 0 && available;
         addRenderableWidget(output);
+        Button filter = Button.builder(Component.literal("过滤"),
+                b -> openFilter())
+                .bounds(startX + (buttonW + gap) * 3, buttonY, buttonW, 20).build();
+        filter.active = selectedSlot >= 0 && available;
+        addRenderableWidget(filter);
         if (pagedMachineLayout && pageCount > 1) {
             addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
                 page = Math.max(0, page - 1);
@@ -115,6 +124,43 @@ public final class RemoteTransferInventoryScreen extends Screen {
         if (!pagedMachineLayout) return true;
         if (index == 0) return page == 0;
         return (index - 1) / 27 == page;
+    }
+
+    private void openFilter() {
+        if (selectedSlot < 0 || networkId == null || memberId == null) return;
+        RemoteTransferNetworkData.Filter filter = localFilters.getOrDefault(selectedSlot,
+                readFilter(selectedSlot));
+        minecraft.setScreen(new RemoteTransferFilterScreen(this, networkId, memberId,
+                selectedSlot, filter, updated -> localFilters.put(selectedSlot, updated)));
+    }
+
+    private RemoteTransferNetworkData.Filter readFilter(int slotIndex) {
+        CompoundTag network = null;
+        ListTag networks = parent.snapshotCopy().getList("Networks", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < networks.size(); i++) {
+            CompoundTag candidate = networks.getCompound(i);
+            if (candidate.hasUUID("Id") && candidate.getUUID("Id").equals(networkId)) {
+                network = candidate; break;
+            }
+        }
+        if (network == null) return RemoteTransferNetworkData.Filter.none();
+        ListTag filters = network.getList("SlotFilters", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < filters.size(); i++) {
+            CompoundTag entry = filters.getCompound(i);
+            if (!entry.hasUUID("Workstation") || !entry.getUUID("Workstation").equals(memberId)
+                    || entry.getInt("Slot") != slotIndex) continue;
+            ListTag values = entry.getList("Items", net.minecraft.nbt.Tag.TAG_STRING);
+            java.util.ArrayList<String> items = new java.util.ArrayList<>();
+            for (int j = 0; j < values.size(); j++) items.add(values.getString(j));
+            RemoteTransferNetworkData.FilterMode mode;
+            try { mode = RemoteTransferNetworkData.FilterMode.valueOf(entry.getString("Mode")); }
+            catch (RuntimeException ignored) { mode = RemoteTransferNetworkData.FilterMode.NONE; }
+            return new RemoteTransferNetworkData.Filter(mode, entry.getBoolean("Exact"), items,
+                    mode != RemoteTransferNetworkData.FilterMode.NONE,
+                    entry.getBoolean("IgnoreDurability"), entry.getBoolean("IgnoreNbt"),
+                    entry.getBoolean("MatchTags"));
+        }
+        return RemoteTransferNetworkData.Filter.none();
     }
 
     private void beginBinding(String direction) {
