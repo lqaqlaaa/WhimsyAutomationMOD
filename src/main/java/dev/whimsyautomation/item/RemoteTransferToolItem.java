@@ -54,89 +54,99 @@ public final class RemoteTransferToolItem extends Item {
         return false;
     }
 
+    private static net.neoforged.neoforge.items.IItemHandler findAnyHandler(
+            Level level, net.minecraft.core.BlockPos pos) {
+        var capability = net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK;
+        var handler = level.getCapability(capability, pos, null);
+        if (handler != null) return handler;
+        for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
+            handler = level.getCapability(capability, pos, side);
+            if (handler != null) return handler;
+        }
+        return null;
+    }
+
     @Override
     public InteractionResult useOn(UseOnContext context) {
         if (context.getPlayer() == null || !context.getPlayer().isShiftKeyDown()) return InteractionResult.PASS;
-        // Consume the interaction on the client so the target block's menu/use
-        // callback cannot run after the configurator has claimed this click.
         if (context.getLevel().isClientSide) return InteractionResult.CONSUME;
         if (!(context.getPlayer() instanceof ServerPlayer player)) return InteractionResult.PASS;
-        var level = context.getLevel();
+
+        Level level = context.getLevel();
         var pos = context.getClickedPos();
-        var be = level.getBlockEntity(pos);
-        var pending = RemoteTransferSelection.get(player.getUUID());
+        RemoteTransferSelection.Pending pending = RemoteTransferSelection.get(player.getUUID());
         if (pending == null) {
-            player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.select_network_first"), true);
+            player.displayClientMessage(Component.literal("请先在网络界面选择网络，并启动“添加成员”或具体槽位的绑定操作。"), true);
             return InteractionResult.SUCCESS;
         }
 
-        // Classify the clicked block by its role in the two-step binding flow,
-        // not by a hard-coded list of this mod's own machines. Any block that
-        // exposes NeoForge's standard block ItemHandler capability can be used
-        // as a workstation endpoint in step one and as a storage endpoint in
-        // step two. This automatically includes vanilla furnaces, smokers,
-        // blast furnaces, and modded machines that expose IItemHandler.
-        boolean hasItemHandler = hasItemHandler(level, pos);
-        if (!hasItemHandler) {
-            player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.not_container"), true);
-            return InteractionResult.FAIL;
-        }
-        RemoteTransferNetworkData.EndpointKind kind = pending.workstationId() == null
-                ? RemoteTransferNetworkData.EndpointKind.WORKSTATION
-                : RemoteTransferNetworkData.EndpointKind.CONTAINER;
-        var networkId = pending.networkId();
-        var data = RemoteTransferNetworkData.get(player.server);
-        var network = data.getNetwork(networkId);
+        RemoteTransferNetworkData data = RemoteTransferNetworkData.get(player.server);
+        var network = data.getNetwork(pending.networkId());
         if (network == null || !network.owner().equals(player.getUUID())) {
             RemoteTransferSelection.clear(player.getUUID());
+            player.displayClientMessage(Component.literal("网络不存在或不属于你，请重新选择网络。"), true);
             return InteractionResult.SUCCESS;
         }
 
-        if (pending.workstationId() == null) {
-            if (kind != RemoteTransferNetworkData.EndpointKind.WORKSTATION) {
-                player.displayClientMessage(Component.literal("请先 Shift+右键选择工作方块。"), true);
-                return InteractionResult.SUCCESS;
+        if (pending.mode() == RemoteTransferSelection.Mode.ADD_MEMBER) {
+            var existing = network.members().stream()
+                    .filter(member -> member.dimension().equals(level.dimension()) && member.pos().equals(pos))
+                    .findFirst().orElse(null);
+            if (existing == null) {
+                var member = RemoteTransferNetworkData.Endpoint.create(
+                        level, pos, RemoteTransferNetworkData.EndpointKind.CONTAINER);
+                if (!data.addMember(pending.networkId(), member)) {
+                    player.displayClientMessage(Component.literal("该方块已经在当前网络中。"), true);
+                    return InteractionResult.SUCCESS;
+                }
             }
-            // A workstation can serve both INPUT and OUTPUT bindings. Reuse the
-            // existing endpoint in this network instead of trying to add a duplicate.
+            RemoteTransferSelection.clear(player.getUUID());
+            player.displayClientMessage(Component.literal("方块已加入网络成员。"), true);
+        } else if (pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT) {
             var workstation = network.members().stream()
-                    .filter(member -> member.kind() == RemoteTransferNetworkData.EndpointKind.WORKSTATION
-                            && member.dimension().equals(level.dimension()) && member.pos().equals(pos))
+                    .filter(member -> member.id().equals(pending.workstationId()))
                     .findFirst().orElse(null);
             if (workstation == null) {
-                workstation = RemoteTransferNetworkData.Endpoint.create(level, pos, kind);
-                if (!data.addMember(networkId, workstation)) {
-                    player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.target_exists"), true);
-                    return InteractionResult.SUCCESS;
-                }
-            }
-            RemoteTransferSelection.setWorkstation(player.getUUID(), pending, workstation.id());
-            player.displayClientMessage(Component.literal("工作方块已标记，请继续 Shift+右键选择连接容器。"), true);
-        } else {
-            if (kind != RemoteTransferNetworkData.EndpointKind.CONTAINER) {
-                player.displayClientMessage(Component.literal("第二个方块必须是连接容器。"), true);
+                RemoteTransferSelection.clear(player.getUUID());
+                player.displayClientMessage(Component.literal("选中的工作方块已不在网络中，请重新选择槽位。"), true);
                 return InteractionResult.SUCCESS;
             }
-            // Reuse an already registered container too, so one physical block can
-            // participate in both an INPUT and an OUTPUT connection.
-            var container = network.members().stream()
-                    .filter(member -> member.kind() == RemoteTransferNetworkData.EndpointKind.CONTAINER
-                            && member.dimension().equals(level.dimension()) && member.pos().equals(pos))
+            if (workstation.dimension().equals(level.dimension()) && workstation.pos().equals(pos)) {
+                player.displayClientMessage(Component.literal("目标容器不能与工作方块是同一个方块。"), true);
+                return InteractionResult.SUCCESS;
+            }
+            if (findAnyHandler(level, pos) == null) {
+                player.displayClientMessage(Component.literal("这个方块没有可用的物品库存接口，不能作为槽位绑定容器。"), true);
+                return InteractionResult.SUCCESS;
+            }
+
+            var target = network.members().stream()
+                    .filter(member -> member.dimension().equals(level.dimension()) && member.pos().equals(pos))
                     .findFirst().orElse(null);
-            if (container == null) {
-                container = RemoteTransferNetworkData.Endpoint.create(level, pos, kind);
-                if (!data.addMember(networkId, container)) {
-                    player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.target_exists"), true);
+            if (target == null) {
+                target = RemoteTransferNetworkData.Endpoint.create(
+                        level, pos, RemoteTransferNetworkData.EndpointKind.CONTAINER);
+                if (!data.addMember(pending.networkId(), target)) {
+                    player.displayClientMessage(Component.literal("无法将目标方块加入网络。"), true);
                     return InteractionResult.SUCCESS;
                 }
             }
-            data.addConnection(networkId, RemoteTransferNetworkData.Connection.create(
-                    pending.workstationId(), container.id(), pending.direction()));
+
+            var binding = RemoteTransferNetworkData.SlotBinding.create(
+                    workstation.id(), pending.workstationSlot(), pending.direction(), target.id(),
+                    context.getClickedFace());
+            if (!data.addSlotBinding(pending.networkId(), binding)) {
+                player.displayClientMessage(Component.literal("该工作槽位与目标容器之间已经存在相同绑定。"), true);
+            } else {
+                player.displayClientMessage(Component.literal(pending.direction()
+                        == RemoteTransferNetworkData.TransferDirection.INPUT
+                        ? "槽位输入绑定已建立。" : "槽位输出绑定已建立。"), true);
+            }
             RemoteTransferSelection.clear(player.getUUID());
-            player.displayClientMessage(Component.literal(pending.direction() == RemoteTransferNetworkData.TransferDirection.INPUT
-                    ? "输入连接已建立。" : "输出连接已建立。"), true);
         }
+
         PacketDistributor.sendToPlayer(player, RemoteTransferSnapshotPayload.from(data, player.getUUID()));
         return InteractionResult.SUCCESS;
     }
+}
 }
