@@ -17,14 +17,17 @@ import java.util.UUID;
 
 /** Displays the selected member's live server-side ItemHandler slots. */
 public final class RemoteTransferInventoryScreen extends Screen {
-    private static final int CELL = 24;
+    private static final int CELL = 18;
+    private static final int SLOT_SIZE = 18;
     private final RemoteTransferScreen parent;
     private final UUID networkId;
     private final UUID memberId;
     private final ListTag slots;
     private final boolean available;
+    private final String blockId;
+    private final boolean furnaceLayout;
     private int selectedSlot = -1;
-    private int columns, cell, gridX, gridY;
+    private int panelX, panelY, panelWidth = 176, panelHeight = 166;
 
     public RemoteTransferInventoryScreen(RemoteTransferScreen parent, CompoundTag snapshot) {
         super(Component.literal("工作方块库存槽位"));
@@ -33,16 +36,19 @@ public final class RemoteTransferInventoryScreen extends Screen {
         CompoundTag inventory = snapshot.getCompound("Inventory");
         this.memberId = inventory.hasUUID("Member") ? inventory.getUUID("Member") : null;
         this.available = inventory.getBoolean("Available");
+        this.blockId = inventory.getString("Block");
+        this.furnaceLayout = blockId.equals("minecraft:furnace")
+                || blockId.equals("minecraft:blast_furnace") || blockId.equals("minecraft:smoker");
         this.slots = inventory.getList("Slots", net.minecraft.nbt.Tag.TAG_COMPOUND).copy();
     }
 
     @Override
     protected void init() {
-        cell = Math.max(18, Math.min(CELL, (width - 24) / 9));
-        columns = Math.max(1, Math.min(9, (width - 24) / cell));
-        int rows = Math.max(1, (slots.size() + columns - 1) / columns);
-        gridX = (width - columns * cell) / 2;
-        gridY = Math.max(48, (height - rows * cell) / 2 - 8);
+        int rows = furnaceLayout ? 1 : Math.max(1, (slots.size() + 8) / 9);
+        panelWidth = 176;
+        panelHeight = furnaceLayout ? 166 : Math.max(92, 52 + rows * SLOT_SIZE);
+        panelX = (width - panelWidth) / 2;
+        panelY = Math.max(42, (height - panelHeight) / 2 - 12);
 
         int buttonY = height - 28;
         int gap = 4;
@@ -84,34 +90,87 @@ public final class RemoteTransferInventoryScreen extends Screen {
         }
     }
 
+    private int slotX(int index) {
+        if (furnaceLayout) {
+            return switch (index) {
+                case 0, 1 -> 56;
+                case 2 -> 116;
+                default -> -1000;
+            };
+        }
+        return 7 + (index % 9) * SLOT_SIZE;
+    }
+
+    private int slotY(int index) {
+        if (furnaceLayout) {
+            return switch (index) {
+                case 0 -> 17;
+                case 1 -> 53;
+                case 2 -> 35;
+                default -> -1000;
+            };
+        }
+        return 42 + (index / 9) * SLOT_SIZE;
+    }
+
+    private String slotRole(int index) {
+        if (!furnaceLayout) return "槽位 " + index;
+        return switch (index) {
+            case 0 -> "原料";
+            case 1 -> "燃料";
+            case 2 -> "成品";
+            default -> "槽位 " + index;
+        };
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
-        g.fill(0, 0, width, height, 0xE9101722);
-        g.drawCenteredString(font, "工作方块真实库存槽位", width / 2, 16, 0xFFFFFFFF);
+        // Use a fully opaque surface. Calling renderBackground() here would
+        // reintroduce Minecraft's world blur behind this custom inventory view.
+        g.fill(0, 0, width, height, 0xFF101722);
+        g.drawCenteredString(font, "工作方块库存槽位", width / 2, 16, 0xFFFFFFFF);
         g.drawCenteredString(font, available
-                ? "点击一个槽位，再选择输入或输出；随后 Shift+右键目标容器。"
+                ? (furnaceLayout
+                    ? "原料、燃料、成品按熔炉原生槽位位置显示。"
+                    : "通用库存视图：编号对应服务端 ItemHandler 的真实槽位索引。")
                 : "该方块当前没有可读取的 ItemHandler 库存接口。",
                 width / 2, 30, available ? 0xFFD0D9E5 : 0xFFFF9A8B);
 
+        g.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF192638);
+        g.renderOutline(panelX, panelY, panelWidth, panelHeight, 0xFF58718F);
+
+        if (furnaceLayout) {
+            g.drawString(font, "原料", panelX + 24, panelY + 22, 0xFFBFCBDD, false);
+            g.drawString(font, "燃料", panelX + 24, panelY + 58, 0xFFBFCBDD, false);
+            g.drawString(font, "成品", panelX + 137, panelY + 40, 0xFFBFCBDD, false);
+        }
+
         for (int i = 0; i < slots.size(); i++) {
             CompoundTag slot = slots.getCompound(i);
-            int x = gridX + (i % columns) * cell;
-            int y = gridY + (i / columns) * cell;
-            boolean selected = slot.getInt("Index") == selectedSlot;
-            g.fill(x, y, x + cell - 2, y + cell - 2, selected ? 0xFF315C88 : 0xFF26384D);
-            g.renderOutline(x, y, cell - 2, cell - 2, selected ? 0xFF8FC5FF : 0xFF58718F);
+            int index = slot.getInt("Index");
+            int x = panelX + slotX(index);
+            int y = panelY + slotY(index);
+            if (x < panelX || x + SLOT_SIZE > panelX + panelWidth) continue;
+            boolean selected = index == selectedSlot;
+            g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE,
+                    selected ? 0xFF315C88 : 0xFF26384D);
+            g.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE,
+                    selected ? 0xFF8FC5FF : 0xFF7890AA);
             ItemStack stack = slotStack(slot);
             if (!stack.isEmpty()) {
-                g.renderItem(stack, x + 3, y + 3);
-                g.renderItemDecorations(font, stack, x + 3, y + 3);
+                g.renderItem(stack, x + 1, y + 1);
+                g.renderItemDecorations(font, stack, x + 1, y + 1);
             }
-            g.drawString(font, Integer.toString(slot.getInt("Index")), x + 2, y + cell - 9, 0xFFBFCBDD, false);
+            if (!furnaceLayout) {
+                g.drawCenteredString(font, Integer.toString(index), x + SLOT_SIZE / 2,
+                        y + SLOT_SIZE + 2, 0xFFBFCBDD);
+            }
         }
 
         super.render(g, mouseX, mouseY, partialTick);
         if (selectedSlot >= 0) {
-            g.drawCenteredString(font, "当前选择槽位：" + selectedSlot, width / 2, height - 42, 0xFFFFFFFF);
+            g.drawCenteredString(font, "当前选择：" + slotRole(selectedSlot)
+                    + "（槽位 " + selectedSlot + "）", width / 2, height - 42, 0xFFFFFFFF);
         }
     }
 
@@ -120,11 +179,12 @@ public final class RemoteTransferInventoryScreen extends Screen {
         if (button == 0) {
             for (int i = 0; i < slots.size(); i++) {
                 CompoundTag slot = slots.getCompound(i);
-                int x = gridX + (i % columns) * cell;
-                int y = gridY + (i / columns) * cell;
-                if (mouseX >= x && mouseX < x + cell - 2
-                        && mouseY >= y && mouseY < y + cell - 2) {
-                    selectedSlot = slot.getInt("Index");
+                int index = slot.getInt("Index");
+                int x = panelX + slotX(index);
+                int y = panelY + slotY(index);
+                if (mouseX >= x && mouseX < x + SLOT_SIZE
+                        && mouseY >= y && mouseY < y + SLOT_SIZE) {
+                    selectedSlot = index;
                     init();
                     return true;
                 }
