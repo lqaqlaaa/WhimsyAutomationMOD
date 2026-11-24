@@ -507,8 +507,11 @@ public final class RemoteTransferScreen extends Screen {
                     textX, y + 16, MUTED, false);
             if (rowH >= 36) {
                 String state = loaded ? "已加载" : "未加载";
-                g.drawString(font, state + " · ID " + shortId(id), textX, y + 27,
-                        loaded ? 0xFF8FE0A0 : 0xFFFFC078, false);
+                String role = "WORKSTATION".equals(member.getString("Kind")) ? "工作方块" : "普通成员";
+                long bindingCount = slotBindings.stream().filter(binding ->
+                        binding.getUUID("Workstation").equals(id) || binding.getUUID("Target").equals(id)).count();
+                g.drawString(font, state + " · " + role + " · 绑定 " + bindingCount,
+                        textX, y + 27, loaded ? 0xFF8FE0A0 : 0xFFFFC078, false);
             }
         }
         if (members.isEmpty()) {
