@@ -91,11 +91,20 @@ public final class RemoteTransferScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
-        sideW = Math.max(78, Math.min(112, width / 4));
-        contentX = sideW + 20;
-        contentW = Math.max(90, width - contentX - 12);
-        listTop = 88;
-        rowH = Math.max(30, Math.min(38, (height - 112) / 5));
+        int margin = RemoteTransferGuiLayout.fit(8, width, height, 4);
+        sideW = Math.max(96, Math.min(136,
+                Math.max(width / 5, RemoteTransferGuiLayout.fit(108, width, height, 84))));
+        contentX = sideW + margin * 2;
+        contentW = Math.max(90, width - contentX - margin);
+        listTop = Math.max(84, Math.min(104,
+                RemoteTransferGuiLayout.fit(64, width, height, 52)));
+        int availableListHeight = Math.max(1, height - listTop - 12);
+        int desiredRowHeight = Math.max(30, Math.min(48,
+                RemoteTransferGuiLayout.fit(36, width, height, 28)));
+        int visibleRows = RemoteTransferGuiLayout.maxRows(
+                availableListHeight, desiredRowHeight, 28);
+        rowH = RemoteTransferGuiLayout.actualRowHeight(
+                availableListHeight, visibleRows, desiredRowHeight, 28);
 
         // Persistent network rail.
         int navTop = 42;
