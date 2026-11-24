@@ -202,17 +202,18 @@ public final class RemoteTransferTicker {
     }
 
     /**
-     * Sophisticated Storage's handler can expose Integer.MAX_VALUE limits for
-     * oversized stacks, but its internal slot NBT validator still accepts at
-     * most 99 items per insert call. Keep this integration-specific batch cap
-     * separate from the total transfer budget and from other inventory mods.
+     * ItemStack counts crossing an inventory capability boundary must remain
+     * legal for vanilla and third-party handlers. In particular, Sophisticated
+     * Core validates its serialized slot count in the range [1, 99], even when
+     * a wrapper advertises a much larger slot limit. Do not identify handlers
+     * by implementation class: capabilities may be wrapped by caches/delegates
+     * whose runtime class is outside the owning mod's package.
+     *
+     * The machine's authoritative long count is retained by LongCountItemStackHandler;
+     * this is only the maximum size of one external IItemHandler call.
      */
     private static int getHandlerBatchLimit(IItemHandler handler, int slotLimit, ItemStack stack) {
-        String handlerClass = handler.getClass().getName();
-        if (handlerClass.startsWith("net.p3pp3rf1y.sophisticatedcore.inventory.")) {
-            return Math.min(slotLimit, 99);
-        }
-        return Math.min(slotLimit, stack.getMaxStackSize());
+        return Math.max(0, Math.min(Math.min(slotLimit, 99), stack.getMaxStackSize()));
     }
 
     private static IItemHandler findHandler(ServerLevel level,
