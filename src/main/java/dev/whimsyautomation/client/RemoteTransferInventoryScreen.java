@@ -27,6 +27,11 @@ public final class RemoteTransferInventoryScreen extends Screen {
     private final String blockId;
     private final boolean furnaceLayout;
     private final boolean menuLayout;
+    private final boolean deconstructionLayout;
+    private final boolean conversionLayout;
+    private final boolean extractorLayout;
+    private final boolean pagedMachineLayout;
+    private int page;
     private int selectedSlot = -1;
     private int panelX, panelY, panelWidth = 176, panelHeight = 166;
 
@@ -41,12 +46,18 @@ public final class RemoteTransferInventoryScreen extends Screen {
         this.furnaceLayout = blockId.equals("minecraft:furnace")
                 || blockId.equals("minecraft:blast_furnace") || blockId.equals("minecraft:smoker");
         this.menuLayout = inventory.getBoolean("MenuLayout");
+        this.deconstructionLayout = blockId.equals("whimsy_automation:deconstruction_table");
+        this.conversionLayout = blockId.equals("whimsy_automation:enchantment_conversion_table");
+        this.extractorLayout = blockId.equals("whimsy_automation:enchantment_extractor");
+        this.pagedMachineLayout = deconstructionLayout || extractorLayout;
         this.slots = inventory.getList("Slots", net.minecraft.nbt.Tag.TAG_COMPOUND).copy();
     }
 
     @Override
     protected void init() {
-        int rows = Math.max(1, (slots.size() + 8) / 9);
+        int pageCount = pageCount();
+        page = Math.max(0, Math.min(page, pageCount - 1));
+        int rows = Math.max(1, (Math.min(27, slots.size()) + 8) / 9);
         int maxGuiX = 0, maxGuiY = 0;
         if (menuLayout) {
             for (int i = 0; i < slots.size(); i++) {
@@ -55,9 +66,11 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 maxGuiY = Math.max(maxGuiY, slot.getInt("GuiY") + SLOT_SIZE);
             }
         }
-        panelWidth = menuLayout ? Math.max(176, maxGuiX + 8) : 176;
+        panelWidth = menuLayout ? Math.max(176, maxGuiX + 8)
+                : pagedMachineLayout ? 224 : 176;
         panelHeight = menuLayout ? Math.max(166, maxGuiY + 8)
-                : furnaceLayout ? 166 : Math.max(92, 52 + rows * SLOT_SIZE);
+                : furnaceLayout || pagedMachineLayout ? 166
+                : Math.max(92, 52 + rows * SLOT_SIZE);
         panelX = (width - panelWidth) / 2;
         panelY = Math.max(42, (height - panelHeight) / 2 - 12);
 
@@ -79,6 +92,29 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 .bounds(startX + (buttonW + gap) * 2, buttonY, buttonW, 20).build();
         output.active = selectedSlot >= 0 && available;
         addRenderableWidget(output);
+        if (pagedMachineLayout && pageCount > 1) {
+            addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
+                page = Math.max(0, page - 1);
+                selectedSlot = -1;
+                init();
+            }).bounds(panelX + panelWidth - 44, panelY + 3, 18, 14).build());
+            addRenderableWidget(Button.builder(Component.literal("›"), b -> {
+                page = Math.min(pageCount - 1, page + 1);
+                selectedSlot = -1;
+                init();
+            }).bounds(panelX + panelWidth - 22, panelY + 3, 18, 14).build());
+        }
+    }
+
+    private int pageCount() {
+        if (!pagedMachineLayout || slots.size() <= 1) return 1;
+        return Math.max(1, (slots.size() - 1 + 26) / 27);
+    }
+
+    private boolean isSlotVisible(int index) {
+        if (!pagedMachineLayout) return true;
+        if (index == 0) return page == 0;
+        return (index - 1) / 27 == page;
     }
 
     private void beginBinding(String direction) {
@@ -102,9 +138,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private int slotX(int index) {
-        if (menuLayout) {
-            return findSlot(index).getInt("GuiX");
-        }
+        if (menuLayout) return findSlot(index).getInt("GuiX");
         if (furnaceLayout) {
             return switch (index) {
                 case 0, 1 -> 56;
@@ -112,13 +146,16 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 default -> -1000;
             };
         }
+        if (conversionLayout) return index == 0 ? 28 : index == 1 ? 132 : -1000;
+        if (pagedMachineLayout) {
+            if (index == 0) return 184;
+            return 8 + ((index - 1) % 9) * SLOT_SIZE;
+        }
         return 7 + (index % 9) * SLOT_SIZE;
     }
 
     private int slotY(int index) {
-        if (menuLayout) {
-            return findSlot(index).getInt("GuiY");
-        }
+        if (menuLayout) return findSlot(index).getInt("GuiY");
         if (furnaceLayout) {
             return switch (index) {
                 case 0 -> 17;
@@ -126,6 +163,11 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 case 2 -> 35;
                 default -> -1000;
             };
+        }
+        if (conversionLayout) return 50;
+        if (pagedMachineLayout) {
+            if (index == 0) return deconstructionLayout ? 53 : 71;
+            return 71 + (((index - 1) % 27) / 9) * SLOT_SIZE;
         }
         return 42 + (index / 9) * SLOT_SIZE;
     }
@@ -139,19 +181,30 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private String slotRole(int index) {
-        if (!furnaceLayout) return "槽位 " + index;
-        return switch (index) {
+        if (furnaceLayout) return switch (index) {
             case 0 -> "原料";
             case 1 -> "燃料";
             case 2 -> "成品";
             default -> "槽位 " + index;
         };
+        if (deconstructionLayout || extractorLayout) {
+            if (index == 0) return deconstructionLayout ? "拆解输入" : "待处理物品";
+            return "输出槽位";
+        }
+        if (conversionLayout) return index == 0 ? "复制输入" : "复制结果";
+        return "槽位 " + index;
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Override Screen's vanilla blurred menu background. This screen is a
+        // custom inventory selector, so the world must never be visible through it.
+        g.fill(0, 0, width, height, 0xFF101722);
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // Use a fully opaque surface. Calling renderBackground() here would
-        // reintroduce Minecraft's world blur behind this custom inventory view.
+        // Draw the same opaque base again before panels and widgets.
         g.fill(0, 0, width, height, 0xFF101722);
         g.drawCenteredString(font, "工作方块库存槽位", width / 2, 16, 0xFFFFFFFF);
         g.drawCenteredString(font, available
@@ -159,7 +212,13 @@ public final class RemoteTransferInventoryScreen extends Screen {
                     ? "槽位位置取自该方块原生菜单；编号对应真实库存槽位。"
                     : furnaceLayout
                         ? "原料、燃料、成品按熔炉原生槽位位置显示。"
-                        : "通用库存视图：编号对应服务端 ItemHandler 的真实槽位索引。")
+                        : deconstructionLayout
+                            ? "拆解台：输入槽与当前输出页按原生菜单位置显示。"
+                            : extractorLayout
+                                ? "附魔提取台：处理槽与当前输出页按原生菜单位置显示。"
+                                : conversionLayout
+                                    ? "复制台：输入与结果槽按原生菜单位置显示。"
+                                    : "通用库存视图：编号对应服务端 ItemHandler 的真实槽位索引。")
                 : "该方块当前没有可读取的 ItemHandler 库存接口。",
                 width / 2, 30, available ? 0xFFD0D9E5 : 0xFFFF9A8B);
 
@@ -170,10 +229,20 @@ public final class RemoteTransferInventoryScreen extends Screen {
             g.drawString(font, "原料", panelX + 24, panelY + 22, 0xFFBFCBDD, false);
             g.drawString(font, "燃料", panelX + 24, panelY + 58, 0xFFBFCBDD, false);
             g.drawString(font, "成品", panelX + 137, panelY + 40, 0xFFBFCBDD, false);
+        } else if (deconstructionLayout || extractorLayout) {
+            g.drawString(font, deconstructionLayout ? "输入" : "处理物品",
+                    panelX + 184, panelY + (deconstructionLayout ? 42 : 60), 0xFFBFCBDD, false);
+            g.drawString(font, "输出区", panelX + 8, panelY + 57, 0xFFBFCBDD, false);
+            g.drawString(font, "第 " + (page + 1) + " / " + pageCount() + " 页",
+                    panelX + panelWidth - 100, panelY + 6, 0xFFBFCBDD, false);
+        } else if (conversionLayout) {
+            g.drawString(font, "输入物品", panelX + 22, panelY + 34, 0xFFBFCBDD, false);
+            g.drawString(font, "复制结果", panelX + 126, panelY + 34, 0xFFBFCBDD, false);
         }
 
         for (int i = 0; i < slots.size(); i++) {
             CompoundTag slot = slots.getCompound(i);
+            if (!isSlotVisible(slot.getInt("Index"))) continue;
             int index = slot.getInt("Index");
             int x = panelX + slotX(index);
             int y = panelY + slotY(index);
@@ -205,6 +274,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
             for (int i = 0; i < slots.size(); i++) {
                 CompoundTag slot = slots.getCompound(i);
                 int index = slot.getInt("Index");
+                if (!isSlotVisible(index)) continue;
                 int x = panelX + slotX(index);
                 int y = panelY + slotY(index);
                 if (mouseX >= x && mouseX < x + SLOT_SIZE
