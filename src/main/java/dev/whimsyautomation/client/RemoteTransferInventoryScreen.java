@@ -26,6 +26,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
     private final boolean available;
     private final String blockId;
     private final boolean furnaceLayout;
+    private final boolean menuLayout;
     private int selectedSlot = -1;
     private int panelX, panelY, panelWidth = 176, panelHeight = 166;
 
@@ -39,14 +40,24 @@ public final class RemoteTransferInventoryScreen extends Screen {
         this.blockId = inventory.getString("Block");
         this.furnaceLayout = blockId.equals("minecraft:furnace")
                 || blockId.equals("minecraft:blast_furnace") || blockId.equals("minecraft:smoker");
+        this.menuLayout = inventory.getBoolean("MenuLayout");
         this.slots = inventory.getList("Slots", net.minecraft.nbt.Tag.TAG_COMPOUND).copy();
     }
 
     @Override
     protected void init() {
-        int rows = furnaceLayout ? 1 : Math.max(1, (slots.size() + 8) / 9);
-        panelWidth = 176;
-        panelHeight = furnaceLayout ? 166 : Math.max(92, 52 + rows * SLOT_SIZE);
+        int rows = Math.max(1, (slots.size() + 8) / 9);
+        int maxGuiX = 0, maxGuiY = 0;
+        if (menuLayout) {
+            for (int i = 0; i < slots.size(); i++) {
+                CompoundTag slot = slots.getCompound(i);
+                maxGuiX = Math.max(maxGuiX, slot.getInt("GuiX") + SLOT_SIZE);
+                maxGuiY = Math.max(maxGuiY, slot.getInt("GuiY") + SLOT_SIZE);
+            }
+        }
+        panelWidth = menuLayout ? Math.max(176, maxGuiX + 8) : 176;
+        panelHeight = menuLayout ? Math.max(166, maxGuiY + 8)
+                : furnaceLayout ? 166 : Math.max(92, 52 + rows * SLOT_SIZE);
         panelX = (width - panelWidth) / 2;
         panelY = Math.max(42, (height - panelHeight) / 2 - 12);
 
@@ -91,6 +102,9 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private int slotX(int index) {
+        if (menuLayout) {
+            return findSlot(index).getInt("GuiX");
+        }
         if (furnaceLayout) {
             return switch (index) {
                 case 0, 1 -> 56;
@@ -102,6 +116,9 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private int slotY(int index) {
+        if (menuLayout) {
+            return findSlot(index).getInt("GuiY");
+        }
         if (furnaceLayout) {
             return switch (index) {
                 case 0 -> 17;
@@ -113,8 +130,16 @@ public final class RemoteTransferInventoryScreen extends Screen {
         return 42 + (index / 9) * SLOT_SIZE;
     }
 
+    private CompoundTag findSlot(int index) {
+        for (int i = 0; i < slots.size(); i++) {
+            CompoundTag slot = slots.getCompound(i);
+            if (slot.getInt("Index") == index) return slot;
+        }
+        return new CompoundTag();
+    }
+
     private String slotRole(int index) {
-        if (!furnaceLayout) return "槽位 " + index;
+        if (!furnaceLayout || menuLayout) return "槽位 " + index;
         return switch (index) {
             case 0 -> "原料";
             case 1 -> "燃料";
@@ -130,16 +155,18 @@ public final class RemoteTransferInventoryScreen extends Screen {
         g.fill(0, 0, width, height, 0xFF101722);
         g.drawCenteredString(font, "工作方块库存槽位", width / 2, 16, 0xFFFFFFFF);
         g.drawCenteredString(font, available
-                ? (furnaceLayout
-                    ? "原料、燃料、成品按熔炉原生槽位位置显示。"
-                    : "通用库存视图：编号对应服务端 ItemHandler 的真实槽位索引。")
+                ? (menuLayout
+                    ? "槽位位置取自该方块原生菜单；编号对应真实库存槽位。"
+                    : furnaceLayout
+                        ? "原料、燃料、成品按熔炉原生槽位位置显示。"
+                        : "通用库存视图：编号对应服务端 ItemHandler 的真实槽位索引。")
                 : "该方块当前没有可读取的 ItemHandler 库存接口。",
                 width / 2, 30, available ? 0xFFD0D9E5 : 0xFFFF9A8B);
 
         g.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF192638);
         g.renderOutline(panelX, panelY, panelWidth, panelHeight, 0xFF58718F);
 
-        if (furnaceLayout) {
+        if (furnaceLayout && !menuLayout) {
             g.drawString(font, "原料", panelX + 24, panelY + 22, 0xFFBFCBDD, false);
             g.drawString(font, "燃料", panelX + 24, panelY + 58, 0xFFBFCBDD, false);
             g.drawString(font, "成品", panelX + 137, panelY + 40, 0xFFBFCBDD, false);
