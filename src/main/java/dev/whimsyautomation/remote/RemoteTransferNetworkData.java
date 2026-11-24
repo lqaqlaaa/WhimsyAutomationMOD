@@ -496,35 +496,56 @@ public final class RemoteTransferNetworkData extends SavedData {
             if (stack.isEmpty()) return false;
             if (!enabled || mode == FilterMode.NONE || items.isEmpty()) return true;
             ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-            boolean contains = items.stream().anyMatch(entry -> entry.equals(itemId.toString())
-                    || entry.startsWith(itemId.toString() + "|"));
-            if (matchTags) {
-                for (String entry : items) {
-                    int separator = entry.indexOf('|');
-                    String templateId = separator >= 0 ? entry.substring(0, separator) : entry;
-                    ResourceLocation templateLocation = ResourceLocation.tryParse(templateId);
-                    if (templateLocation == null) continue;
+            boolean contains = false;
+            String actualComponents = stack.getComponents().toString()
+                    .replaceAll("minecraft:damage=[0-9]+,?\\s*", "");
+            for (String entry : items) {
+                int first = entry.indexOf('|');
+                String templateId = first < 0 ? entry : entry.substring(0, first);
+                ResourceLocation templateLocation = ResourceLocation.tryParse(templateId);
+                if (templateLocation == null) continue;
+                if (matchTags) {
                     net.minecraft.world.item.Item templateItem =
                             BuiltInRegistries.ITEM.getOptional(templateLocation).orElse(null);
-                    if (templateItem == null) continue;
-                    ItemStack template = new ItemStack(templateItem);
-                    if (template.getTags().anyMatch(stack::is)) {
-                        contains = true;
-                        break;
+                    if (templateItem != null) {
+                        ItemStack template = new ItemStack(templateItem);
+                        if (template.getTags().anyMatch(stack::is)) {
+                            contains = true;
+                            break;
+                        }
                     }
                 }
+                if (!templateLocation.equals(itemId)) continue;
+                if (!exactComponents) {
+                    contains = true;
+                    break;
+                }
+                if (first < 0) continue;
+                int second = entry.indexOf('|', first + 1);
+                if (second < 0) continue;
+                try {
+                    int templateDamage = Integer.parseInt(entry.substring(first + 1, second));
+                    if (!ignoreDurability && templateDamage != stack.getDamageValue()) continue;
+                } catch (NumberFormatException ignored) { continue; }
+                if (!ignoreNbt) {
+                    String templateComponents = entry.substring(second + 1)
+                            .replaceAll("minecraft:damage=[0-9]+,?\\s*", "");
+                    if (!templateComponents.equals(actualComponents)) continue;
+                }
+                contains = true;
+                break;
             }
-            if (exactComponents && items.contains(fingerprint(stack, ignoreDurability, ignoreNbt))) contains = true;
             return mode == FilterMode.WHITELIST ? contains : !contains;
         }
 
         public static String fingerprint(ItemStack source, boolean ignoreDurability, boolean ignoreNbt) {
             ItemStack normalized = source.copyWithCount(1);
+            int damage = ignoreDurability ? 0 : normalized.getDamageValue();
             if (ignoreDurability) normalized.remove(net.minecraft.core.component.DataComponents.DAMAGE);
             if (ignoreNbt) normalized.remove(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
-            return BuiltInRegistries.ITEM.getKey(normalized.getItem()) + "|" + normalized.getComponents();
-        }
-    }
+            return BuiltInRegistries.ITEM.getKey(normalized.getItem()) + "|" + damage
+                    + "|" + normalized.getComponents();
+        }    }
 
     public record Connection(UUID id, UUID sourceMember, UUID targetMember, TransferDirection direction,
                              boolean enabled, Filter inputFilter, Filter outputFilter, boolean lineVisible) {
