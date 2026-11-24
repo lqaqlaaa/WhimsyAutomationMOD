@@ -26,11 +26,6 @@ import java.util.UUID;
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class RemoteTransferTicker {
     private static final int MAX_ITEMS_PER_LINK_PER_TICK = Integer.MAX_VALUE;
-    // Third-party inventories may advertise Integer.MAX_VALUE as their slot/item limit
-    // while enforcing a much smaller internal serialization limit (Sophisticated: 99).
-    // Keep every capability call within the common safe stack bound; this is a transfer
-    // batch size, not a limit on the amount stored by Whimsy Automation.
-    private static final int MAX_HANDLER_INSERT_BATCH = 99;
     private static long serverTickCounter;
 
     private RemoteTransferTicker() {}
@@ -151,10 +146,9 @@ public final class RemoteTransferTicker {
                 int slotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
                 int occupied = present.isEmpty() ? 0 : present.getCount();
                 int free = Math.max(0, slotLimit - occupied);
-                int batchLimit = Math.min(slotLimit, simulated.getMaxStackSize());
-                int batch = Math.min(MAX_HANDLER_INSERT_BATCH,
-                        Math.min(Math.min(free, batchLimit),
-                                Math.min(simulated.getCount() - accepted, remainingBudget - accepted)));
+                int batchLimit = getHandlerBatchLimit(targetHandler, slotLimit, simulated);
+                int batch = Math.min(Math.min(free, batchLimit),
+                        Math.min(simulated.getCount() - accepted, remainingBudget - accepted));
                 if (batch <= 0) continue;
                 ItemStack offeredBatch = simulated.copyWithCount(batch);
                 ItemStack remainder = targetHandler.insertItem(targetSlot, offeredBatch, true);
@@ -173,9 +167,8 @@ public final class RemoteTransferTicker {
                 int slotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
                 int occupied = present.isEmpty() ? 0 : present.getCount();
                 int free = Math.max(0, slotLimit - occupied);
-                int batchLimit = Math.min(slotLimit, notInserted.getMaxStackSize());
-                int batch = Math.min(MAX_HANDLER_INSERT_BATCH,
-                        Math.min(free, Math.min(batchLimit, notInserted.getCount())));
+                int batchLimit = getHandlerBatchLimit(targetHandler, slotLimit, notInserted);
+                int batch = Math.min(free, Math.min(batchLimit, notInserted.getCount()));
                 if (batch <= 0) continue;
                 ItemStack batchStack = notInserted.copyWithCount(batch);
                 ItemStack remainder = targetHandler.insertItem(targetSlot, batchStack, false);
@@ -196,6 +189,20 @@ public final class RemoteTransferTicker {
             }
             remainingBudget -= insertedTotal;
         }
+    }
+
+    /**
+     * Sophisticated Storage's handler can expose Integer.MAX_VALUE limits for
+     * oversized stacks, but its internal slot NBT validator still accepts at
+     * most 99 items per insert call. Keep this integration-specific batch cap
+     * separate from the total transfer budget and from other inventory mods.
+     */
+    private static int getHandlerBatchLimit(IItemHandler handler, int slotLimit, ItemStack stack) {
+        String handlerClass = handler.getClass().getName();
+        if (handlerClass.startsWith("net.p3pp3rf1y.sophisticatedcore.inventory.")) {
+            return Math.min(slotLimit, 99);
+        }
+        return Math.min(slotLimit, stack.getMaxStackSize());
     }
 
     private static IItemHandler findHandler(ServerLevel level,
