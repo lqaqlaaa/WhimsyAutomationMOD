@@ -174,6 +174,12 @@ public final class RemoteTransferTicker {
                 if (extracting ? mode != 2 : mode != 1) return null;
             }
             IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), side);
+            // Some inventories expose only an unsided capability. Use it only
+            // when the clicked face has no capability at all; never bypass an
+            // existing sided handler's insertion/extraction restrictions.
+            if (handler == null) {
+                handler = level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), null);
+            }
             return supports(handler, endpoint, extracting, probe) ? handler : null;
         }
         for (Direction side : Direction.values()) {
