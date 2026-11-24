@@ -126,7 +126,7 @@ public final class RemoteTransferOverlay {
             boundTargetColors.putIfAbsent(targetId, SLOT_COLORS[slotIndex % SLOT_COLORS.length]);
         }
 
-        if (network.getBoolean("MemberBordersVisible", true)) {
+        if (!network.contains("MemberBordersVisible") || network.getBoolean("MemberBordersVisible")) {
         VertexConsumer boxLines = buffers.getBuffer(RenderType.lines());
         for (int i = 0; i < members.size(); i++) {
             CompoundTag member = members.getCompound(i);
