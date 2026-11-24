@@ -30,9 +30,30 @@ final class RemoteTransferInsertion {
 
     private RemoteTransferInsertion() {}
 
-    /** True when the underlying handler persists full slot counts inside ItemStacks. */
-    static boolean requiresBoundedStoredStack(IItemHandler handler) {
-        return findSophisticatedHandler(handler) != null;
+    /**
+     * Returns the target inventory's item-specific capacity when its native
+     * handler exposes one. IItemHandler#getSlotLimit is only a base slot limit;
+     * inventories with upgrades or per-item rules may provide a more accurate
+     * getStackLimit(slot, stack). The fallback keeps ordinary handlers on the
+     * standard NeoForge contract.
+     */
+    static int getItemStackLimit(IItemHandler handler, int slot, ItemStack stack, int fallback) {
+        Object inventory = findSophisticatedHandler(handler);
+        if (inventory == null) return fallback;
+        try {
+            Method method = inventory.getClass().getMethod("getStackLimit", int.class, ItemStack.class);
+            Object result = method.invoke(inventory, slot, stack);
+            return result instanceof Number number ? Math.max(0, number.intValue()) : fallback;
+        } catch (NoSuchMethodException ignored) {
+            return fallback;
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Cannot read target inventory's item-specific stack limit", e);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException runtimeException) throw runtimeException;
+            if (cause instanceof Error error) throw error;
+            throw new IllegalStateException("Target inventory failed to calculate its stack limit", cause);
+        }
     }
 
     static ItemStack insert(IItemHandler handler, int slot, ItemStack stack, boolean simulate) {
