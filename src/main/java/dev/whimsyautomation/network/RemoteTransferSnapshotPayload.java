@@ -116,7 +116,6 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                     inventory.putBoolean("Available", true);
                     inventory.putUUID("Member", member.id());
                     inventory.putString("Block", member.blockId());
-                    net.minecraft.nbt.ListTag slots = new net.minecraft.nbt.ListTag();
                     int[] menuX = new int[handler.getSlots()];
                     int[] menuY = new int[handler.getSlots()];
                     boolean[] menuMapped = new boolean[handler.getSlots()];
