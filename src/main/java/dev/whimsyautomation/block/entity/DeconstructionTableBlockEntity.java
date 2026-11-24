@@ -205,21 +205,19 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
     public void dropAllContents() {
         if (level == null || level.isClientSide) return;
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
-            ItemStack stack = inventory.getStackInSlot(slot);
-            if (!stack.isEmpty()) {
-                int remaining = stack.getCount();
-                int legalSize = Math.max(1, PlayerStackRules.getPlayerMaxStackSize(stack));
-                while (remaining > 0) {
-                    int batch = Math.min(remaining, legalSize);
-                    Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
-                            worldPosition.getZ() + 0.5, PlayerStackRules.copyForPlayer(stack, batch));
-                    remaining -= batch;
-                }
-                inventory.setStackInSlot(slot, ItemStack.EMPTY);
+            ItemStack template = inventory.getStoredTemplate(slot);
+            long remaining = inventory.getStoredCount(slot);
+            if (template.isEmpty() || remaining <= 0L) continue;
+            int legalSize = Math.max(1, PlayerStackRules.getPlayerMaxStackSize(template));
+            while (remaining > 0L) {
+                int batch = (int) Math.min(remaining, (long) legalSize);
+                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
+                        worldPosition.getZ() + 0.5, PlayerStackRules.copyForPlayer(template, batch));
+                remaining -= batch;
             }
+            inventory.setStackInSlot(slot, ItemStack.EMPTY);
         }
     }
-
     @Override public Component getDisplayName() {
         return Component.translatable("container.whimsy_automation.deconstruction_table");
     }
