@@ -111,6 +111,7 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                             RemoteTransferNetworkData.EndpointKind.WORKSTATION);
                     inventory.putBoolean("Available", true);
                     inventory.putUUID("Member", member.id());
+                    inventory.putString("Block", member.blockId());
                     net.minecraft.nbt.ListTag slots = new net.minecraft.nbt.ListTag();
                     for (int i = 0; i < handler.getSlots(); i++) {
                         net.minecraft.world.item.ItemStack stack = handler.getStackInSlot(i);
