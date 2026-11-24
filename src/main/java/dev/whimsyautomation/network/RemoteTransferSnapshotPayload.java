@@ -35,6 +35,7 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                 CompoundTag m = new CompoundTag();
                 m.putUUID("Id", member.id()); m.putString("Dimension", member.dimension().location().toString());
                 m.putLong("Pos", member.pos().asLong()); m.putString("Kind", member.kind().name());
+                m.putString("Block", member.blockId());
                 members.add(m);
             }
             n.put("Members", members);
