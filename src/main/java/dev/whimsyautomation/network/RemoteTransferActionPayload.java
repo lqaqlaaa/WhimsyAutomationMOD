@@ -127,14 +127,14 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     if (n != null) for (var old : n.connections()) if (old.id().equals(p.firstId())) {
                         boolean inputSide = p.value() == 0;
                         var current = inputSide ? old.inputFilter() : old.outputFilter();
-                        String fingerprint = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(player.getMainHandItem().getItem())
-                                + "|" + player.getMainHandItem().getComponents();
+                        String fingerprint = RemoteTransferNetworkData.Filter.fingerprint(player.getMainHandItem(),
+                                current.ignoreDurability(), current.ignoreNbt());
                         java.util.ArrayList<String> entries = new java.util.ArrayList<>(current.items());
                         if (!entries.contains(fingerprint)) entries.add(fingerprint);
                         var updated = new RemoteTransferNetworkData.Filter(
                                 current.mode() == RemoteTransferNetworkData.FilterMode.NONE
                                         ? RemoteTransferNetworkData.FilterMode.WHITELIST : current.mode(),
-                                true, entries);
+                                true, entries, true, current.ignoreDurability(), current.ignoreNbt(), current.matchTags());
                         data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
                                 old.sourceMember(), old.targetMember(), old.direction(), old.enabled(),
                                 inputSide ? updated : old.inputFilter(), inputSide ? old.outputFilter() : updated));
@@ -149,6 +149,9 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                         int side = p.value() & 1;
                         int mode = (p.value() >> 1) & 3;
                         boolean exact = (p.value() & 8) != 0;
+                        boolean ignoreDurability = (p.value() & 16) != 0;
+                        boolean ignoreNbt = (p.value() & 32) != 0;
+                        boolean matchTags = (p.value() & 64) != 0;
                         var current = side == 0 ? old.inputFilter() : old.outputFilter();
                         java.util.ArrayList<String> entries = new java.util.ArrayList<>();
                         if (exact) current.items().stream().filter(s -> s.contains("|")).forEach(entries::add);
@@ -157,7 +160,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                                 .forEach(entries::add);
                         var filter = new RemoteTransferNetworkData.Filter(
                                 RemoteTransferNetworkData.FilterMode.values()[Math.min(2, mode)],
-                                exact, entries);
+                                exact, entries, mode != 0, ignoreDurability, ignoreNbt, matchTags);
                         data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
                                 old.sourceMember(), old.targetMember(), old.direction(), old.enabled(),
                                 side == 0 ? filter : old.inputFilter(), side == 1 ? filter : old.outputFilter()));

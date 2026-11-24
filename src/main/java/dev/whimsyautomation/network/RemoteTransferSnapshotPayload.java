@@ -47,9 +47,15 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                 c.putBoolean("Enabled", link.enabled());
                 c.putString("InputMode", link.inputFilter().mode().name());
                 c.putBoolean("InputExact", link.inputFilter().exactComponents());
+                c.putBoolean("InputIgnoreDurability", link.inputFilter().ignoreDurability());
+                c.putBoolean("InputIgnoreNbt", link.inputFilter().ignoreNbt());
+                c.putBoolean("InputMatchTags", link.inputFilter().matchTags());
                 c.putString("InputItems", link.inputFilter().items().stream().map(s -> s.contains("|") ? s.substring(0, s.indexOf('|')) : s).distinct().collect(java.util.stream.Collectors.joining(",")));
                 c.putString("OutputMode", link.outputFilter().mode().name());
                 c.putBoolean("OutputExact", link.outputFilter().exactComponents());
+                c.putBoolean("OutputIgnoreDurability", link.outputFilter().ignoreDurability());
+                c.putBoolean("OutputIgnoreNbt", link.outputFilter().ignoreNbt());
+                c.putBoolean("OutputMatchTags", link.outputFilter().matchTags());
                 c.putString("OutputItems", link.outputFilter().items().stream().map(s -> s.contains("|") ? s.substring(0, s.indexOf('|')) : s).distinct().collect(java.util.stream.Collectors.joining(",")));
                 links.add(c);
             }

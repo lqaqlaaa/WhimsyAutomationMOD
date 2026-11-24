@@ -218,7 +218,9 @@ public final class RemoteTransferNetworkData extends SavedData {
 
     private static Filter readFilter(CompoundTag tag, String prefix) {
         FilterMode mode = FilterMode.valueOf(tag.getString(prefix + "FilterMode"));
-        return new Filter(mode, tag.getBoolean(prefix + "Exact"), getStrings(tag, prefix + "Items"));
+        return new Filter(mode, tag.getBoolean(prefix + "Exact"), getStrings(tag, prefix + "Items"),
+                mode != FilterMode.NONE, tag.getBoolean(prefix + "IgnoreDurability"),
+                tag.getBoolean(prefix + "IgnoreNbt"), tag.getBoolean(prefix + "MatchTags"));
     }
 
     private static void putStrings(CompoundTag tag, String key, List<String> values) {
@@ -259,37 +261,52 @@ public final class RemoteTransferNetworkData extends SavedData {
         }
     }
 
-    public record Filter(FilterMode mode, boolean exactComponents, List<String> items) {
+    public record Filter(FilterMode mode, boolean exactComponents, List<String> items,
+                         boolean enabled, boolean ignoreDurability, boolean ignoreNbt, boolean matchTags) {
+        public Filter(FilterMode mode, boolean exactComponents, List<String> items) {
+            this(mode, exactComponents, items, mode != FilterMode.NONE, false, false, false);
+        }
+
         public Filter {
             Objects.requireNonNull(mode);
             items = List.copyOf(items);
         }
 
         public static Filter none() {
-            return new Filter(FilterMode.NONE, false, List.of());
+            return new Filter(FilterMode.NONE, false, List.of(), false, false, false, false);
         }
 
         public boolean allows(ResourceLocation itemId) {
+            if (!enabled || mode == FilterMode.NONE) return true;
             boolean contains = items.contains(itemId.toString());
-            return switch (mode) {
-                case NONE -> true;
-                case WHITELIST -> contains;
-                case BLACKLIST -> !contains;
-            };
+            return mode == FilterMode.WHITELIST ? contains : !contains;
         }
 
         public boolean allows(ItemStack stack) {
             if (stack.isEmpty()) return false;
+            if (!enabled || mode == FilterMode.NONE) return true;
             ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-            if (!exactComponents) return allows(itemId);
-            boolean containsExact = items.contains(itemId + "|" + stack.getComponents());
-            boolean containsType = items.contains(itemId.toString());
-            boolean contains = containsExact || containsType;
-            return switch (mode) {
-                case NONE -> true;
-                case WHITELIST -> contains;
-                case BLACKLIST -> !contains;
-            };
+            boolean contains = items.contains(itemId.toString());
+            if (matchTags) {
+                for (String entry : items) {
+                    if (!entry.startsWith("#")) continue;
+                    ResourceLocation tagId = ResourceLocation.tryParse(entry.substring(1));
+                    if (tagId != null && stack.is(net.minecraft.tags.TagKey.create(
+                            net.minecraft.core.registries.Registries.ITEM, tagId))) {
+                        contains = true;
+                        break;
+                    }
+                }
+            }
+            if (exactComponents && items.contains(fingerprint(stack, ignoreDurability, ignoreNbt))) contains = true;
+            return mode == FilterMode.WHITELIST ? contains : !contains;
+        }
+
+        public static String fingerprint(ItemStack source, boolean ignoreDurability, boolean ignoreNbt) {
+            ItemStack normalized = source.copyWithCount(1);
+            if (ignoreDurability) normalized.remove(net.minecraft.core.component.DataComponents.DAMAGE);
+            if (ignoreNbt) normalized.remove(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+            return BuiltInRegistries.ITEM.getKey(normalized.getItem()) + "|" + normalized.getComponents();
         }
     }
 

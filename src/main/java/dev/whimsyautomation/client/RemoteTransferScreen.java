@@ -47,6 +47,9 @@ public final class RemoteTransferScreen extends Screen {
     private int connectionDirection;
     private int filterModeInput, filterModeOutput;
     private boolean exactInput, exactOutput;
+    private boolean ignoreDurabilityInput, ignoreDurabilityOutput;
+    private boolean ignoreNbtInput, ignoreNbtOutput;
+    private boolean matchTagsInput, matchTagsOutput;
     private List<CompoundTag> networks = List.of(), members = List.of(), links = List.of();
     private int sideW, contentX, contentW, listTop, rowH;
 
@@ -261,7 +264,7 @@ public final class RemoteTransferScreen extends Screen {
         int labelW = columns == 2 ? (contentW - 18) / 2 : contentW - 18;
         int inputX = contentX + 6;
         int outputX = inputX + labelW + gap;
-        int fieldY = Math.max(82, Math.min(height - 118, Math.max(y + 8, 100)));
+        int fieldY = Math.max(82, Math.min(height - 144, Math.max(y + 8, 100)));
         addRenderableWidget(Button.builder(Component.literal(filterLabel("输入", filterModeInput, exactInput)), b -> {
             filterModeInput = (filterModeInput + 1) % 3;
             if (filterModeInput == 0) exactInput = !exactInput;
@@ -299,11 +302,15 @@ public final class RemoteTransferScreen extends Screen {
                 }))).bounds(outputX, fieldY + 48, labelW, 20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输入规则"), b ->
                 send(9, selectedNetwork, selectedConnection, null,
-                        (filterModeInput << 1) | (exactInput ? 8 : 0), inputFilterBox.getValue()))
+                        (filterModeInput << 1) | (exactInput ? 8 : 0)
+                                | (ignoreDurabilityInput ? 16 : 0) | (ignoreNbtInput ? 32 : 0)
+                                | (matchTagsInput ? 64 : 0), inputFilterBox.getValue()))
                 .bounds(inputX, fieldY + 72, labelW, 20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输出规则"), b ->
                 send(9, selectedNetwork, selectedConnection, null,
-                        1 | (filterModeOutput << 1) | (exactOutput ? 8 : 0), outputFilterBox.getValue()))
+                        1 | (filterModeOutput << 1) | (exactOutput ? 8 : 0)
+                                | (ignoreDurabilityOutput ? 16 : 0) | (ignoreNbtOutput ? 32 : 0)
+                                | (matchTagsOutput ? 64 : 0), outputFilterBox.getValue()))
                 .bounds(outputX, fieldY + 72, labelW, 20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输入精确规则"), b ->
                 send(10, selectedNetwork, selectedConnection, null, 0, ""))
@@ -311,6 +318,30 @@ public final class RemoteTransferScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输出精确规则"), b ->
                 send(10, selectedNetwork, selectedConnection, null, 1, ""))
                 .bounds(outputX, fieldY + 96, labelW, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("忽略耐久：" + (ignoreDurabilityInput ? "开" : "关")), b -> {
+            ignoreDurabilityInput = !ignoreDurabilityInput;
+            b.setMessage(Component.literal("忽略耐久：" + (ignoreDurabilityInput ? "开" : "关")));
+        }).bounds(inputX, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("忽略NBT：" + (ignoreNbtInput ? "开" : "关")), b -> {
+            ignoreNbtInput = !ignoreNbtInput;
+            b.setMessage(Component.literal("忽略NBT：" + (ignoreNbtInput ? "开" : "关")));
+        }).bounds(inputX + (labelW - 4) / 3 + 2, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("标签：" + (matchTagsInput ? "开" : "关")), b -> {
+            matchTagsInput = !matchTagsInput;
+            b.setMessage(Component.literal("标签：" + (matchTagsInput ? "开" : "关")));
+        }).bounds(inputX + 2 * ((labelW - 4) / 3) + 2, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("忽略耐久：" + (ignoreDurabilityOutput ? "开" : "关")), b -> {
+            ignoreDurabilityOutput = !ignoreDurabilityOutput;
+            b.setMessage(Component.literal("忽略耐久：" + (ignoreDurabilityOutput ? "开" : "关")));
+        }).bounds(outputX, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("忽略NBT：" + (ignoreNbtOutput ? "开" : "关")), b -> {
+            ignoreNbtOutput = !ignoreNbtOutput;
+            b.setMessage(Component.literal("忽略NBT：" + (ignoreNbtOutput ? "开" : "关")));
+        }).bounds(outputX + (labelW - 4) / 3 + 2, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("标签：" + (matchTagsOutput ? "开" : "关")), b -> {
+            matchTagsOutput = !matchTagsOutput;
+            b.setMessage(Component.literal("标签：" + (matchTagsOutput ? "开" : "关")));
+        }).bounds(outputX + 2 * ((labelW - 4) / 3) + 2, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
     }
 
     private void loadSelectedFilter(CompoundTag link) {
@@ -318,6 +349,12 @@ public final class RemoteTransferScreen extends Screen {
         filterModeOutput = Math.max(0, java.util.Arrays.asList("NONE", "WHITELIST", "BLACKLIST").indexOf(link.getString("OutputMode")));
         exactInput = link.getBoolean("InputExact");
         exactOutput = link.getBoolean("OutputExact");
+        ignoreDurabilityInput = link.getBoolean("InputIgnoreDurability");
+        ignoreDurabilityOutput = link.getBoolean("OutputIgnoreDurability");
+        ignoreNbtInput = link.getBoolean("InputIgnoreNbt");
+        ignoreNbtOutput = link.getBoolean("OutputIgnoreNbt");
+        matchTagsInput = link.getBoolean("InputMatchTags");
+        matchTagsOutput = link.getBoolean("OutputMatchTags");
         inputFilterText = link.getString("InputItems");
         outputFilterText = link.getString("OutputItems");
     }
@@ -370,7 +407,7 @@ public final class RemoteTransferScreen extends Screen {
         } else if (activePage == 3) {
             g.drawString(font, "先选择一条连接，再分别配置输入端与输出端。",
                     contentX + 6, 52, MUTED, false);
-            g.drawString(font, "规则格式：minecraft:stone,minecraft:dirt",
+            g.drawString(font, "规则格式：minecraft:stone,minecraft:dirt；标签写作 #minecraft:logs",
                     contentX + 6, height - 16, MUTED, false);
         }
     }
