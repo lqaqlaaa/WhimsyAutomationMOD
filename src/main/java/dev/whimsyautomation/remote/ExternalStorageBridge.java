@@ -107,6 +107,17 @@ public final class ExternalStorageBridge {
         throw new IllegalArgumentException("Missing enum value " + className + "." + name);
     }
 
+    private static boolean isInsertionSlot(List<ItemStack> stacks, int slot, ItemStack offered) {
+        int firstMatch = -1;
+        for (int i = 0; i < stacks.size(); i++) {
+            if (ItemStack.isSameItemSameComponents(stacks.get(i), offered)) {
+                firstMatch = i;
+                break;
+            }
+        }
+        return firstMatch >= 0 ? slot == firstMatch : slot == stacks.size();
+    }
+
     private static int visibleCount(long amount, ItemStack stack) {
         return (int) Math.max(0L, Math.min(Math.min(amount, 99L), stack.getMaxStackSize()));
     }
@@ -148,13 +159,15 @@ public final class ExternalStorageBridge {
             return result;
         }
 
-        @Override public int getSlots() { return snapshot().size(); }
+        @Override public int getSlots() { return snapshot().size() + 1; }
         @Override public ItemStack getStackInSlot(int slot) {
             List<ItemStack> all = snapshot();
             return slot < 0 || slot >= all.size() ? ItemStack.EMPTY : all.get(slot).copy();
         }
         @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             if (stack.isEmpty()) return ItemStack.EMPTY;
+            List<ItemStack> visible = snapshot();
+            if (!isInsertionSlot(visible, slot, stack)) return stack;
             Ae2Context c = resolve();
             if (c == null) return stack;
             try {
@@ -221,13 +234,15 @@ public final class ExternalStorageBridge {
             return result;
         }
 
-        @Override public int getSlots() { return snapshot().size(); }
+        @Override public int getSlots() { return snapshot().size() + 1; }
         @Override public ItemStack getStackInSlot(int slot) {
             List<ItemStack> all = snapshot();
             return slot < 0 || slot >= all.size() ? ItemStack.EMPTY : all.get(slot).copy();
         }
         @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             if (stack.isEmpty()) return ItemStack.EMPTY;
+            List<ItemStack> visible = snapshot();
+            if (!isInsertionSlot(visible, slot, stack)) return stack;
             RsContext c = resolve();
             if (c == null) return stack;
             try {
