@@ -1,6 +1,9 @@
 package dev.whimsyautomation.util;
 
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.ArrayList;
@@ -112,6 +115,21 @@ public class LongCountItemStackHandler extends ItemStackHandler {
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
         return validSlot(slot) && stack != null && !stack.isEmpty();
+    }
+
+    /** Loads legacy vanilla ItemStackHandler NBT without narrowing future long-backed saves. */
+    @Override
+    public void deserializeNBT(HolderLookup.Provider registries, CompoundTag tag) {
+        resizeSlots(Math.max(0, tag.getInt("Size")));
+        for (int slot = 0; slot < getSlots(); slot++) setStoredStack(slot, ItemStack.EMPTY, 0L);
+        ListTag items = tag.getList("Items", 10);
+        for (int i = 0; i < items.size(); i++) {
+            CompoundTag entry = items.getCompound(i);
+            int slot = entry.getInt("Slot");
+            if (slot < 0 || slot >= getSlots()) continue;
+            ItemStack stack = ItemStack.parseOptional(registries, entry);
+            if (!stack.isEmpty()) setStoredStack(slot, stack, stack.getCount());
+        }
     }
 
     /** Resizes storage while retaining all existing long counts. */
