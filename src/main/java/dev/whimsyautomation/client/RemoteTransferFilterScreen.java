@@ -52,25 +52,26 @@ public final class RemoteTransferFilterScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
-        int buttonY = 112;
+        int buttonY = 108;
+        int controlGap = 3;
+        int controlW = Math.max(36, (width - 16 - controlGap * 3) / 4);
         addRenderableWidget(Button.builder(Component.literal(
-                mode == RemoteTransferNetworkData.FilterMode.WHITELIST ? "模式：白名单" : "模式：黑名单"), b -> {
+                mode == RemoteTransferNetworkData.FilterMode.WHITELIST ? "白名单" : "黑名单"), b -> {
             mode = mode == RemoteTransferNetworkData.FilterMode.WHITELIST
                     ? RemoteTransferNetworkData.FilterMode.BLACKLIST
                     : RemoteTransferNetworkData.FilterMode.WHITELIST;
             b.setMessage(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST
-                    ? "模式：白名单" : "模式：黑名单"));
-        }).bounds(8, buttonY, Math.max(80, (width - 24) / 2), 20).build());
-        int optionW = Math.max(52, (width - 28) / 3);
-        addRenderableWidget(toggle("匹配耐久", matchDurability, v -> matchDurability = v)
-                .bounds(8, buttonY + 24, optionW, 20).build());
-        addRenderableWidget(toggle("匹配物品标签", matchTags, v -> matchTags = v)
-                .bounds(12 + optionW, buttonY + 24, optionW, 20).build());
-        addRenderableWidget(toggle("匹配NBT", matchNbt, v -> matchNbt = v)
-                .bounds(16 + optionW * 2, buttonY + 24, optionW, 20).build());
+                    ? "白名单" : "黑名单"));
+        }).bounds(8, buttonY, controlW, 20).build());
+        addRenderableWidget(toggle("耐久", matchDurability, v -> matchDurability = v)
+                .bounds(8 + controlW + controlGap, buttonY, controlW, 20).build());
+        addRenderableWidget(toggle("物品标签", matchTags, v -> matchTags = v)
+                .bounds(8 + (controlW + controlGap) * 2, buttonY, controlW, 20).build());
+        addRenderableWidget(toggle("NBT", matchNbt, v -> matchNbt = v)
+                .bounds(8 + (controlW + controlGap) * 3, buttonY, controlW, 20).build());
 
         inventoryX = (width - 9 * SLOT) / 2;
-        inventoryY = height - 98;
+        inventoryY = height - 104;
         addRenderableWidget(Button.builder(Component.literal("返回"), b -> minecraft.setScreen(parent))
                 .bounds(8, height - 24, Math.max(64, (width - 24) / 2), 20).build());
         addRenderableWidget(Button.builder(Component.literal("保存过滤规则"), b -> save())
