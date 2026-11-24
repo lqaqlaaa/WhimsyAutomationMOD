@@ -40,6 +40,7 @@ public final class RemoteTransferScreen extends Screen {
 
     private CompoundTag snapshot = new CompoundTag();
     private UUID selectedNetwork, selectedMember, selectedSecond, selectedConnection, selectedSlotBinding;
+    private UUID serverSyncedNetwork;
     private int activePage;
     private int networkScroll, memberScroll, connectionScroll;
     private EditBox createNameBox, renameBox, inputFilterBox, outputFilterBox;
@@ -53,7 +54,10 @@ public final class RemoteTransferScreen extends Screen {
     private List<CompoundTag> networks = List.of(), members = List.of(), links = List.of(), slotBindings = List.of();
     private int sideW, contentX, contentW, listTop, rowH;
 
-    public RemoteTransferScreen() { super(Component.literal("远程传输网络")); }
+    public RemoteTransferScreen() {
+        super(Component.literal("远程传输网络"));
+        selectedNetwork = RemoteTransferOverlay.selectedNetwork();
+    }
     public RemoteTransferScreen(CompoundTag data) { this(); applySnapshot(data); }
 
     public RemoteTransferScreen applySnapshot(CompoundTag data) {
@@ -86,6 +90,10 @@ public final class RemoteTransferScreen extends Screen {
         if (selectedSlotBinding != null && slotBindings.stream()
                 .noneMatch(binding -> binding.getUUID("Id").equals(selectedSlotBinding))) selectedSlotBinding = null;
         RemoteTransferOverlay.selectNetwork(selectedNetwork);
+        if (selectedNetwork != null && !selectedNetwork.equals(serverSyncedNetwork)) {
+            serverSyncedNetwork = selectedNetwork;
+            send(20, selectedNetwork, null, null, 0, "");
+        }
     }
 
     private CompoundTag findNetwork() {
