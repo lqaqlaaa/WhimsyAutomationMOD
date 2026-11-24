@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 
 /** Renders selected network members and thick, direction-colored connection beams. */
@@ -152,8 +154,10 @@ public final class RemoteTransferOverlay {
                 drawBetweenBlockFaces(beams, matrix, source, target, color, 0.0F);
             }
 
-            // Per-slot bindings are the active routing model. Draw a dedicated
-            // beam for each one, colored exactly like its target block outline.
+            // Slot bindings remain independent for transfer logic, but bindings
+            // created as one workstation-to-container connection share one visual beam.
+            // This avoids drawing a bundle of parallel lines for multi-slot auto-binding.
+            Set<String> renderedBindingPairs = new HashSet<>();
             for (int i = 0; i < slotBindings.size(); i++) {
                 CompoundTag binding = slotBindings.getCompound(i);
                 if (!binding.getBoolean("Enabled")
@@ -161,10 +165,11 @@ public final class RemoteTransferOverlay {
                 BlockPos workstation = positions.get(binding.getUUID("Workstation"));
                 BlockPos target = positions.get(binding.getUUID("Target"));
                 if (workstation == null || target == null) continue;
+                String pairKey = binding.getUUID("Workstation") + ":" + binding.getUUID("Target");
+                if (!renderedBindingPairs.add(pairKey)) continue;
                 int slotIndex = Math.max(0, binding.getInt("WorkstationSlot"));
                 int color = SLOT_COLORS[slotIndex % SLOT_COLORS.length];
-                float lane = ((slotIndex % 7) - 3) * 0.065F;
-                drawBetweenBlockFaces(beams, matrix, workstation, target, color, lane);
+                drawBetweenBlockFaces(beams, matrix, workstation, target, color, 0.0F);
             }
             buffers.endBatch(CONNECTION_BEAM);
         }
