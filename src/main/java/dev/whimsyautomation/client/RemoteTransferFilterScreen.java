@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.UUID;
 
 /** Ten non-consuming ghost item slots plus the player's inventory. */
@@ -22,6 +23,7 @@ public final class RemoteTransferFilterScreen extends Screen {
     private final Screen parent;
     private final UUID networkId, workstationId;
     private final int workstationSlot;
+    private final Consumer<RemoteTransferNetworkData.Filter> onSaved;
     private final List<String> entries = new ArrayList<>();
     private RemoteTransferNetworkData.FilterMode mode;
     private boolean matchDurability, matchTags, matchNbt;
@@ -29,12 +31,14 @@ public final class RemoteTransferFilterScreen extends Screen {
     private int inventoryX, inventoryY;
 
     public RemoteTransferFilterScreen(Screen parent, UUID networkId, UUID workstationId,
-                                      int workstationSlot, RemoteTransferNetworkData.Filter filter) {
+                                      int workstationSlot, RemoteTransferNetworkData.Filter filter,
+                                      Consumer<RemoteTransferNetworkData.Filter> onSaved) {
         super(Component.literal("槽位过滤规则"));
         this.parent = parent;
         this.networkId = networkId;
         this.workstationId = workstationId;
         this.workstationSlot = workstationSlot;
+        this.onSaved = onSaved;
         this.mode = filter.mode() == RemoteTransferNetworkData.FilterMode.BLACKLIST
                 ? RemoteTransferNetworkData.FilterMode.BLACKLIST
                 : RemoteTransferNetworkData.FilterMode.WHITELIST;
@@ -92,8 +96,12 @@ public final class RemoteTransferFilterScreen extends Screen {
             first = false;
             encoded.append(Base64.getEncoder().encodeToString(entry.getBytes(StandardCharsets.UTF_8)));
         }
+        RemoteTransferNetworkData.Filter updated = new RemoteTransferNetworkData.Filter(mode, true,
+                entries.stream().filter(e -> !e.isBlank()).toList(), !entries.stream().allMatch(String::isBlank),
+                !matchDurability, !matchNbt, matchTags);
         PacketDistributor.sendToServer(new RemoteTransferActionPayload(
                 23, networkId, workstationId, null, workstationSlot, encoded.toString()));
+        if (onSaved != null) onSaved.accept(updated);
         minecraft.setScreen(parent);
     }
 
