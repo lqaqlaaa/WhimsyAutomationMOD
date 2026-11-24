@@ -46,6 +46,29 @@ public final class ExternalStorageBridge {
         };
     }
 
+    public static boolean sameNetwork(Level level, BlockPos firstPos, BlockPos secondPos, EndpointKind kind) {
+        Object first = networkIdentity(level, firstPos, kind);
+        Object second = networkIdentity(level, secondPos, kind);
+        return first != null && first == second;
+    }
+
+    private static Object networkIdentity(Level level, BlockPos pos, EndpointKind kind) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be == null) return null;
+        try {
+            if (kind == EndpointKind.AE2_NETWORK && isInstance(AE2_WIRELESS_ACCESS_POINT, be)) {
+                return invoke(be, "getGrid");
+            }
+            if (kind == EndpointKind.REFINED_STORAGE_NETWORK && isInstance(RS_NETWORK_NODE_PROXY, be)) {
+                Object node = invoke(be, "getNode");
+                return node == null ? null : invoke(node, "getNetwork");
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            return null;
+        }
+        return null;
+    }
+
     public static String connectedMessage(EndpointKind kind) {
         return switch (kind) {
             case AE2_NETWORK -> "已绑定应用能源 2 的 ME 网络。";

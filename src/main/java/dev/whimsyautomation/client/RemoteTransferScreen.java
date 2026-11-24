@@ -567,7 +567,13 @@ public final class RemoteTransferScreen extends Screen {
                     textX, y + 16, MUTED, false);
             if (rowH >= 36) {
                 String state = loaded ? "已加载" : "未加载";
-                String role = "WORKSTATION".equals(member.getString("Kind")) ? "工作方块" : "普通成员";
+                String role = switch (member.getString("Kind")) {
+                    case "WORKSTATION" -> "工作方块";
+                    case "AE2_NETWORK" -> "AE2 网络";
+                    case "REFINED_STORAGE_NETWORK" -> "精致存储网络";
+                    case "CONTAINER" -> "容器";
+                    default -> "普通成员";
+                };
                 long bindingCount = slotBindings.stream().filter(binding ->
                         binding.getUUID("Workstation").equals(id) || binding.getUUID("Target").equals(id)).count();
                 g.drawString(font, state + " · " + role + " · 绑定 " + bindingCount,
