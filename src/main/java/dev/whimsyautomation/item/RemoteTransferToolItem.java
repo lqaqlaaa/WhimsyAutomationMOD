@@ -94,9 +94,7 @@ public final class RemoteTransferToolItem extends Item {
             }
             data.removeMember(activeId, member.id());
             player.displayClientMessage(Component.literal("已从当前网络移除该方块。"), true);
-            PacketDistributor.sendToPlayer(player, reopenConfigurator
-                ? RemoteTransferSnapshotPayload.openConfigurator(data, player.getUUID())
-                : RemoteTransferSnapshotPayload.from(data, player.getUUID()));
+            PacketDistributor.sendToPlayer(player, RemoteTransferSnapshotPayload.from(data, player.getUUID()));
             return InteractionResult.SUCCESS;
         }
 
