@@ -6,19 +6,27 @@ import net.neoforged.neoforge.items.IItemHandler;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Queue;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
  * Bridges Sophisticated Core's slot-specific insertion API without taking a
  * compile-time dependency on that optional mod.
  *
- * InventoryHandler.insertItem(slot, stack, false) may route the real insertion
- * through the entire inventory, while its simulation is slot-specific.
- * insertItemOnlyToSlot keeps both phases on the exact same physical slot.
+ * Sophisticated Core exposes CachedFailedInsertInventoryHandler through some
+ * capabilities. That cache delegates ordinary insertItem calls to the whole
+ * inventory, so we must reach its wrapped InventoryHandler and call
+ * insertItemOnlyToSlot for both simulation and execution.
  */
 final class RemoteTransferInsertion {
     private static final String SOPHISTICATED_PACKAGE =
             "net.p3pp3rf1y.sophisticatedcore.inventory.";
+    private static final String NEOFORGE_WRAPPER_PACKAGE =
+            "net.neoforged.neoforge.items.wrapper.";
 
     private RemoteTransferInsertion() {}
 
@@ -48,50 +56,81 @@ final class RemoteTransferInsertion {
     }
 
     /**
-     * Capabilities can expose Sophisticated Core's CachedFailedInsert wrapper
-     * instead of InventoryHandler itself. Follow only Sophisticated Core's
-     * supplier-backed wrapper, never arbitrary third-party object fields.
+     * Follow only known delegation layers. A NeoForge capability wrapper can
+     * sit outside Sophisticated Core's cache, so checking only the first
+     * runtime class is insufficient.
      */
     private static Object findSophisticatedHandler(Object handler) {
-        Object current = handler;
-        for (int depth = 0; current != null && depth < 8; depth++) {
+        Queue<Object> pending = new ArrayDeque<>();
+        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        pending.add(handler);
+        boolean sawSophisticatedLayer = false;
+
+        while (!pending.isEmpty() && visited.size() < 32) {
+            Object current = pending.remove();
+            if (current == null || !visited.add(current)) continue;
+
             Class<?> type = current.getClass();
-            if (!type.getName().startsWith(SOPHISTICATED_PACKAGE)) {
-                return null;
-            }
+            String className = type.getName();
 
             try {
-                type.getMethod("insertItemOnlyToSlot",
-                        int.class, ItemStack.class, boolean.class);
-                return current;
+                return type.getMethod("insertItemOnlyToSlot",
+                        int.class, ItemStack.class, boolean.class).getDeclaringClass() != null
+                        ? current : null;
             } catch (NoSuchMethodException ignored) {
-                // Continue through the known Sophisticated Core wrapper.
+                // This layer is a delegate/cache rather than the real inventory.
             }
 
-            Object next = unwrapSupplierField(current, type);
-            if (next == current) return null;
-            current = next;
+            if (className.startsWith(SOPHISTICATED_PACKAGE)) {
+                sawSophisticatedLayer = true;
+                collectSupplierDelegates(current, type, pending);
+            } else if (className.startsWith(NEOFORGE_WRAPPER_PACKAGE)) {
+                collectHandlerDelegates(current, type, pending);
+            }
+        }
+
+        // Never silently fall back to the unsafe whole-inventory insertion
+        // when a Sophisticated wrapper was present but could not be unwrapped.
+        if (sawSophisticatedLayer) {
+            throw new IllegalStateException(
+                    "Could not unwrap Sophisticated Core capability to its InventoryHandler; "
+                            + "refusing unsafe whole-inventory insertion");
         }
         return null;
     }
 
-    private static Object unwrapSupplierField(Object instance, Class<?> type) {
+    private static void collectSupplierDelegates(Object instance, Class<?> type, Queue<Object> pending) {
         for (Class<?> current = type; current != null; current = current.getSuperclass()) {
             for (Field field : current.getDeclaredFields()) {
                 if (!Supplier.class.isAssignableFrom(field.getType())) continue;
                 try {
-                    field.setAccessible(true);
+                    if (!field.trySetAccessible()) continue;
                     Object value = field.get(instance);
                     if (value instanceof Supplier<?> supplier) {
                         Object supplied = supplier.get();
-                        if (supplied instanceof IItemHandler) return supplied;
+                        if (supplied instanceof IItemHandler) pending.add(supplied);
                     }
-                } catch (ReflectiveOperationException | RuntimeException ignored) {
-                    // If the optional wrapper cannot be unwrapped, use the
-                    // standard IItemHandler contract rather than guessing.
+                } catch (ReflectiveOperationException | RuntimeException e) {
+                    throw new IllegalStateException(
+                            "Failed to unwrap Sophisticated Core inventory cache", e);
                 }
             }
         }
-        return null;
+    }
+
+    private static void collectHandlerDelegates(Object instance, Class<?> type, Queue<Object> pending) {
+        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
+            for (Field field : current.getDeclaredFields()) {
+                if (!IItemHandler.class.isAssignableFrom(field.getType())) continue;
+                try {
+                    if (!field.trySetAccessible()) continue;
+                    Object value = field.get(instance);
+                    if (value instanceof IItemHandler delegate) pending.add(delegate);
+                } catch (ReflectiveOperationException | RuntimeException e) {
+                    throw new IllegalStateException(
+                            "Failed to inspect NeoForge item-handler wrapper", e);
+                }
+            }
+        }
     }
 }
