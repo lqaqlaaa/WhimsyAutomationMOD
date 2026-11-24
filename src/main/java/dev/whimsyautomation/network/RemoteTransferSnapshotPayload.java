@@ -7,6 +7,10 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.neoforged.neoforge.items.SlotItemHandler;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 import java.util.UUID;
@@ -113,6 +117,38 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                     inventory.putUUID("Member", member.id());
                     inventory.putString("Block", member.blockId());
                     net.minecraft.nbt.ListTag slots = new net.minecraft.nbt.ListTag();
+                    int[] menuX = new int[handler.getSlots()];
+                    int[] menuY = new int[handler.getSlots()];
+                    boolean[] menuMapped = new boolean[handler.getSlots()];
+                    var blockEntity = level.getBlockEntity(member.pos());
+                    if (blockEntity instanceof MenuProvider provider) {
+                        try {
+                            AbstractContainerMenu menu = provider.createMenu(0, player.getInventory(), player);
+                            if (menu != null) {
+                                for (Slot menuSlot : menu.slots) {
+                                    int inventoryIndex = -1;
+                                    if (menuSlot instanceof SlotItemHandler itemSlot
+                                            && itemSlot.getItemHandler() == handler) {
+                                        inventoryIndex = itemSlot.getSlotIndex();
+                                    } else if (menuSlot.container == blockEntity) {
+                                        inventoryIndex = menuSlot.getContainerSlot();
+                                    }
+                                    if (inventoryIndex >= 0 && inventoryIndex < handler.getSlots()) {
+                                        menuX[inventoryIndex] = menuSlot.x;
+                                        menuY[inventoryIndex] = menuSlot.y;
+                                        menuMapped[inventoryIndex] = true;
+                                    }
+                                }
+                            }
+                        } catch (RuntimeException ignored) {
+                            // Some modded menus require their own open context. In that
+                            // case the generic indexed layout below remains available.
+                        }
+                    }
+                    boolean completeMenuLayout = handler.getSlots() > 0;
+                    for (boolean mapped : menuMapped) completeMenuLayout &= mapped;
+                    inventory.putBoolean("MenuLayout", completeMenuLayout);
+                    net.minecraft.nbt.ListTag slots = new net.minecraft.nbt.ListTag();
                     for (int i = 0; i < handler.getSlots(); i++) {
                         net.minecraft.world.item.ItemStack stack = handler.getStackInSlot(i);
                         CompoundTag slot = new CompoundTag();
@@ -120,6 +156,10 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                         slot.putString("Item", stack.isEmpty() ? "" :
                                 net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
                         slot.putInt("Count", stack.getCount());
+                        if (completeMenuLayout) {
+                            slot.putInt("GuiX", menuX[i]);
+                            slot.putInt("GuiY", menuY[i]);
+                        }
                         slots.add(slot);
                     }
                     inventory.put("Slots", slots);
