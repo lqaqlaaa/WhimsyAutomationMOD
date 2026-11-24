@@ -129,7 +129,8 @@ public final class RemoteTransferToolItem extends Item {
             RemoteTransferSelection.clear(player.getUUID());
             reopenConfigurator = true;
             player.displayClientMessage(Component.literal("方块已加入网络成员。"), true);
-        } else if (pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT\n                || pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT_BATCH) {
+        } else if (pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT
+                || pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT_BATCH) {
             var workstation = network.members().stream()
                     .filter(member -> member.id().equals(pending.workstationId()))
                     .findFirst().orElse(null);
