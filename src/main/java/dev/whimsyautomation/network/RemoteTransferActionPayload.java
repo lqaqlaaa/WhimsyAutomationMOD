@@ -53,6 +53,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                 if (owned(data, p.networkId(), player))
                     RemoteTransferSelection.setActiveNetwork(player.getUUID(), p.networkId());
             }
+            case 21 -> RemoteTransferSelection.setConnectionsVisible(player.getUUID(), p.value() != 0);
             case 1 -> data.createNetwork(player.getUUID(), p.text().isBlank()
                     ? "新建网络" : p.text());
             case 2 -> {
