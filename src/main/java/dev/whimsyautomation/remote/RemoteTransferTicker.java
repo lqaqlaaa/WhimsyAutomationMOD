@@ -161,9 +161,10 @@ public final class RemoteTransferTicker {
                  targetSlot++) {
                 ItemStack present = targetHandler.getStackInSlot(targetSlot);
                 if (!present.isEmpty() && !ItemStack.isSameItemSameComponents(present, simulated)) continue;
-                int slotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
-                int occupied = present.isEmpty() ? 0 : present.getCount();
-                int free = getAvailableSpace(targetHandler, targetSlot, present, slotLimit);
+                int baseSlotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
+                int slotLimit = RemoteTransferInsertion.getItemStackLimit(
+                        targetHandler, targetSlot, simulated, baseSlotLimit);
+                int free = getAvailableSpace(present, slotLimit);
                 int batchLimit = getHandlerBatchLimit(targetHandler, slotLimit, simulated);
                 int batch = Math.min(Math.min(free, batchLimit),
                         Math.min(simulated.getCount() - accepted, remainingBudget - accepted));
@@ -192,9 +193,10 @@ public final class RemoteTransferTicker {
                  targetSlot < lastTargetSlot && !notInserted.isEmpty(); targetSlot++) {
                 ItemStack present = targetHandler.getStackInSlot(targetSlot);
                 if (!present.isEmpty() && !ItemStack.isSameItemSameComponents(present, notInserted)) continue;
-                int slotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
-                int occupied = present.isEmpty() ? 0 : present.getCount();
-                int free = getAvailableSpace(targetHandler, targetSlot, present, slotLimit);
+                int baseSlotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
+                int slotLimit = RemoteTransferInsertion.getItemStackLimit(
+                        targetHandler, targetSlot, notInserted, baseSlotLimit);
+                int free = getAvailableSpace(present, slotLimit);
                 int batchLimit = getHandlerBatchLimit(targetHandler, slotLimit, notInserted);
                 int batch = Math.min(free, Math.min(batchLimit, notInserted.getCount()));
                 if (batch <= 0) continue;
@@ -271,31 +273,17 @@ public final class RemoteTransferTicker {
         }
     }
 
-    /** Long-backed machine slots expose a capped ItemStack view but retain independent long capacity. */
-    private static int getAvailableSpace(IItemHandler handler, int slot, ItemStack present, int slotLimit) {
-        if (handler instanceof LongCountItemStackHandler longHandler) {
-            long stored = longHandler.getStoredCount(slot);
-            return (int) Math.min((long) Integer.MAX_VALUE, Long.MAX_VALUE - stored);
-        }
+    /** Computes free capacity from the limit reported by the target inventory. */
+    private static int getAvailableSpace(ItemStack present, int effectiveLimit) {
         int occupied = present.isEmpty() ? 0 : present.getCount();
-        // Sophisticated Core stores the complete count in an ItemStack and
-        // validates that stack against Minecraft's [1, 99] codec while saving.
-        // Storage Drawers is different: its physical drawer stores the amount
-        // in a separate int field and serializes a one-item prototype. Applying
-        // the Sophisticated limit to every capability incorrectly treats those
-        // independent storage models as if they were identical.
-        int effectiveLimit = RemoteTransferInsertion.requiresBoundedStoredStack(handler)
-                ? Math.min(slotLimit, 99) : slotLimit;
         return Math.max(0, effectiveLimit - occupied);
     }
 
     /**
-     * ItemStack counts crossing an inventory capability boundary must remain
-     * legal for vanilla and third-party handlers. In particular, Sophisticated
-     * Core validates its serialized slot count in the range [1, 99], even when
-     * a wrapper advertises a much larger slot limit. Do not identify handlers
-     * by implementation class: capabilities may be wrapped by caches/delegates
-     * whose runtime class is outside the owning mod's package.
+     * Keep each individual capability call within the vanilla serializable
+     * ItemStack range. This is a transfer batch size, not a per-slot capacity:
+     * repeated batches can fill a target slot up to the larger limit reported
+     * by that target inventory (including upgrade- or item-specific limits).
      *
      * The machine's authoritative long count is retained by LongCountItemStackHandler;
      * this is only the maximum size of one external IItemHandler call.
