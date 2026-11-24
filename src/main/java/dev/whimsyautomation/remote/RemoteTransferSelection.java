@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentMap;
 public final class RemoteTransferSelection {
     private static final ConcurrentMap<UUID, Pending> PENDING = new ConcurrentHashMap<>();
     private static final ConcurrentMap<UUID, UUID> ACTIVE_NETWORK = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<UUID, Boolean> CONNECTION_LINES_VISIBLE = new ConcurrentHashMap<>();
 
     private RemoteTransferSelection() {}
 
@@ -26,6 +27,15 @@ public final class RemoteTransferSelection {
 
     public static UUID activeNetwork(UUID player) { return ACTIVE_NETWORK.get(player); }
 
+    /** Server-authoritative copy of the client's global connection-line visibility toggle. */
+    public static boolean connectionsVisible(UUID player) {
+        return CONNECTION_LINES_VISIBLE.getOrDefault(player, true);
+    }
+
+    public static void setConnectionsVisible(UUID player, boolean visible) {
+        CONNECTION_LINES_VISIBLE.put(player, visible);
+    }
+
     public static void setActiveNetwork(UUID player, UUID network) { if (network == null) ACTIVE_NETWORK.remove(player); else ACTIVE_NETWORK.put(player, network); }
 
     public static Pending get(UUID player) {
@@ -39,6 +49,7 @@ public final class RemoteTransferSelection {
     public static void clearAll(UUID player) {
         PENDING.remove(player);
         ACTIVE_NETWORK.remove(player);
+        CONNECTION_LINES_VISIBLE.remove(player);
     }
 
     public enum Mode {
