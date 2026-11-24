@@ -201,21 +201,29 @@ public final class RemoteTransferScreen extends Screen {
     }
 
     private void buildConnectionWidgets() {
-        int columns = RemoteTransferGuiLayout.cols(contentW - 14, 104);
-        int half = columns == 2 ? (contentW - 14) / 2 : contentW - 14;
+        int usableW = Math.max(1, contentW - 12);
+        int columns = RemoteTransferGuiLayout.cols(usableW, 104);
+        int half = columns == 2 ? (usableW - 6) / 2 : usableW;
+        int x = contentX + 6;
         int y = 66;
+
         addRenderableWidget(Button.builder(Component.literal("连接方向：" +
                 new String[]{"输入", "输出", "双向"}[connectionDirection]), b -> {
             connectionDirection = (connectionDirection + 1) % 3;
-            b.setMessage(Component.literal("连接方向：" + new String[]{"输入", "输出", "双向"}[connectionDirection]));
-        }).bounds(contentX + 6, y, Math.min(110, half), 20).build());
+            b.setMessage(Component.literal("连接方向：" +
+                    new String[]{"输入", "输出", "双向"}[connectionDirection]));
+        }).bounds(x, y, half, 20).build());
+
+        int createY = columns == 2 ? y : y + 24;
+        int createX = columns == 2 ? x + half + 6 : x;
+        int createW = columns == 2 ? half : usableW;
         addRenderableWidget(Button.builder(Component.literal("建立所选连接"), b -> {
             if (selectedMember != null && selectedSecond != null && !selectedMember.equals(selectedSecond))
                 send(6, selectedNetwork, selectedMember, selectedSecond, connectionDirection, "");
-        }).bounds(contentX + 122, y, Math.max(64, Math.min(110, contentW - 128)), 20).build());
+        }).bounds(createX, createY, createW, 20).build());
 
-        int memberY = 96;
-        int memberRows = Math.max(1, Math.min(4, (height - 160) / 22));
+        int memberY = createY + 30;
+        int memberRows = Math.max(1, Math.min(4, (height - memberY - 44) / 22));
         for (int i = memberScroll; i < Math.min(members.size(), memberScroll + memberRows); i++) {
             CompoundTag m = members.get(i);
             UUID id = m.getUUID("Id");
@@ -228,25 +236,27 @@ public final class RemoteTransferScreen extends Screen {
                 else if (selectedSecond == null) selectedSecond = id;
                 else { selectedMember = selectedSecond; selectedSecond = id; }
                 init();
-            }).bounds(contentX + 6, yRow, half, 20).build());
+            }).bounds(x, yRow, half, 20).build());
         }
 
-        int linkX = contentX + half + 12;
-        int linkRows = Math.max(1, Math.min(5, (height - 126) / 22));
+        int linkX = columns == 2 ? x + half + 6 : x;
+        int linkY = columns == 2 ? memberY : memberY + memberRows * 22 + 6;
+        int linkW = columns == 2 ? half : usableW;
+        int linkRows = Math.max(1, Math.min(5, (height - linkY - 34) / 22));
         for (int i = connectionScroll; i < Math.min(links.size(), connectionScroll + linkRows); i++) {
             CompoundTag link = links.get(i);
             UUID id = link.getUUID("Id");
-            int yRow = memberY + (i - connectionScroll) * 22;
+            int yRow = linkY + (i - connectionScroll) * 22;
             addRenderableWidget(Button.builder(Component.literal(
                     (id.equals(selectedConnection) ? "▸ " : "") + connectionLabel(link)), b -> {
                 selectedConnection = id;
                 loadSelectedFilter(link);
                 init();
-            }).bounds(linkX, yRow, Math.max(36, contentW - half - 18), 20).build());
+            }).bounds(linkX, yRow, linkW, 20).build());
         }
         addRenderableWidget(Button.builder(Component.literal("移除所选连接"), b -> {
             if (selectedConnection != null) send(7, selectedNetwork, selectedConnection, null, 0, "");
-        }).bounds(linkX, height - 30, Math.max(36, contentW - half - 18), 20).build());
+        }).bounds(linkX, height - 30, linkW, 20).build());
     }
 
     private void buildFilterWidgets() {
@@ -269,7 +279,7 @@ public final class RemoteTransferScreen extends Screen {
         int labelW = columns == 2 ? (contentW - 18) / 2 : contentW - 18;
         int inputX = contentX + 6;
         int outputX = inputX + labelW + gap;
-        int fieldY = Math.min(height - 88, Math.max(y + 8, 122));
+        int fieldY = Math.max(82, Math.min(height - 118, Math.max(y + 8, 100)));
         addRenderableWidget(Button.builder(Component.literal(filterLabel("输入", filterModeInput, exactInput)), b -> {
             filterModeInput = (filterModeInput + 1) % 3;
             if (filterModeInput == 0) exactInput = !exactInput;
