@@ -75,12 +75,31 @@ public final class RemoteTransferToolItem extends Item {
         Level level = context.getLevel();
         var pos = context.getClickedPos();
         RemoteTransferSelection.Pending pending = RemoteTransferSelection.get(player.getUUID());
+        RemoteTransferNetworkData data = RemoteTransferNetworkData.get(player.server);
         if (pending == null) {
-            player.displayClientMessage(Component.literal("请先在网络界面选择网络，并启动“添加成员”或具体槽位的绑定操作。"), true);
+            // With no pending add/bind operation, Shift+right-click toggles
+            // membership in the currently active network.
+            var activeId = RemoteTransferSelection.activeNetwork(player.getUUID());
+            var activeNetwork = activeId == null ? null : data.getNetwork(activeId);
+            if (activeNetwork == null || !activeNetwork.owner().equals(player.getUUID())) {
+                player.displayClientMessage(Component.literal("请先在网络界面选择一个网络。"), true);
+                return InteractionResult.SUCCESS;
+            }
+            var member = activeNetwork.members().stream()
+                    .filter(m -> m.dimension().equals(level.dimension()) && m.pos().equals(pos))
+                    .findFirst().orElse(null);
+            if (member == null) {
+                player.displayClientMessage(Component.literal("该方块不在当前网络中。"), true);
+                return InteractionResult.SUCCESS;
+            }
+            data.removeMember(activeId, member.id());
+            player.displayClientMessage(Component.literal("已从当前网络移除该方块。"), true);
+            PacketDistributor.sendToPlayer(player, reopenConfigurator
+                ? RemoteTransferSnapshotPayload.openConfigurator(data, player.getUUID())
+                : RemoteTransferSnapshotPayload.from(data, player.getUUID()));
             return InteractionResult.SUCCESS;
         }
 
-        RemoteTransferNetworkData data = RemoteTransferNetworkData.get(player.server);
         var network = data.getNetwork(pending.networkId());
         if (network == null || !network.owner().equals(player.getUUID())) {
             RemoteTransferSelection.clear(player.getUUID());
@@ -88,6 +107,7 @@ public final class RemoteTransferToolItem extends Item {
             return InteractionResult.SUCCESS;
         }
 
+        boolean reopenConfigurator = false;
         if (pending.mode() == RemoteTransferSelection.Mode.ADD_MEMBER) {
             var existing = network.members().stream()
                     .filter(member -> member.dimension().equals(level.dimension()) && member.pos().equals(pos))
@@ -101,6 +121,7 @@ public final class RemoteTransferToolItem extends Item {
                 }
             }
             RemoteTransferSelection.clear(player.getUUID());
+            reopenConfigurator = true;
             player.displayClientMessage(Component.literal("方块已加入网络成员。"), true);
         } else if (pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT) {
             var workstation = network.members().stream()
