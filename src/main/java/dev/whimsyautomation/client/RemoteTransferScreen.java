@@ -43,6 +43,7 @@ public final class RemoteTransferScreen extends Screen {
     private int activePage;
     private int networkScroll, memberScroll, connectionScroll;
     private EditBox createNameBox, renameBox, inputFilterBox, outputFilterBox;
+    private String inputFilterText, outputFilterText;
     private int connectionDirection;
     private int filterModeInput, filterModeOutput;
     private boolean exactInput, exactOutput;
@@ -200,7 +201,8 @@ public final class RemoteTransferScreen extends Screen {
     }
 
     private void buildConnectionWidgets() {
-        int columns = RemoteTransferGuiLayout.cols(contentW - 14, 104);\n        int half = columns == 2 ? (contentW - 14) / 2 : contentW - 14;
+        int columns = RemoteTransferGuiLayout.cols(contentW - 14, 104);
+        int half = columns == 2 ? (contentW - 14) / 2 : contentW - 14;
         int y = 66;
         addRenderableWidget(Button.builder(Component.literal("连接方向：" +
                 new String[]{"输入", "输出", "双向"}[connectionDirection]), b -> {
@@ -263,7 +265,8 @@ public final class RemoteTransferScreen extends Screen {
         }
         if (selectedConnection == null) return;
         int gap = 6;
-        int columns = RemoteTransferGuiLayout.cols(contentW - 18, 92);\n        int labelW = columns == 2 ? (contentW - 18) / 2 : contentW - 18;
+        int columns = RemoteTransferGuiLayout.cols(contentW - 18, 92);
+        int labelW = columns == 2 ? (contentW - 18) / 2 : contentW - 18;
         int inputX = contentX + 6;
         int outputX = inputX + labelW + gap;
         int fieldY = Math.min(height - 88, Math.max(y + 8, 122));
@@ -277,31 +280,45 @@ public final class RemoteTransferScreen extends Screen {
             if (filterModeOutput == 0) exactOutput = !exactOutput;
             b.setMessage(Component.literal(filterLabel("输出", filterModeOutput, exactOutput)));
         }).bounds(outputX, fieldY, labelW, 20).build());
+        CompoundTag selectedLink = findSelectedLink();
+        if (selectedLink != null) {
+            if (inputFilterText == null) inputFilterText = selectedLink.getString("InputItems");
+            if (outputFilterText == null) outputFilterText = selectedLink.getString("OutputItems");
+        }
         inputFilterBox = new EditBox(font, inputX, fieldY + 24, labelW, 20, Component.literal("输入物品 ID"));
         inputFilterBox.setMaxLength(256);
+        inputFilterBox.setValue(inputFilterText == null ? "" : inputFilterText);
+        inputFilterBox.setResponder(value -> inputFilterText = value);
         addRenderableWidget(inputFilterBox);
         outputFilterBox = new EditBox(font, outputX, fieldY + 24, labelW, 20, Component.literal("输出物品 ID"));
         outputFilterBox.setMaxLength(256);
+        outputFilterBox.setValue(outputFilterText == null ? "" : outputFilterText);
+        outputFilterBox.setResponder(value -> outputFilterText = value);
         addRenderableWidget(outputFilterBox);
-        CompoundTag selectedLink = findSelectedLink();
-        if (selectedLink != null) {
-            inputFilterBox.setValue(selectedLink.getString("InputItems"));
-            outputFilterBox.setValue(selectedLink.getString("OutputItems"));
-        }
+        addRenderableWidget(Button.builder(Component.literal("选择输入物品"), b ->
+                minecraft.setScreen(new RemoteTransferItemPickerScreen(this, inputFilterBox.getValue(), value -> {
+                    inputFilterText = value;
+                    init();
+                }))).bounds(inputX, fieldY + 48, labelW, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("选择输出物品"), b ->
+                minecraft.setScreen(new RemoteTransferItemPickerScreen(this, outputFilterBox.getValue(), value -> {
+                    outputFilterText = value;
+                    init();
+                }))).bounds(outputX, fieldY + 48, labelW, 20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输入规则"), b ->
                 send(9, selectedNetwork, selectedConnection, null,
                         (filterModeInput << 1) | (exactInput ? 8 : 0), inputFilterBox.getValue()))
-                .bounds(inputX, fieldY + 48, labelW, 20).build());
+                .bounds(inputX, fieldY + 72, labelW, 20).build());
         addRenderableWidget(Button.builder(Component.literal("应用输出规则"), b ->
                 send(9, selectedNetwork, selectedConnection, null,
                         1 | (filterModeOutput << 1) | (exactOutput ? 8 : 0), outputFilterBox.getValue()))
-                .bounds(outputX, fieldY + 48, labelW, 20).build());
+                .bounds(outputX, fieldY + 72, labelW, 20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输入精确规则"), b ->
                 send(10, selectedNetwork, selectedConnection, null, 0, ""))
-                .bounds(inputX, fieldY + 72, labelW, 20).build());
+                .bounds(inputX, fieldY + 96, labelW, 20).build());
         addRenderableWidget(Button.builder(Component.literal("手持物品加入输出精确规则"), b ->
                 send(10, selectedNetwork, selectedConnection, null, 1, ""))
-                .bounds(outputX, fieldY + 72, labelW, 20).build());
+                .bounds(outputX, fieldY + 96, labelW, 20).build());
     }
 
     private void loadSelectedFilter(CompoundTag link) {
@@ -309,6 +326,8 @@ public final class RemoteTransferScreen extends Screen {
         filterModeOutput = Math.max(0, java.util.Arrays.asList("NONE", "WHITELIST", "BLACKLIST").indexOf(link.getString("OutputMode")));
         exactInput = link.getBoolean("InputExact");
         exactOutput = link.getBoolean("OutputExact");
+        inputFilterText = link.getString("InputItems");
+        outputFilterText = link.getString("OutputItems");
     }
 
     private static String filterLabel(String side, int mode, boolean exact) {
