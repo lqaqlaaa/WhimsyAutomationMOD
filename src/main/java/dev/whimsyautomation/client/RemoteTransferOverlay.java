@@ -75,6 +75,7 @@ public final class RemoteTransferOverlay {
     }
 
     public static void selectNetwork(UUID id) { selectedNetwork = id; }
+    public static UUID selectedNetwork() { return selectedNetwork; }
     public static void setConnectionsVisible(boolean visible) { connectionsVisible = visible; }
     public static boolean connectionsVisible() { return connectionsVisible; }
     public static void toggleConnectionsVisible() { connectionsVisible = !connectionsVisible; }
@@ -116,14 +117,13 @@ public final class RemoteTransferOverlay {
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
 
         ListTag slotBindings = network.getList("SlotBindings", net.minecraft.nbt.Tag.TAG_COMPOUND);
-        Map<UUID, List<Integer>> boundTargetColors = new HashMap<>();
+        Map<UUID, Integer> boundTargetColors = new HashMap<>();
         for (int i = 0; i < slotBindings.size(); i++) {
             CompoundTag binding = slotBindings.getCompound(i);
             if (!binding.hasUUID("Target") || !binding.hasUUID("Workstation")) continue;
             UUID targetId = binding.getUUID("Target");
             int slotIndex = Math.max(0, binding.getInt("WorkstationSlot"));
-            boundTargetColors.computeIfAbsent(targetId, ignored -> new ArrayList<>())
-                    .add(SLOT_COLORS[slotIndex % SLOT_COLORS.length]);
+            boundTargetColors.putIfAbsent(targetId, SLOT_COLORS[slotIndex % SLOT_COLORS.length]);
         }
 
         VertexConsumer boxLines = buffers.getBuffer(RenderType.lines());
@@ -132,18 +132,12 @@ public final class RemoteTransferOverlay {
             if (!level.dimension().location().toString().equals(member.getString("Dimension"))) continue;
             BlockPos pos = BlockPos.of(member.getLong("Pos"));
             if (!level.hasChunkAt(pos)) continue;
-            List<Integer> colors = member.hasUUID("Id")
+            Integer boundColor = member.hasUUID("Id")
                     ? boundTargetColors.get(member.getUUID("Id")) : null;
-            if (colors == null || colors.isEmpty()) {
-                renderMemberBox(pose, boxLines, pos, MEMBER_COLOR, 0.003D);
-            } else {
-                // If one physical container serves multiple workstation slots,
-                // show nested colored outlines instead of silently losing a binding color.
-                for (int colorIndex = 0; colorIndex < colors.size(); colorIndex++) {
-                    renderMemberBox(pose, boxLines, pos, colors.get(colorIndex),
-                            0.003D + colorIndex * 0.012D);
-                }
-            }
+            // One physical container always has exactly one outline. Multiple
+            // slot bindings are distinguished by their separate colored beams.
+            renderMemberBox(pose, boxLines, pos,
+                    boundColor == null ? MEMBER_COLOR : boundColor, 0.003D);
         }
         buffers.endBatch(RenderType.lines());
 
@@ -175,14 +169,29 @@ public final class RemoteTransferOverlay {
                 if (workstation == null || target == null) continue;
                 int slotIndex = Math.max(0, binding.getInt("WorkstationSlot"));
                 int color = SLOT_COLORS[slotIndex % SLOT_COLORS.length];
-                drawBeam(beams, matrix,
+                float lane = ((slotIndex % 7) - 3) * 0.065F;
+                drawSlotBeam(beams, matrix,
                         workstation.getX() + 0.5F, workstation.getY() + 0.5F, workstation.getZ() + 0.5F,
                         target.getX() + 0.5F, target.getY() + 0.5F, target.getZ() + 0.5F,
-                        color);
+                        color, lane);
             }
             buffers.endBatch(CONNECTION_BEAM);
         }
         pose.popPose();
+    }
+
+    private static void drawSlotBeam(VertexConsumer out, Matrix4f matrix,
+                                     float ax, float ay, float az, float bx, float by, float bz,
+                                     int color, float lane) {
+        Vector3f direction = new Vector3f(bx - ax, by - ay, bz - az);
+        if (direction.lengthSquared() < 1.0E-5F) return;
+        direction.normalize();
+        Vector3f reference = Math.abs(direction.y) < 0.9F
+                ? new Vector3f(0, 1, 0) : new Vector3f(1, 0, 0);
+        Vector3f lateral = new Vector3f(direction).cross(reference).normalize().mul(lane);
+        drawBeam(out, matrix,
+                ax + lateral.x, ay + lateral.y, az + lateral.z,
+                bx + lateral.x, by + lateral.y, bz + lateral.z, color);
     }
 
     private static void renderMemberBox(PoseStack pose, VertexConsumer lines, BlockPos pos,
