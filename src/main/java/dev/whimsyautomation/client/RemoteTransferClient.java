@@ -11,6 +11,13 @@ public final class RemoteTransferClient {
     public static void applySnapshot(CompoundTag data) {
         RemoteTransferOverlay.applySnapshot(data);
         Minecraft minecraft = Minecraft.getInstance();
+        if (data != null && data.getBoolean("CloseConfigurator")) {
+            if (minecraft.screen instanceof RemoteTransferScreen
+                    || minecraft.screen instanceof RemoteTransferInventoryScreen) {
+                minecraft.setScreen(null);
+            }
+            return;
+        }
         if (data != null && data.getBoolean("OpenConfigurator")) {
             minecraft.setScreen(new RemoteTransferScreen(data));
             return;
