@@ -76,7 +76,7 @@ public final class RemoteTransferNetworkData extends SavedData {
     public boolean addMember(UUID networkId, Endpoint endpoint) {
         Network network = networks.get(networkId);
         if (network == null || network.members().stream().anyMatch(member ->
-                member.dimension().equals(endpoint.dimension()) && member.pos().equals(endpoint.pos()) && member.kind() == endpoint.kind())) return false;
+                member.dimension().equals(endpoint.dimension()) && member.pos().equals(endpoint.pos()) && member.kind() == endpoint.kind() && member.slotIndex() == endpoint.slotIndex() && Objects.equals(member.face(), endpoint.face()))) return false;
         network.members().add(endpoint);
         setDirty();
         return true;
@@ -167,6 +167,8 @@ public final class RemoteTransferNetworkData extends SavedData {
                 member.putLong("Pos", endpoint.pos().asLong());
                 member.putString("Kind", endpoint.kind().name());
                 member.putString("Block", endpoint.blockId());
+                member.putInt("Slot", endpoint.slotIndex());
+                member.putInt("Face", endpoint.face() == null ? -1 : endpoint.face().ordinal());
                 members.add(member);
             }
             entry.put("Members", members);
@@ -214,7 +216,7 @@ public final class RemoteTransferNetworkData extends SavedData {
                     String blockId = member.getString("Block");
                     if (blockId.isBlank()) blockId = kind == EndpointKind.WORKSTATION
                             ? "minecraft:crafting_table" : "minecraft:chest";
-                    network.members().add(new Endpoint(id, dimension, BlockPos.of(member.getLong("Pos")), kind, blockId));
+                    network.members().add(new Endpoint(id, dimension, BlockPos.of(member.getLong("Pos")), kind, blockId, member.contains("Slot") ? member.getInt("Slot") : -1, member.contains("Face") && member.getInt("Face") >= 0 && member.getInt("Face") < net.minecraft.core.Direction.values().length ? net.minecraft.core.Direction.values()[member.getInt("Face")] : null));
                 } catch (RuntimeException ignored) {
                     // Ignore malformed entries while preserving the rest of the network.
                 }
@@ -267,7 +269,11 @@ public final class RemoteTransferNetworkData extends SavedData {
     public enum TransferDirection { INPUT, OUTPUT, BIDIRECTIONAL }
     public enum FilterMode { NONE, WHITELIST, BLACKLIST }
 
-    public record Endpoint(UUID id, ResourceKey<Level> dimension, BlockPos pos, EndpointKind kind, String blockId) {
+    public record Endpoint(UUID id, ResourceKey<Level> dimension, BlockPos pos, EndpointKind kind, String blockId, int slotIndex, net.minecraft.core.Direction face) {
+        public Endpoint(UUID id, ResourceKey<Level> dimension, BlockPos pos, EndpointKind kind, String blockId) {
+            this(id, dimension, pos, kind, blockId, -1, null);
+        }
+
         public Endpoint {
             Objects.requireNonNull(id);
             Objects.requireNonNull(dimension);
@@ -277,8 +283,13 @@ public final class RemoteTransferNetworkData extends SavedData {
         }
 
         public static Endpoint create(Level level, BlockPos pos, EndpointKind kind) {
+            return create(level, pos, kind, -1, null);
+        }
+
+        public static Endpoint create(Level level, BlockPos pos, EndpointKind kind, int slotIndex,
+                                      net.minecraft.core.Direction face) {
             String blockId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString();
-            return new Endpoint(UUID.randomUUID(), level.dimension(), pos, kind, blockId);
+            return new Endpoint(UUID.randomUUID(), level.dimension(), pos, kind, blockId, slotIndex, face);
         }
     }
 
