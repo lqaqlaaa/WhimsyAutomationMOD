@@ -198,7 +198,15 @@ public final class RemoteTransferTicker {
             return (int) Math.min((long) Integer.MAX_VALUE, Long.MAX_VALUE - stored);
         }
         int occupied = present.isEmpty() ? 0 : present.getCount();
-        return Math.max(0, slotLimit - occupied);
+        // Third-party handlers may advertise Integer.MAX_VALUE as their slot
+        // limit, but SophisticatedCore 1.5.33 serializes each physical slot
+        // through a [1, 99] count codec. Capping only the incoming batch is not
+        // enough: repeated inserts can merge 99 + 99 into 198 and crash while
+        // the handler serializes the changed slot. Keep the resulting external
+        // slot stack within the codec range as well. Our own long-backed
+        // handlers are handled above and retain their full long capacity.
+        int externalLimit = Math.min(slotLimit, 99);
+        return Math.max(0, externalLimit - occupied);
     }
 
     /**
