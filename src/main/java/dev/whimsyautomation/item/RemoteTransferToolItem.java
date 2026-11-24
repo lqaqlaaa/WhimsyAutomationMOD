@@ -129,7 +129,7 @@ public final class RemoteTransferToolItem extends Item {
             RemoteTransferSelection.clear(player.getUUID());
             reopenConfigurator = true;
             player.displayClientMessage(Component.literal("方块已加入网络成员。"), true);
-        } else if (pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT) {
+        } else if (pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT\n                || pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT_BATCH) {
             var workstation = network.members().stream()
                     .filter(member -> member.id().equals(pending.workstationId()))
                     .findFirst().orElse(null);
@@ -159,10 +159,21 @@ public final class RemoteTransferToolItem extends Item {
                 }
             }
 
-            var binding = RemoteTransferNetworkData.SlotBinding.create(
-                    workstation.id(), pending.workstationSlot(), pending.direction(), target.id(),
-                    context.getClickedFace());
-            if (!data.addSlotBinding(pending.networkId(), binding)) {
+            java.util.List<Integer> slotsToBind = pending.workstationSlots().isEmpty()
+                    ? java.util.List.of(pending.workstationSlot()) : pending.workstationSlots();
+            int created = 0;
+            int skipped = 0;
+            for (int workstationSlot : slotsToBind) {
+                var binding = RemoteTransferNetworkData.SlotBinding.create(
+                        workstation.id(), workstationSlot, pending.direction(), target.id(),
+                        context.getClickedFace());
+                if (data.addSlotBinding(pending.networkId(), binding)) created++;
+                else skipped++;
+            }
+            if (pending.mode() == RemoteTransferSelection.Mode.BIND_SLOT_BATCH) {
+                player.displayClientMessage(Component.literal("批量绑定完成：成功 "
+                        + created + " 个，已存在/跳过 " + skipped + " 个槽位。"), true);
+            } else if (created == 0) {
                 player.displayClientMessage(Component.literal("该工作槽位与目标容器之间已经存在相同绑定。"), true);
             } else {
                 player.displayClientMessage(Component.literal(pending.direction()
