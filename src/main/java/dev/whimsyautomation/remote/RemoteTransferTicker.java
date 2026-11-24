@@ -164,7 +164,7 @@ public final class RemoteTransferTicker {
                 int baseSlotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
                 int slotLimit = RemoteTransferInsertion.getItemStackLimit(
                         targetHandler, targetSlot, simulated, baseSlotLimit);
-                int free = getAvailableSpace(present, slotLimit);
+                int free = getAvailableSpace(targetHandler, targetSlot, present, slotLimit);
                 int batchLimit = getHandlerBatchLimit(targetHandler, slotLimit, simulated);
                 int batch = Math.min(Math.min(free, batchLimit),
                         Math.min(simulated.getCount() - accepted, remainingBudget - accepted));
@@ -196,7 +196,7 @@ public final class RemoteTransferTicker {
                 int baseSlotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
                 int slotLimit = RemoteTransferInsertion.getItemStackLimit(
                         targetHandler, targetSlot, notInserted, baseSlotLimit);
-                int free = getAvailableSpace(present, slotLimit);
+                int free = getAvailableSpace(targetHandler, targetSlot, present, slotLimit);
                 int batchLimit = getHandlerBatchLimit(targetHandler, slotLimit, notInserted);
                 int batch = Math.min(free, Math.min(batchLimit, notInserted.getCount()));
                 if (batch <= 0) continue;
@@ -273,8 +273,17 @@ public final class RemoteTransferTicker {
         }
     }
 
-    /** Computes free capacity from the limit reported by the target inventory. */
-    private static int getAvailableSpace(ItemStack present, int effectiveLimit) {
+    /**
+     * Long-backed machine inventories keep their authoritative quantity outside
+     * ItemStack and therefore use their long counter for capacity. All other
+     * handlers use the item-specific capacity supplied by the target inventory.
+     */
+    private static int getAvailableSpace(IItemHandler handler, int slot,
+                                         ItemStack present, int effectiveLimit) {
+        if (handler instanceof LongCountItemStackHandler longHandler) {
+            long stored = longHandler.getStoredCount(slot);
+            return (int) Math.min((long) Integer.MAX_VALUE, Long.MAX_VALUE - stored);
+        }
         int occupied = present.isEmpty() ? 0 : present.getCount();
         return Math.max(0, effectiveLimit - occupied);
     }
