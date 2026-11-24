@@ -167,6 +167,17 @@ public final class RemoteTransferTicker {
                                              boolean extracting, ItemStack probe) {
         var blockEntity = level.getBlockEntity(endpoint.pos());
         boolean workstation = endpoint.kind() == RemoteTransferNetworkData.EndpointKind.WORKSTATION;
+        // A workstation binding addresses the machine's real GUI inventory slot.
+        // Do not route it through its automation capability: those handlers may
+        // hide empty outputs, compact occupied slots, or expose a paged projection.
+        if (workstation && blockEntity instanceof RemoteTransferInventoryProvider provider) {
+            if (endpoint.face() != null
+                    && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity config) {
+                int mode = config.getSideMode(endpoint.face());
+                if (extracting ? mode != 2 : mode != 1) return null;
+            }
+            return provider.getRemoteTransferInventory();
+        }
         if (endpoint.face() != null) {
             Direction side = endpoint.face();
             if (workstation && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity config) {
