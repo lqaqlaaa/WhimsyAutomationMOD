@@ -77,15 +77,21 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                             player.displayClientMessage(Component.literal("工作方块所在区块未加载，无法读取库存槽位。"), true);
                             return;
                         }
-                        net.neoforged.neoforge.items.IItemHandler handler =
-                                workstationLevel.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
-                                        workstation.pos(), null);
-                        if (handler == null) {
-                            for (Direction side : Direction.values()) {
-                                handler = workstationLevel.getCapability(
-                                        net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
-                                        workstation.pos(), side);
-                                if (handler != null) break;
+                        var workstationEntity = workstationLevel.getBlockEntity(workstation.pos());
+                        net.neoforged.neoforge.items.IItemHandler handler = null;
+                        if (workstationEntity instanceof dev.whimsyautomation.remote.RemoteTransferInventoryProvider provider) {
+                            handler = provider.getRemoteTransferInventory();
+                        } else {
+                            handler = workstationLevel.getCapability(
+                                    net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                    workstation.pos(), null);
+                            if (handler == null) {
+                                for (Direction side : Direction.values()) {
+                                    handler = workstationLevel.getCapability(
+                                            net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                            workstation.pos(), side);
+                                    if (handler != null) break;
+                                }
                             }
                         }
                         if (handler == null || p.value() >= handler.getSlots()) {
