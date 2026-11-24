@@ -94,6 +94,25 @@ public final class RemoteTransferNetworkData extends SavedData {
         return removed;
     }
 
+    /**
+     * Remove every endpoint at a broken/replaced block position. Removing the
+     * endpoint also removes all links that depend on it, across every network.
+     */
+    public void removeEndpointsAt(ResourceKey<Level> dimension, BlockPos pos) {
+        boolean changed = false;
+        for (Network network : networks.values()) {
+            List<UUID> removedIds = network.members().stream()
+                    .filter(member -> member.dimension().equals(dimension) && member.pos().equals(pos))
+                    .map(Endpoint::id).toList();
+            for (UUID memberId : removedIds) {
+                changed |= network.members().removeIf(member -> member.id().equals(memberId));
+                changed |= network.connections().removeIf(connection ->
+                        connection.sourceMember().equals(memberId) || connection.targetMember().equals(memberId));
+            }
+        }
+        if (changed) setDirty();
+    }
+
     public boolean addConnection(UUID networkId, Connection connection) {
         Network network = networks.get(networkId);
         if (network == null || network.connections().stream().anyMatch(existing -> existing.id().equals(connection.id())))
