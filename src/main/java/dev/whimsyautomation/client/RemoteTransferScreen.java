@@ -223,6 +223,20 @@ public final class RemoteTransferScreen extends Screen {
         }).bounds(createX, createY, createW, 20).build());
 
         int memberY = createY + 30;
+        int pickerRowH = columns == 2 ? 24 : 46;
+        addRenderableWidget(Button.builder(Component.literal("选择 A：" + memberName(selectedMember)), b ->
+                minecraft.setScreen(new RemoteTransferMemberPickerScreen(this, members, selectedMember, id -> {
+                    selectedMember = id;
+                    init();
+                }))).bounds(x, memberY, half, 20).build());
+        int secondPickerY = columns == 2 ? memberY : memberY + 22;
+        int secondPickerX = columns == 2 ? x + half + 6 : x;
+        addRenderableWidget(Button.builder(Component.literal("选择 B：" + memberName(selectedSecond)), b ->
+                minecraft.setScreen(new RemoteTransferMemberPickerScreen(this, members, selectedSecond, id -> {
+                    selectedSecond = id;
+                    init();
+                }))).bounds(secondPickerX, secondPickerY, half, 20).build());
+        memberY += pickerRowH;
         int memberRows = Math.max(1, Math.min(4, (height - memberY - 44) / 22));
         for (int i = memberScroll; i < Math.min(members.size(), memberScroll + memberRows); i++) {
             CompoundTag m = members.get(i);
