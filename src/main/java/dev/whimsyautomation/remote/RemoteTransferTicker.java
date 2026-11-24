@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
@@ -28,6 +29,15 @@ public final class RemoteTransferTicker {
     private static long serverTickCounter;
 
     private RemoteTransferTicker() {}
+
+    @SubscribeEvent
+    public static void onBoundBlockBroken(BlockEvent.BreakEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        // BreakEvent runs before the block is removed, so use its exact position
+        // to delete the endpoint and every connection that references it.
+        RemoteTransferNetworkData.get(level.getServer())
+                .removeEndpointsAt(level.dimension(), event.getPos());
+    }
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
