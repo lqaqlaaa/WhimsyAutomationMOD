@@ -45,6 +45,15 @@ public final class RemoteTransferToolItem extends Item {
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }
 
+    private static boolean hasItemHandler(Level level, net.minecraft.core.BlockPos pos) {
+        var capability = net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK;
+        if (level.getCapability(capability, pos, null) != null) return true;
+        for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
+            if (level.getCapability(capability, pos, side) != null) return true;
+        }
+        return false;
+    }
+
     @Override
     public InteractionResult useOn(UseOnContext context) {
         if (context.getPlayer() == null || !context.getPlayer().isShiftKeyDown()) return InteractionResult.PASS;
@@ -55,25 +64,26 @@ public final class RemoteTransferToolItem extends Item {
         var level = context.getLevel();
         var pos = context.getClickedPos();
         var be = level.getBlockEntity(pos);
-        RemoteTransferNetworkData.EndpointKind kind;
-        if (be instanceof DeconstructionTableBlockEntity
-                || be instanceof EnchantmentExtractorBlockEntity
-                || be instanceof EnchantmentConversionTableBlockEntity) {
-            kind = RemoteTransferNetworkData.EndpointKind.WORKSTATION;
-        } else if (level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
-                pos, context.getClickedFace()) != null
-                || level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
-                pos, null) != null) {
-            kind = RemoteTransferNetworkData.EndpointKind.CONTAINER;
-        } else {
-            player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.not_container"), true);
-            return InteractionResult.FAIL;
-        }
         var pending = RemoteTransferSelection.get(player.getUUID());
         if (pending == null) {
             player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.select_network_first"), true);
             return InteractionResult.SUCCESS;
         }
+
+        // Classify the clicked block by its role in the two-step binding flow,
+        // not by a hard-coded list of this mod's own machines. Any block that
+        // exposes NeoForge's standard block ItemHandler capability can be used
+        // as a workstation endpoint in step one and as a storage endpoint in
+        // step two. This automatically includes vanilla furnaces, smokers,
+        // blast furnaces, and modded machines that expose IItemHandler.
+        boolean hasItemHandler = hasItemHandler(level, pos);
+        if (!hasItemHandler) {
+            player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.not_container"), true);
+            return InteractionResult.FAIL;
+        }
+        RemoteTransferNetworkData.EndpointKind kind = pending.workstationId() == null
+                ? RemoteTransferNetworkData.EndpointKind.WORKSTATION
+                : RemoteTransferNetworkData.EndpointKind.CONTAINER;
         var networkId = pending.networkId();
         var data = RemoteTransferNetworkData.get(player.server);
         var network = data.getNetwork(networkId);
