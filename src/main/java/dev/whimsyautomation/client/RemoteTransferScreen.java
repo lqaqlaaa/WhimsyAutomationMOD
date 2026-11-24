@@ -103,7 +103,7 @@ public final class RemoteTransferScreen extends Screen {
                 RemoteTransferGuiLayout.fit(36, width, height, 28)));
         int visibleRows = RemoteTransferGuiLayout.maxRows(
                 availableListHeight, desiredRowHeight, 28);
-        rowH = RemoteTransferGuiLayout.actualRowHeight(
+        rowH = RemoteTransferGuiLayout.actualRowH(
                 availableListHeight, visibleRows, desiredRowHeight, 28);
 
         // Persistent network rail.
@@ -200,7 +200,7 @@ public final class RemoteTransferScreen extends Screen {
     }
 
     private void buildConnectionWidgets() {
-        int half = Math.max(40, (contentW - 14) / 2);
+        int columns = RemoteTransferGuiLayout.cols(contentW - 14, 104);\n        int half = columns == 2 ? (contentW - 14) / 2 : contentW - 14;
         int y = 66;
         addRenderableWidget(Button.builder(Component.literal("连接方向：" +
                 new String[]{"输入", "输出", "双向"}[connectionDirection]), b -> {
@@ -263,7 +263,7 @@ public final class RemoteTransferScreen extends Screen {
         }
         if (selectedConnection == null) return;
         int gap = 6;
-        int labelW = Math.max(42, (contentW - 18) / 2);
+        int columns = RemoteTransferGuiLayout.cols(contentW - 18, 92);\n        int labelW = columns == 2 ? (contentW - 18) / 2 : contentW - 18;
         int inputX = contentX + 6;
         int outputX = inputX + labelW + gap;
         int fieldY = Math.min(height - 88, Math.max(y + 8, 122));
