@@ -53,6 +53,10 @@ public class LongCountItemStackHandler extends ItemStackHandler {
         if (!validSlot(slot)) return;
         ItemStack next = template == null || template.isEmpty() || count <= 0L
                 ? ItemStack.EMPTY : template.copyWithCount(1);
+        // A machine stores quantity in its own long counter, never in the
+        // ItemStack max-stack-size component. Remove legacy values such as
+        // Integer.MAX_VALUE, which Minecraft 1.21.1 cannot serialize.
+        PlayerStackRules.normalizeStackLimit(next);
         long nextCount = next.isEmpty() ? 0L : count;
         if (ItemStack.isSameItemSameComponents(templates.get(slot), next)
                 && counts.get(slot) == nextCount) return;
@@ -71,18 +75,25 @@ public class LongCountItemStackHandler extends ItemStackHandler {
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
         if (!validSlot(slot) || stack == null || stack.isEmpty() || !isItemValid(slot, stack)) return stack;
+        ItemStack normalized = stack.copy();
+        PlayerStackRules.normalizeStackLimit(normalized);
         ItemStack current = getStoredTemplate(slot);
-        if (!current.isEmpty() && !ItemStack.isSameItemSameComponents(current, stack)) return stack;
+        if (!current.isEmpty() && !ItemStack.isSameItemSameComponents(current, normalized)) return stack;
         long stored = counts.get(slot);
-        long accepted = Math.min(Math.min((long) stack.getCount(), (long) apiLimit(slot, stack)), Long.MAX_VALUE - stored);
+        long accepted = Math.min(Math.min((long) normalized.getCount(),
+                (long) apiLimit(slot, normalized)), Long.MAX_VALUE - stored);
         if (accepted <= 0L) return stack;
         if (!simulate) {
-            if (current.isEmpty()) templates.set(slot, stack.copyWithCount(1));
+            if (current.isEmpty()) {
+                ItemStack template = normalized.copyWithCount(1);
+                PlayerStackRules.normalizeStackLimit(template);
+                templates.set(slot, template);
+            }
             counts.set(slot, stored + accepted);
             onContentsChanged(slot);
         }
-        long left = (long) stack.getCount() - accepted;
-        return left <= 0L ? ItemStack.EMPTY : stack.copyWithCount((int) left);
+        long left = (long) normalized.getCount() - accepted;
+        return left <= 0L ? ItemStack.EMPTY : normalized.copyWithCount((int) left);
     }
 
     @Override
