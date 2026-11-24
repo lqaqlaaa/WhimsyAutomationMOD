@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import dev.whimsyautomation.WhimsyAutomation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -12,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import dev.whimsyautomation.util.LongCountItemStackHandler;
+import dev.whimsyautomation.util.PlayerStackRules;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -35,6 +37,7 @@ public final class RemoteTransferTicker {
     private static final int MAX_ITEMS_PER_LINK_PER_TICK = Integer.MAX_VALUE;
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Set<String> INVALID_STACK_WARNINGS = new HashSet<>();
+    private static final Set<String> NORMALIZED_STACK_LIMIT_WARNINGS = new HashSet<>();
     private static long serverTickCounter;
 
     private RemoteTransferTicker() {}
@@ -135,8 +138,9 @@ public final class RemoteTransferTicker {
             int request = Math.min(Math.min(remainingBudget, offered.getCount()),
                     Math.min(99, offered.getMaxStackSize()));
             ItemStack simulated = sourceHandler.extractItem(slot, request, true);
-            if (simulated.isEmpty() || simulated.getCount() > request || !targetFilter.allows(simulated)) continue;
-            if (!isSerializablePrototype(simulated, sourceLevel)) continue;
+            if (simulated.isEmpty() || simulated.getCount() > request) continue;
+            simulated = normalizeTransferStack(simulated, sourceLevel);
+            if (simulated.isEmpty() || !targetFilter.allows(simulated)) continue;
             // Pick the target face that can actually accept this item in the
             // requested slot. This is required for sided inventories such as
             // vanilla furnaces (top=input, sides=fuel, bottom=output).
@@ -172,7 +176,17 @@ public final class RemoteTransferTicker {
 
             ItemStack extracted = sourceHandler.extractItem(slot, accepted, false);
             if (extracted.isEmpty()) continue;
-            ItemStack notInserted = extracted;
+            ItemStack notInserted = normalizeTransferStack(extracted, sourceLevel);
+            if (notInserted.isEmpty()) {
+                LOGGER.error("Remote transfer extracted an item that cannot be serialized after normalization; "
+                        + "source={} target={} slot={}", source.pos(), target.pos(), slot);
+                ItemStack refund = sourceHandler.insertItem(slot, extracted, false);
+                if (!refund.isEmpty()) {
+                    LOGGER.error("Source handler rejected the refund of an invalid extracted stack: {}",
+                            refund.getItem());
+                }
+                continue;
+            }
             int insertedTotal = 0;
             for (int targetSlot = firstTargetSlot;
                  targetSlot < lastTargetSlot && !notInserted.isEmpty(); targetSlot++) {
@@ -227,24 +241,33 @@ public final class RemoteTransferTicker {
     }
 
     /**
-     * Validate the exact one-item prototype Storage Drawers will persist.
-     * ItemStack.save validates both the count and every serialized component;
-     * checking a count-99 transfer batch alone cannot detect an invalid
-     * component carried by the item itself.
+     * Normalize illegal legacy max-stack overrides before a stack crosses an
+     * inventory boundary. The machine's real quantity is stored separately;
+     * Minecraft 1.21.1 only permits an ItemStack count and max_stack_size of 1..99.
      */
-    private static boolean isSerializablePrototype(ItemStack stack, ServerLevel level) {
-        try {
-            stack.copyWithCount(1).save(level.registryAccess(), new CompoundTag());
-            return true;
-        } catch (RuntimeException exception) {
-            String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-            if (INVALID_STACK_WARNINGS.add(itemId)) {
-                LOGGER.error("Remote transfer skipped non-serializable item prototype {} "
-                        + "(source count={}, effective max stack size={}). "
-                        + "The source item contains data that Minecraft 1.21.1 cannot encode.",
-                        itemId, stack.getCount(), stack.getMaxStackSize(), exception);
+    private static ItemStack normalizeTransferStack(ItemStack stack, ServerLevel level) {
+        if (stack.isEmpty()) return ItemStack.EMPTY;
+        ItemStack normalized = stack.copy();
+        Integer declaredLimit = normalized.get(DataComponents.MAX_STACK_SIZE);
+        if (declaredLimit != null && (declaredLimit < 1 || declaredLimit > 99)) {
+            normalized.remove(DataComponents.MAX_STACK_SIZE);
+            String itemId = BuiltInRegistries.ITEM.getKey(normalized.getItem()).toString();
+            if (NORMALIZED_STACK_LIMIT_WARNINGS.add(itemId)) {
+                LOGGER.warn("Removed invalid minecraft:max_stack_size={} from {} during remote transfer; "
+                        + "the legal item default is retained.", declaredLimit, itemId);
             }
-            return false;
+        }
+        try {
+            normalized.copyWithCount(1).save(level.registryAccess(), new CompoundTag());
+            return normalized;
+        } catch (RuntimeException exception) {
+            String itemId = BuiltInRegistries.ITEM.getKey(normalized.getItem()).toString();
+            if (INVALID_STACK_WARNINGS.add(itemId)) {
+                LOGGER.error("Remote transfer rejected non-serializable item prototype {}. "
+                        + "A component other than the invalid max-stack override cannot be encoded.",
+                        itemId, exception);
+            }
+            return ItemStack.EMPTY;
         }
     }
 
