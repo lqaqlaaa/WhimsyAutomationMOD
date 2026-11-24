@@ -100,14 +100,22 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
         if (member != null) {
             var level = player.server.getLevel(member.dimension());
             if (level != null && level.hasChunkAt(member.pos())) {
-                net.neoforged.neoforge.items.IItemHandler handler =
-                        level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
-                                member.pos(), null);
-                if (handler == null) {
-                    for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
-                        handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
-                                member.pos(), side);
-                        if (handler != null) break;
+                var blockEntity = level.getBlockEntity(member.pos());
+                net.neoforged.neoforge.items.IItemHandler handler = null;
+                // Our machines expose a stable raw inventory for slot binding.
+                // Their automation capabilities are intentionally filtered and
+                // compacted, so those capability indices are not GUI slot indices.
+                if (blockEntity instanceof dev.whimsyautomation.remote.RemoteTransferInventoryProvider provider) {
+                    handler = provider.getRemoteTransferInventory();
+                } else {
+                    handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                            member.pos(), null);
+                    if (handler == null) {
+                        for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
+                            handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                    member.pos(), side);
+                            if (handler != null) break;
+                        }
                     }
                 }
                 if (handler != null) {
@@ -119,8 +127,8 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                     int[] menuX = new int[handler.getSlots()];
                     int[] menuY = new int[handler.getSlots()];
                     boolean[] menuMapped = new boolean[handler.getSlots()];
-                    var blockEntity = level.getBlockEntity(member.pos());
-                    if (blockEntity instanceof MenuProvider provider) {
+                    if (!(blockEntity instanceof dev.whimsyautomation.remote.RemoteTransferInventoryProvider)
+                            && blockEntity instanceof MenuProvider provider) {
                         try {
                             AbstractContainerMenu menu = provider.createMenu(0, player.getInventory(), player);
                             if (menu != null) {
