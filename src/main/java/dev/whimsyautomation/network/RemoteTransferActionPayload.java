@@ -113,6 +113,21 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     }
                 }
             }
+            case 18 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null) {
+                    var network = data.getNetwork(p.networkId());
+                    if (network != null) for (var binding : network.slotBindings()) {
+                        if (binding.id().equals(p.firstId())) {
+                            data.updateSlotBinding(p.networkId(), binding.withEnabled(!binding.enabled()));
+                            break;
+                        }
+                    }
+                }
+            }
+            case 19 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null)
+                    data.removeSlotBinding(p.networkId(), p.firstId());
+            }
             case 5 -> {
                 if (owned(data, p.networkId(), player) && p.firstId() != null)
                     data.removeMember(p.networkId(), p.firstId());
