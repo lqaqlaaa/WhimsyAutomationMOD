@@ -76,6 +76,8 @@ public final class RemoteTransferScreen extends Screen {
         return selectedNetwork;
     }
 
+    CompoundTag snapshotCopy() { return snapshot.copy(); }
+
     private void rebuildData() {
         networks = compounds(snapshot.getList("Networks", Tag.TAG_COMPOUND));
         if (selectedNetwork == null && !networks.isEmpty()) selectedNetwork = networks.get(0).getUUID("Id");
