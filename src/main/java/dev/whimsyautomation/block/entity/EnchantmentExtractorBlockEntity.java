@@ -223,7 +223,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
     }
 
     private final DynamicItemStackHandler inventory = new DynamicItemStackHandler(OUTPUT_START + PAGE_SIZE * 10) {
-        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : OversizedItemStackCodec.MAX_COUNT; }
+        @Override public int getSlotLimit(int slot) { return slot == 0 ? 1 : 99; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (stack.isEmpty()) return false;
             // The extractor must accept every non-empty input. Items without
