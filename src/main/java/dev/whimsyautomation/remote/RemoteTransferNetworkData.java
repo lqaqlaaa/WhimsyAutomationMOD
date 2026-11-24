@@ -486,7 +486,7 @@ public final class RemoteTransferNetworkData extends SavedData {
         }
 
         public boolean allows(ResourceLocation itemId) {
-            if (!enabled || mode == FilterMode.NONE) return true;
+            if (!enabled || mode == FilterMode.NONE || items.isEmpty()) return true;
             boolean contains = items.stream().anyMatch(entry -> entry.equals(itemId.toString())
                     || entry.startsWith(itemId.toString() + "|"));
             return mode == FilterMode.WHITELIST ? contains : !contains;
@@ -494,26 +494,27 @@ public final class RemoteTransferNetworkData extends SavedData {
 
         public boolean allows(ItemStack stack) {
             if (stack.isEmpty()) return false;
-            if (!enabled || mode == FilterMode.NONE) return true;
+            if (!enabled || mode == FilterMode.NONE || items.isEmpty()) return true;
             ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
             boolean contains = items.stream().anyMatch(entry -> entry.equals(itemId.toString())
                     || entry.startsWith(itemId.toString() + "|"));
             if (matchTags) {
                 for (String entry : items) {
-                    if (!entry.startsWith("#")) continue;
-                    ResourceLocation tagId = ResourceLocation.tryParse(entry.substring(1));
-                    if (tagId != null && stack.is(net.minecraft.tags.TagKey.create(
-                            net.minecraft.core.registries.Registries.ITEM, tagId))) {
+                    int separator = entry.indexOf('|');
+                    String templateId = separator >= 0 ? entry.substring(0, separator) : entry;
+                    ResourceLocation templateLocation = ResourceLocation.tryParse(templateId);
+                    if (templateLocation == null) continue;
+                    net.minecraft.world.item.Item templateItem =
+                            BuiltInRegistries.ITEM.getOptional(templateLocation).orElse(null);
+                    if (templateItem == null) continue;
+                    ItemStack template = new ItemStack(templateItem);
+                    if (template.getTags().anyMatch(stack::is)) {
                         contains = true;
                         break;
                     }
                 }
             }
             if (exactComponents && items.contains(fingerprint(stack, ignoreDurability, ignoreNbt))) contains = true;
-            if (!exactComponents && !ignoreDurability && !ignoreNbt) {
-                String actual = fingerprint(stack, false, false);
-                if (items.contains(actual)) contains = true;
-            }
             return mode == FilterMode.WHITELIST ? contains : !contains;
         }
 
