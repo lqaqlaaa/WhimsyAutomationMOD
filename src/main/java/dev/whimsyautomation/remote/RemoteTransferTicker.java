@@ -26,6 +26,11 @@ import java.util.UUID;
 @EventBusSubscriber(modid = WhimsyAutomation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class RemoteTransferTicker {
     private static final int MAX_ITEMS_PER_LINK_PER_TICK = Integer.MAX_VALUE;
+    // Third-party inventories may advertise Integer.MAX_VALUE as their slot/item limit
+    // while enforcing a much smaller internal serialization limit (Sophisticated: 99).
+    // Keep every capability call within the common safe stack bound; this is a transfer
+    // batch size, not a limit on the amount stored by Whimsy Automation.
+    private static final int MAX_HANDLER_INSERT_BATCH = 99;
     private static long serverTickCounter;
 
     private RemoteTransferTicker() {}
@@ -119,7 +124,8 @@ public final class RemoteTransferTicker {
         for (int slot = firstSourceSlot; slot < lastSourceSlot && remainingBudget > 0; slot++) {
             ItemStack offered = sourceHandler.getStackInSlot(slot);
             if (offered.isEmpty() || !sourceFilter.allows(offered)) continue;
-            int request = Math.min(remainingBudget, offered.getCount());
+            int request = Math.min(MAX_HANDLER_INSERT_BATCH,
+                    Math.min(remainingBudget, offered.getCount()));
             ItemStack simulated = sourceHandler.extractItem(slot, request, true);
             if (simulated.isEmpty() || !targetFilter.allows(simulated)) continue;
             // Pick the target face that can actually accept this item in the
@@ -146,8 +152,9 @@ public final class RemoteTransferTicker {
                 int occupied = present.isEmpty() ? 0 : present.getCount();
                 int free = Math.max(0, slotLimit - occupied);
                 int batchLimit = Math.min(slotLimit, simulated.getMaxStackSize());
-                int batch = Math.min(Math.min(free, batchLimit),
-                        Math.min(simulated.getCount() - accepted, remainingBudget - accepted));
+                int batch = Math.min(MAX_HANDLER_INSERT_BATCH,
+                        Math.min(Math.min(free, batchLimit),
+                                Math.min(simulated.getCount() - accepted, remainingBudget - accepted)));
                 if (batch <= 0) continue;
                 ItemStack offeredBatch = simulated.copyWithCount(batch);
                 ItemStack remainder = targetHandler.insertItem(targetSlot, offeredBatch, true);
@@ -167,7 +174,8 @@ public final class RemoteTransferTicker {
                 int occupied = present.isEmpty() ? 0 : present.getCount();
                 int free = Math.max(0, slotLimit - occupied);
                 int batchLimit = Math.min(slotLimit, notInserted.getMaxStackSize());
-                int batch = Math.min(free, Math.min(batchLimit, notInserted.getCount()));
+                int batch = Math.min(MAX_HANDLER_INSERT_BATCH,
+                        Math.min(free, Math.min(batchLimit, notInserted.getCount())));
                 if (batch <= 0) continue;
                 ItemStack batchStack = notInserted.copyWithCount(batch);
                 ItemStack remainder = targetHandler.insertItem(targetSlot, batchStack, false);
