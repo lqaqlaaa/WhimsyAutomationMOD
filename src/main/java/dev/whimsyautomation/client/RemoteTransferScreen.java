@@ -57,10 +57,19 @@ public final class RemoteTransferScreen extends Screen {
     public RemoteTransferScreen(CompoundTag data) { this(); applySnapshot(data); }
 
     public RemoteTransferScreen applySnapshot(CompoundTag data) {
+        if (data != null && data.contains("Inventory")
+                && minecraft != null && minecraft.screen == this) {
+            minecraft.setScreen(new RemoteTransferInventoryScreen(this, data));
+            return this;
+        }
         snapshot = data == null ? new CompoundTag() : data.copy();
         rebuildData();
         if (minecraft != null && minecraft.screen == this) init();
         return this;
+    }
+
+    UUID selectedNetworkId() {
+        return selectedNetwork;
     }
 
     private void rebuildData() {
@@ -183,13 +192,18 @@ public final class RemoteTransferScreen extends Screen {
     }
 
     private void buildMemberWidgets() {
-        int half = Math.max(36, (contentW - 18) / 2);
-        addRenderableWidget(Button.builder(Component.literal("添加成员方块"), b ->
+        int third = Math.max(28, (contentW - 24) / 3);
+        addRenderableWidget(Button.builder(Component.literal("添加成员"), b ->
                 send(15, selectedNetwork, null, null, 0, ""))
-                .bounds(contentX + 6, 62, half, 20).build());
+                .bounds(contentX + 6, 62, third, 20).build());
+        Button inventoryButton = Button.builder(Component.literal("查看库存槽位"), b ->
+                send(17, selectedNetwork, selectedMember, null, 0, ""))
+                .bounds(contentX + 12 + third, 62, third, 20).build();
+        inventoryButton.active = selectedMember != null;
+        addRenderableWidget(inventoryButton);
         addRenderableWidget(Button.builder(Component.literal("移除成员"), b -> {
             if (selectedMember != null) send(5, selectedNetwork, selectedMember, null, 0, "");
-        }).bounds(contentX + 12 + half, 62, half, 20).build());
+        }).bounds(contentX + 18 + third * 2, 62, third, 20).build());
 
         int visible = visibleMemberRows();
         for (int row = 0; row < visible && row + memberScroll < members.size(); row++) {
