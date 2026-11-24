@@ -46,6 +46,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
         RemoteTransferNetworkData data = RemoteTransferNetworkData.get(player.server);
         UUID inventoryRequestMember = null;
         boolean suppressSnapshot = false;
+        boolean closeConfigurator = false;
         switch (p.action()) {
             case 0 -> { /* request current snapshot */ }
             case 20 -> {
@@ -66,6 +67,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
             case 4, 15 -> {
                 if (owned(data, p.networkId(), player)) {
                     RemoteTransferSelection.beginAddMember(player.getUUID(), p.networkId());
+                    closeConfigurator = true;
                     player.displayClientMessage(Component.literal("添加成员模式已启动：Shift+右键任意方块即可加入当前网络。"), true);
                 }
             }
@@ -269,9 +271,15 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
             default -> { return; }
         }
         if (!suppressSnapshot) {
-            PacketDistributor.sendToPlayer(player, inventoryRequestMember == null
+            RemoteTransferSnapshotPayload response = inventoryRequestMember == null
                     ? RemoteTransferSnapshotPayload.from(data, player.getUUID())
-                    : RemoteTransferSnapshotPayload.withInventory(data, player, p.networkId(), inventoryRequestMember));
+                    : RemoteTransferSnapshotPayload.withInventory(data, player, p.networkId(), inventoryRequestMember);
+            if (closeConfigurator) {
+                net.minecraft.nbt.CompoundTag root = response.data().copy();
+                root.putBoolean("CloseConfigurator", true);
+                response = new RemoteTransferSnapshotPayload(root);
+            }
+            PacketDistributor.sendToPlayer(player, response);
         }
     }
 
