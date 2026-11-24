@@ -56,14 +56,9 @@ public final class RemoteTransferOverlay {
                     .setShaderState(new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorShader))
                     .setTransparencyState(RenderStateShard.NO_TRANSPARENCY)
                     .setCullState(new RenderStateShard.CullStateShard(false))
-                    .setLayeringState(new RenderStateShard.LayeringStateShard(
-                            "whimsy_remote_beam_polygon_offset",
-                            () -> {
-                                RenderSystem.enablePolygonOffset();
-                                RenderSystem.polygonOffset(-1.0F, -1.0F);
-                            },
-                            RenderSystem::disablePolygonOffset))
-                    .setDepthTestState(new RenderStateShard.DepthTestStateShard("whimsy_remote_beam_depth", 515))
+                    .setLayeringState(RenderStateShard.NO_LAYERING)
+                    // X-ray beam: ignore terrain depth so the complete connection remains visible.
+                    .setDepthTestState(RenderStateShard.NO_DEPTH_TEST)
                     .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, true))
                     .createCompositeState(false));
 
@@ -154,10 +149,7 @@ public final class RemoteTransferOverlay {
                 BlockPos target = positions.get(connection.getUUID("Target"));
                 if (source == null || target == null) continue;
                 int color = "INPUT".equals(connection.getString("Direction")) ? INPUT_COLOR : OUTPUT_COLOR;
-                drawBeam(beams, matrix,
-                        source.getX() + 0.5F, source.getY() + 0.5F, source.getZ() + 0.5F,
-                        target.getX() + 0.5F, target.getY() + 0.5F, target.getZ() + 0.5F,
-                        color);
+                drawBetweenBlockFaces(beams, matrix, source, target, color, 0.0F);
             }
 
             // Per-slot bindings are the active routing model. Draw a dedicated
@@ -172,14 +164,28 @@ public final class RemoteTransferOverlay {
                 int slotIndex = Math.max(0, binding.getInt("WorkstationSlot"));
                 int color = SLOT_COLORS[slotIndex % SLOT_COLORS.length];
                 float lane = ((slotIndex % 7) - 3) * 0.065F;
-                drawSlotBeam(beams, matrix,
-                        workstation.getX() + 0.5F, workstation.getY() + 0.5F, workstation.getZ() + 0.5F,
-                        target.getX() + 0.5F, target.getY() + 0.5F, target.getZ() + 0.5F,
-                        color, lane);
+                drawBetweenBlockFaces(beams, matrix, workstation, target, color, lane);
             }
             buffers.endBatch(CONNECTION_BEAM);
         }
         pose.popPose();
+    }
+
+    /** Draws between the nearest block faces, not through block centers. */
+    private static void drawBetweenBlockFaces(VertexConsumer out, Matrix4f matrix,
+                                              BlockPos from, BlockPos to, int color, float lane) {
+        float ax = from.getX() + 0.5F, ay = from.getY() + 0.5F, az = from.getZ() + 0.5F;
+        float bx = to.getX() + 0.5F, by = to.getY() + 0.5F, bz = to.getZ() + 0.5F;
+        Vector3f direction = new Vector3f(bx - ax, by - ay, bz - az);
+        if (direction.lengthSquared() < 1.0E-5F) return;
+        direction.normalize();
+        float faceOffset = 0.5F / Math.max(Math.max(Math.abs(direction.x), Math.abs(direction.y)), Math.abs(direction.z));
+        float sx = ax + direction.x * faceOffset, sy = ay + direction.y * faceOffset, sz = az + direction.z * faceOffset;
+        float ex = bx - direction.x * faceOffset, ey = by - direction.y * faceOffset, ez = bz - direction.z * faceOffset;
+        Vector3f reference = Math.abs(direction.y) < 0.9F ? new Vector3f(0, 1, 0) : new Vector3f(1, 0, 0);
+        Vector3f lateral = new Vector3f(direction).cross(reference).normalize().mul(lane);
+        drawBeam(out, matrix, sx + lateral.x, sy + lateral.y, sz + lateral.z,
+                ex + lateral.x, ey + lateral.y, ez + lateral.z, color);
     }
 
     private static void drawSlotBeam(VertexConsumer out, Matrix4f matrix,
