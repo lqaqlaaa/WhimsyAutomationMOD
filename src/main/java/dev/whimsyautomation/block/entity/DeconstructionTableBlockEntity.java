@@ -5,6 +5,7 @@ import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
 import dev.whimsyautomation.util.OversizedItemStackCodec;
 import dev.whimsyautomation.util.PlayerStackRules;
+import dev.whimsyautomation.util.LongCountItemStackHandler;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -88,7 +89,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
         }
     };
 
-    private static class DynamicItemStackHandler extends ItemStackHandler {
+    private static class DynamicItemStackHandler extends LongCountItemStackHandler {
         private DynamicItemStackHandler(int size) { super(size); }
 
         @Override protected int getStackLimit(int slot, ItemStack stack) {
@@ -104,12 +105,7 @@ public final class DeconstructionTableBlockEntity extends BlockEntity implements
 
         private void resize(int size) {
             int targetSize = Math.max(OUTPUT_START + PAGE_SIZE * 10, size);
-            if (targetSize == stacks.size()) return;
-            NonNullList<ItemStack> resized = NonNullList.withSize(targetSize, ItemStack.EMPTY);
-            for (int i = 0; i < Math.min(stacks.size(), targetSize); i++) {
-                resized.set(i, stacks.get(i));
-            }
-            stacks = resized;
+            resizeSlots(targetSize);
         }
     }
 
