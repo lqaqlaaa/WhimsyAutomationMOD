@@ -34,7 +34,9 @@ public final class RemoteTransferToolItem extends Item {
                 RemoteTransferNetworkData data = RemoteTransferNetworkData.get(serverPlayer.server);
                 java.util.UUID networkId = RemoteTransferSelection.activeNetwork(serverPlayer.getUUID());
                 var network = networkId == null ? null : data.getNetwork(networkId);
-                java.util.UUID bindingId = network == null ? null : findBindingUnderRay(serverPlayer, network, 64.0D);
+                java.util.UUID bindingId = network == null
+                        || !RemoteTransferSelection.connectionsVisible(serverPlayer.getUUID())
+                        ? null : findBindingUnderRay(serverPlayer, network, 64.0D);
                 if (bindingId != null && data.removeSlotBinding(networkId, bindingId)) {
                     serverPlayer.displayClientMessage(Component.literal("已删除准星指向的槽位连接。"), true);
                     PacketDistributor.sendToPlayer(serverPlayer, RemoteTransferSnapshotPayload.from(data, serverPlayer.getUUID()));
@@ -89,7 +91,8 @@ public final class RemoteTransferToolItem extends Item {
         RemoteTransferNetworkData data = RemoteTransferNetworkData.get(player.server);
         var activeId = RemoteTransferSelection.activeNetwork(player.getUUID());
         var activeNetwork = activeId == null ? null : data.getNetwork(activeId);
-        java.util.UUID lineBinding = activeNetwork == null ? null
+        java.util.UUID lineBinding = activeNetwork == null
+                || !RemoteTransferSelection.connectionsVisible(player.getUUID()) ? null
                 : findBindingUnderRay(player, activeNetwork,
                     player.getEyePosition().distanceTo(context.getClickLocation()) + 0.08D);
         if (lineBinding != null && data.removeSlotBinding(activeId, lineBinding)) {
