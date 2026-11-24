@@ -88,7 +88,6 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
     public static RemoteTransferSnapshotPayload withInventory(RemoteTransferNetworkData source,
                                                                 ServerPlayer player,
                                                                 UUID networkId, UUID memberId) {
-        CompoundTag root = from(source, player.getUUID()).data().copy();
         CompoundTag inventory = new CompoundTag();
         inventory.putBoolean("Available", false);
         var network = source.getNetwork(networkId);
@@ -108,6 +107,8 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                     }
                 }
                 if (handler != null) {
+                    source.setMemberKind(networkId, member.id(),
+                            RemoteTransferNetworkData.EndpointKind.WORKSTATION);
                     inventory.putBoolean("Available", true);
                     inventory.putUUID("Member", member.id());
                     net.minecraft.nbt.ListTag slots = new net.minecraft.nbt.ListTag();
@@ -124,6 +125,7 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                 }
             }
         }
+        CompoundTag root = from(source, player.getUUID()).data().copy();
         root.put("Inventory", inventory);
         return new RemoteTransferSnapshotPayload(root);
     }
