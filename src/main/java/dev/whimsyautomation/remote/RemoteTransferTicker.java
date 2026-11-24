@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
+import dev.whimsyautomation.util.LongCountItemStackHandler;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -144,7 +145,7 @@ public final class RemoteTransferTicker {
                 if (!present.isEmpty() && !ItemStack.isSameItemSameComponents(present, simulated)) continue;
                 int slotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
                 int occupied = present.isEmpty() ? 0 : present.getCount();
-                int free = Math.max(0, slotLimit - occupied);
+                int free = getAvailableSpace(targetHandler, targetSlot, present, slotLimit);
                 int batchLimit = getHandlerBatchLimit(targetHandler, slotLimit, simulated);
                 int batch = Math.min(Math.min(free, batchLimit),
                         Math.min(simulated.getCount() - accepted, remainingBudget - accepted));
@@ -165,7 +166,7 @@ public final class RemoteTransferTicker {
                 if (!present.isEmpty() && !ItemStack.isSameItemSameComponents(present, notInserted)) continue;
                 int slotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
                 int occupied = present.isEmpty() ? 0 : present.getCount();
-                int free = Math.max(0, slotLimit - occupied);
+                int free = getAvailableSpace(targetHandler, targetSlot, present, slotLimit);
                 int batchLimit = getHandlerBatchLimit(targetHandler, slotLimit, notInserted);
                 int batch = Math.min(free, Math.min(batchLimit, notInserted.getCount()));
                 if (batch <= 0) continue;
@@ -188,6 +189,16 @@ public final class RemoteTransferTicker {
             }
             remainingBudget -= insertedTotal;
         }
+    }
+
+    /** Long-backed machine slots expose a capped ItemStack view but retain independent long capacity. */
+    private static int getAvailableSpace(IItemHandler handler, int slot, ItemStack present, int slotLimit) {
+        if (handler instanceof LongCountItemStackHandler longHandler) {
+            long stored = longHandler.getStoredCount(slot);
+            return (int) Math.min((long) Integer.MAX_VALUE, Long.MAX_VALUE - stored);
+        }
+        int occupied = present.isEmpty() ? 0 : present.getCount();
+        return Math.max(0, slotLimit - occupied);
     }
 
     /**
