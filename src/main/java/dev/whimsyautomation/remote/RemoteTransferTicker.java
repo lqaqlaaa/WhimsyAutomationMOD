@@ -120,7 +120,12 @@ public final class RemoteTransferTicker {
         for (int slot = firstSourceSlot; slot < lastSourceSlot && remainingBudget > 0; slot++) {
             ItemStack offered = sourceHandler.getStackInSlot(slot);
             if (offered.isEmpty() || !sourceFilter.allows(offered)) continue;
-            int request = Math.min(remainingBudget, offered.getCount());
+            // Keep every ordinary ItemStack crossing a capability boundary within
+            // the external handler's serializable count range. Long-backed
+            // source inventories expose this bounded view and retain the rest
+            // of their authoritative long count internally.
+            int request = Math.min(Math.min(remainingBudget, offered.getCount()),
+                    Math.min(99, offered.getMaxStackSize()));
             ItemStack simulated = sourceHandler.extractItem(slot, request, true);
             if (simulated.isEmpty() || !targetFilter.allows(simulated)) continue;
             // Pick the target face that can actually accept this item in the
@@ -151,7 +156,7 @@ public final class RemoteTransferTicker {
                         Math.min(simulated.getCount() - accepted, remainingBudget - accepted));
                 if (batch <= 0) continue;
                 ItemStack offeredBatch = simulated.copyWithCount(batch);
-                ItemStack remainder = targetHandler.insertItem(targetSlot, offeredBatch, true);
+                ItemStack remainder = RemoteTransferInsertion.insert(targetHandler, targetSlot, offeredBatch, true);
                 accepted += batch - remainder.getCount();
             }
             if (accepted <= 0) continue;
@@ -171,7 +176,7 @@ public final class RemoteTransferTicker {
                 int batch = Math.min(free, Math.min(batchLimit, notInserted.getCount()));
                 if (batch <= 0) continue;
                 ItemStack batchStack = notInserted.copyWithCount(batch);
-                ItemStack remainder = targetHandler.insertItem(targetSlot, batchStack, false);
+                ItemStack remainder = RemoteTransferInsertion.insert(targetHandler, targetSlot, batchStack, false);
                 int inserted = batch - remainder.getCount();
                 insertedTotal += inserted;
                 if (inserted >= notInserted.getCount()) notInserted = ItemStack.EMPTY;
