@@ -68,6 +68,32 @@ public final class RemoteTransferTicker {
                         transfer(server, target, source, connection.inputFilter(), connection.outputFilter());
                 }
             }
+
+            // Slot bindings are the new routing unit: each workstation slot has
+            // its own direction and target inventory. Legacy whole-endpoint
+            // connections remain readable for existing worlds during migration.
+            for (RemoteTransferNetworkData.SlotBinding binding : network.slotBindings()) {
+                if (!binding.enabled()) continue;
+                RemoteTransferNetworkData.Endpoint workstation = members.get(binding.workstationMember());
+                RemoteTransferNetworkData.Endpoint target = members.get(binding.targetMember());
+                if (workstation == null || target == null) continue;
+                if (workstation.dimension().equals(target.dimension())
+                        && workstation.pos().equals(target.pos())) continue;
+
+                RemoteTransferNetworkData.Endpoint workstationSlot = new RemoteTransferNetworkData.Endpoint(
+                        workstation.id(), workstation.dimension(), workstation.pos(), workstation.kind(),
+                        workstation.blockId(), binding.workstationSlot(), workstation.face());
+                RemoteTransferNetworkData.Endpoint targetSlot = new RemoteTransferNetworkData.Endpoint(
+                        target.id(), target.dimension(), target.pos(), target.kind(), target.blockId(),
+                        binding.targetSlot(), binding.targetFace());
+                if (binding.direction() == RemoteTransferNetworkData.TransferDirection.INPUT) {
+                    transfer(server, targetSlot, workstationSlot,
+                            RemoteTransferNetworkData.Filter.none(), RemoteTransferNetworkData.Filter.none());
+                } else if (binding.direction() == RemoteTransferNetworkData.TransferDirection.OUTPUT) {
+                    transfer(server, workstationSlot, targetSlot,
+                            RemoteTransferNetworkData.Filter.none(), RemoteTransferNetworkData.Filter.none());
+                }
+            }
         }
     }
 
