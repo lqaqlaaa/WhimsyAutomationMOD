@@ -439,7 +439,7 @@ public final class RemoteTransferScreen extends Screen {
         } else if (activePage == 2) {
             g.drawString(font, "先选择输入或输出，再依次 Shift+右键工作方块和连接容器。",
                     contentX + 6, 52, MUTED, false);
-            g.drawString(font, "A：" + memberName(selectedMember) + "   B：" + memberName(selectedSecond),
+            g.drawString(font, "选中容器后，可直接调整输入/输出、传输开关和连接线显示。",
                     contentX + 6, height - 48, TEXT, false);
             g.drawString(font, "已有连接",
                     contentX + Math.max(44, (contentW - 14) / 2) + 12, 82, MUTED, false);
