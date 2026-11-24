@@ -4,6 +4,7 @@ import dev.whimsyautomation.menu.EnchantmentConversionTableMenu;
 import dev.whimsyautomation.registry.ModBlockEntities;
 import dev.whimsyautomation.util.OversizedItemStackCodec;
 import dev.whimsyautomation.util.SidedMachineItemHandler;
+import dev.whimsyautomation.util.LongCountItemStackHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -34,7 +35,7 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     public static final int OUTPUT_SLOT = 1;
     public static final int SLOT_COUNT = 2;
     public static final int MAX_COPY_COUNT = Integer.MAX_VALUE;
-    private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
+    private final LongCountItemStackHandler inventory = new LongCountItemStackHandler(SLOT_COUNT) {
         @Override
         public int getSlotLimit(int slot) {
             return slot == INPUT_SLOT ? 1 : MAX_COPY_COUNT;
