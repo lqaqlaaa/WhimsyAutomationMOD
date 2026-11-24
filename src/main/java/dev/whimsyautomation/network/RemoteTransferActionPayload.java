@@ -48,6 +48,10 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
         boolean suppressSnapshot = false;
         switch (p.action()) {
             case 0 -> { /* request current snapshot */ }
+            case 20 -> {
+                if (owned(data, p.networkId(), player))
+                    RemoteTransferSelection.setActiveNetwork(player.getUUID(), p.networkId());
+            }
             case 1 -> data.createNetwork(player.getUUID(), p.text().isBlank()
                     ? "新建网络" : p.text());
             case 2 -> {
@@ -56,7 +60,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
             case 3 -> {
                 if (owned(data, p.networkId(), player)) {
                     data.deleteNetwork(p.networkId(), player.getUUID());
-                    RemoteTransferSelection.clear(player.getUUID());
+                    RemoteTransferSelection.clearAll(player.getUUID());
                 }
             }
             case 4, 15 -> {
