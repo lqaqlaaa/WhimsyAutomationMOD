@@ -97,6 +97,28 @@ public final class RemoteTransferNetworkData extends SavedData {
         return false;
     }
 
+    public boolean setMemberBordersVisible(UUID networkId, boolean visible) {
+        Network network = networks.get(networkId);
+        if (network == null) return false;
+        network.setMemberBordersVisible(visible);
+        setDirty();
+        return true;
+    }
+
+    public boolean setSlotFilter(UUID networkId, UUID workstation, int slot, Filter filter) {
+        Network network = networks.get(networkId);
+        if (network == null || workstation == null || slot < 0 || filter == null) return false;
+        network.slotFilters().put(Network.slotFilterKey(workstation, slot), filter);
+        setDirty();
+        return true;
+    }
+
+    public Filter getSlotFilter(UUID networkId, UUID workstation, int slot) {
+        Network network = networks.get(networkId);
+        return network == null ? Filter.none()
+                : network.slotFilters().getOrDefault(Network.slotFilterKey(workstation, slot), Filter.none());
+    }
+
     public boolean addSlotBinding(UUID networkId, SlotBinding binding) {
         Network network = networks.get(networkId);
         if (network == null) return false;
@@ -249,6 +271,27 @@ public final class RemoteTransferNetworkData extends SavedData {
             }
             entry.put("Connections", connections);
 
+            entry.putBoolean("MemberBordersVisible", network.memberBordersVisible());
+            ListTag slotFilters = new ListTag();
+            for (var filterEntry : network.slotFilters().entrySet()) {
+                CompoundTag filterTag = new CompoundTag();
+                String[] key = filterEntry.getKey().split(":", 2);
+                if (key.length != 2) continue;
+                try {
+                    filterTag.putUUID("Workstation", UUID.fromString(key[0]));
+                    filterTag.putInt("Slot", Integer.parseInt(key[1]));
+                } catch (RuntimeException ignored) { continue; }
+                Filter filter = filterEntry.getValue();
+                filterTag.putString("Mode", filter.mode().name());
+                filterTag.putBoolean("Exact", filter.exactComponents());
+                filterTag.putBoolean("IgnoreDurability", filter.ignoreDurability());
+                filterTag.putBoolean("IgnoreNbt", filter.ignoreNbt());
+                filterTag.putBoolean("MatchTags", filter.matchTags());
+                putStrings(filterTag, "Items", filter.items());
+                slotFilters.add(filterTag);
+            }
+            entry.put("SlotFilters", slotFilters);
+
             ListTag slotBindings = new ListTag();
             for (SlotBinding binding : network.slotBindings()) {
                 CompoundTag slot = new CompoundTag();
@@ -305,6 +348,22 @@ public final class RemoteTransferNetworkData extends SavedData {
                 } catch (RuntimeException ignored) {
                     // A malformed connection must not invalidate other saved connections.
                 }
+            }
+            network.setMemberBordersVisible(!entry.contains("MemberBordersVisible")
+                    || entry.getBoolean("MemberBordersVisible"));
+            ListTag slotFilters = entry.getList("SlotFilters", Tag.TAG_COMPOUND);
+            for (int j = 0; j < slotFilters.size(); j++) {
+                CompoundTag filterTag = slotFilters.getCompound(j);
+                try {
+                    UUID workstation = filterTag.getUUID("Workstation");
+                    int slot = filterTag.getInt("Slot");
+                    FilterMode mode = FilterMode.valueOf(filterTag.getString("Mode"));
+                    Filter filter = new Filter(mode, filterTag.getBoolean("Exact"),
+                            getStrings(filterTag, "Items"), mode != FilterMode.NONE,
+                            filterTag.getBoolean("IgnoreDurability"), filterTag.getBoolean("IgnoreNbt"),
+                            filterTag.getBoolean("MatchTags"));
+                    network.slotFilters().put(Network.slotFilterKey(workstation, slot), filter);
+                } catch (RuntimeException ignored) {}
             }
             ListTag slotBindings = entry.getList("SlotBindings", Tag.TAG_COMPOUND);
             for (int j = 0; j < slotBindings.size(); j++) {
@@ -428,7 +487,8 @@ public final class RemoteTransferNetworkData extends SavedData {
 
         public boolean allows(ResourceLocation itemId) {
             if (!enabled || mode == FilterMode.NONE) return true;
-            boolean contains = items.contains(itemId.toString());
+            boolean contains = items.stream().anyMatch(entry -> entry.equals(itemId.toString())
+                    || entry.startsWith(itemId.toString() + "|"));
             return mode == FilterMode.WHITELIST ? contains : !contains;
         }
 
@@ -436,7 +496,8 @@ public final class RemoteTransferNetworkData extends SavedData {
             if (stack.isEmpty()) return false;
             if (!enabled || mode == FilterMode.NONE) return true;
             ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-            boolean contains = items.contains(itemId.toString());
+            boolean contains = items.stream().anyMatch(entry -> entry.equals(itemId.toString())
+                    || entry.startsWith(itemId.toString() + "|"));
             if (matchTags) {
                 for (String entry : items) {
                     if (!entry.startsWith("#")) continue;
@@ -449,6 +510,10 @@ public final class RemoteTransferNetworkData extends SavedData {
                 }
             }
             if (exactComponents && items.contains(fingerprint(stack, ignoreDurability, ignoreNbt))) contains = true;
+            if (!exactComponents && !ignoreDurability && !ignoreNbt) {
+                String actual = fingerprint(stack, false, false);
+                if (items.contains(actual)) contains = true;
+            }
             return mode == FilterMode.WHITELIST ? contains : !contains;
         }
 
@@ -487,6 +552,8 @@ public final class RemoteTransferNetworkData extends SavedData {
         private final List<Endpoint> members = new ArrayList<>();
         private final List<Connection> connections = new ArrayList<>();
         private final List<SlotBinding> slotBindings = new ArrayList<>();
+        private final Map<String, Filter> slotFilters = new LinkedHashMap<>();
+        private boolean memberBordersVisible = true;
 
         private Network(UUID id, UUID owner, String name) {
             this.id = id;
@@ -500,6 +567,10 @@ public final class RemoteTransferNetworkData extends SavedData {
         public List<Endpoint> members() { return members; }
         public List<Connection> connections() { return connections; }
         public List<SlotBinding> slotBindings() { return slotBindings; }
+        public Map<String, Filter> slotFilters() { return slotFilters; }
+        public boolean memberBordersVisible() { return memberBordersVisible; }
+        private void setMemberBordersVisible(boolean value) { memberBordersVisible = value; }
+        private static String slotFilterKey(UUID workstation, int slot) { return workstation + ":" + slot; }
         private void setName(String name) { this.name = name; }
     }
 }
