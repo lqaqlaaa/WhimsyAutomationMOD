@@ -160,9 +160,9 @@ public final class RemoteTransferScreen extends Screen {
         }).bounds(8, height - 26, sideW, 20).build());
 
         // Main navigation tabs.
-        String[] tabs = {"网络概览", "成员方块", "槽位绑定", "过滤规则"};
-        int tabGap = 3;
-        int tabW = Math.max(42, (contentW - tabGap * 3) / 4);
+        String[] tabs = {"网络概览", "成员方块", "槽位绑定"};
+        int tabGap = 4;
+        int tabW = Math.max(42, (contentW - tabGap * 2) / 3);
         for (int i = 0; i < tabs.length; i++) {
             final int page = i;
             addRenderableWidget(Button.builder(Component.literal((activePage == i ? "◆ " : "") + tabs[i]), b -> {
@@ -188,23 +188,37 @@ public final class RemoteTransferScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("重命名"), b ->
                 send(2, selectedNetwork, null, null, 0, renameBox.getValue()))
                 .bounds(contentX + contentW - 96, 112, 88, 20).build());
+        int half = Math.max(38, (contentW - 20) / 2);
+        int row1 = Math.max(142, Math.min(148, height - 94));
+        int row2 = row1 + 26;
+        int row3 = row2 + 26;
         addRenderableWidget(Button.builder(Component.literal("删除当前网络"), b ->
                 send(3, selectedNetwork, null, null, 0, ""))
-                .bounds(contentX + 8, 148, Math.min(110, contentW - 16), 20).build());
-        addRenderableWidget(Button.builder(Component.literal("添加网络成员方块"), b ->
+                .bounds(contentX + 6, row1, half, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("添加成员方块"), b ->
                 send(15, selectedNetwork, null, null, 0, ""))
-                .bounds(contentX + 8, 178, Math.min(150, contentW - 16), 20).build());
-        addRenderableWidget(Button.builder(Component.literal("打开成员管理 ›"), b -> {
+                .bounds(contentX + 12 + half, row1, Math.max(38, contentW - half - 18), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("打开成员管理"), b -> {
             activePage = 1; init();
-        }).bounds(contentX + 8, 208, Math.min(130, contentW - 16), 20).build());
+        }).bounds(contentX + 6, row2, half, 20).build());
         addRenderableWidget(Button.builder(Component.literal(RemoteTransferOverlay.connectionsVisible()
-                ? "关闭连接线显示" : "开启连接线显示"), b -> {
+                ? "连接线：关" : "连接线：开"), b -> {
             RemoteTransferOverlay.toggleConnectionsVisible();
             b.setMessage(Component.literal(RemoteTransferOverlay.connectionsVisible()
-                    ? "关闭连接线显示" : "开启连接线显示"));
+                    ? "连接线：关" : "连接线：开"));
             send(21, selectedNetwork, null, null,
                     RemoteTransferOverlay.connectionsVisible() ? 1 : 0, "");
-        }).bounds(contentX + 8, Math.min(height - 28, 238), Math.min(130, contentW - 16), 20).build());
+        }).bounds(contentX + 12 + half, row2, Math.max(38, contentW - half - 18), 20).build());
+        boolean bordersVisible = !network.contains("MemberBordersVisible")
+                || network.getBoolean("MemberBordersVisible");
+        addRenderableWidget(Button.builder(Component.literal(
+                bordersVisible ? "方块边框：开" : "方块边框：关"), b -> {
+            boolean nextVisible = !(!network.contains("MemberBordersVisible")
+                    || network.getBoolean("MemberBordersVisible"));
+            network.putBoolean("MemberBordersVisible", nextVisible);
+            b.setMessage(Component.literal(nextVisible ? "方块边框：开" : "方块边框：关"));
+            send(22, selectedNetwork, null, null, nextVisible ? 1 : 0, "");
+        }).bounds(contentX + 6, row3, Math.max(60, contentW - 12), 20).build());
     }
 
     private void buildMemberWidgets() {
@@ -486,7 +500,7 @@ public final class RemoteTransferScreen extends Screen {
         g.drawString(font, "网络列表", 12, 30, MUTED, false);
         g.drawString(font, selectedNetwork == null ? "请选择或创建网络" : networkName(),
                 contentX + 4, 14, TEXT, false);
-        g.drawString(font, new String[]{"网络概览", "成员方块", "连接管理", "过滤规则"}[activePage],
+        g.drawString(font, new String[]{"网络概览", "成员方块", "槽位绑定"}[Math.max(0, Math.min(2, activePage))],
                 contentX + 4, 62, 0xFF70AEFF, false);
 
         if (activePage == 0 && selectedNetwork != null) {
@@ -502,11 +516,6 @@ public final class RemoteTransferScreen extends Screen {
                     contentX + 6, 52, MUTED, false);
             g.drawString(font, "可单独暂停或删除绑定；未加载的区块会自动跳过，不会强制加载。",
                     contentX + 6, height - 24, MUTED, false);
-        } else if (activePage == 3) {
-            g.drawString(font, "先选择一条连接，再分别配置输入端与输出端。",
-                    contentX + 6, 52, MUTED, false);
-            g.drawString(font, "规则格式：minecraft:stone,minecraft:dirt；标签写作 #minecraft:logs",
-                    contentX + 6, height - 16, MUTED, false);
         }
     }
 
