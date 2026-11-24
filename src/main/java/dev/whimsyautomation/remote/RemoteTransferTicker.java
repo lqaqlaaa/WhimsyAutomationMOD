@@ -128,39 +128,65 @@ public final class RemoteTransferTicker {
             IItemHandler targetHandler = findHandler(targetLevel, target, false, simulated);
             if (targetHandler == null) continue;
 
-            int accepted = 0;
             int firstTargetSlot = target.slotIndex() >= 0 ? target.slotIndex() : 0;
             int lastTargetSlot = target.slotIndex() >= 0 ? target.slotIndex() + 1 : targetHandler.getSlots();
             if (lastTargetSlot > targetHandler.getSlots()) continue;
-            for (int targetSlot = firstTargetSlot; targetSlot < lastTargetSlot; targetSlot++) {
-                ItemStack remainder = targetHandler.insertItem(targetSlot, simulated.copyWithCount(
-                        Math.min(simulated.getCount() - accepted, remainingBudget)), true);
-                int inserted = Math.min(simulated.getCount() - accepted, remainingBudget) - remainder.getCount();
-                accepted += Math.max(0, inserted);
-                if (accepted >= simulated.getCount() || accepted >= remainingBudget) break;
+
+            // Never pass an oversized stack directly into a third-party handler.
+            // Some handlers (including Sophisticated Storage) validate the count
+            // before applying their own slot limit and reject Integer.MAX_VALUE.
+            // Simulate using the same bounded per-slot batches used below.
+            int accepted = 0;
+            for (int targetSlot = firstTargetSlot;
+                 targetSlot < lastTargetSlot && accepted < Math.min(simulated.getCount(), remainingBudget);
+                 targetSlot++) {
+                ItemStack present = targetHandler.getStackInSlot(targetSlot);
+                if (!present.isEmpty() && !ItemStack.isSameItemSameComponents(present, simulated)) continue;
+                int slotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
+                int occupied = present.isEmpty() ? 0 : present.getCount();
+                int free = Math.max(0, slotLimit - occupied);
+                int batchLimit = Math.min(slotLimit, simulated.getMaxStackSize());
+                int batch = Math.min(Math.min(free, batchLimit),
+                        Math.min(simulated.getCount() - accepted, remainingBudget - accepted));
+                if (batch <= 0) continue;
+                ItemStack offeredBatch = simulated.copyWithCount(batch);
+                ItemStack remainder = targetHandler.insertItem(targetSlot, offeredBatch, true);
+                accepted += batch - remainder.getCount();
             }
             if (accepted <= 0) continue;
 
             ItemStack extracted = sourceHandler.extractItem(slot, accepted, false);
             if (extracted.isEmpty()) continue;
             ItemStack notInserted = extracted;
-            for (int targetSlot = firstTargetSlot; targetSlot < lastTargetSlot && !notInserted.isEmpty(); targetSlot++) {
-                notInserted = targetHandler.insertItem(targetSlot, notInserted, false);
+            int insertedTotal = 0;
+            for (int targetSlot = firstTargetSlot;
+                 targetSlot < lastTargetSlot && !notInserted.isEmpty(); targetSlot++) {
+                ItemStack present = targetHandler.getStackInSlot(targetSlot);
+                if (!present.isEmpty() && !ItemStack.isSameItemSameComponents(present, notInserted)) continue;
+                int slotLimit = Math.max(0, targetHandler.getSlotLimit(targetSlot));
+                int occupied = present.isEmpty() ? 0 : present.getCount();
+                int free = Math.max(0, slotLimit - occupied);
+                int batchLimit = Math.min(slotLimit, notInserted.getMaxStackSize());
+                int batch = Math.min(free, Math.min(batchLimit, notInserted.getCount()));
+                if (batch <= 0) continue;
+                ItemStack batchStack = notInserted.copyWithCount(batch);
+                ItemStack remainder = targetHandler.insertItem(targetSlot, batchStack, false);
+                int inserted = batch - remainder.getCount();
+                insertedTotal += inserted;
+                if (inserted >= notInserted.getCount()) notInserted = ItemStack.EMPTY;
+                else if (inserted > 0) notInserted.shrink(inserted);
             }
             // If a handler changed between simulation and execution, put any
             // unexpected remainder back into its original source slot.
             if (!notInserted.isEmpty()) {
                 ItemStack refund = sourceHandler.insertItem(slot, notInserted, false);
                 if (!refund.isEmpty()) {
-                    // No item is discarded: retain it at the source block by
-                    // dropping only as a last resort when a non-conforming
-                    // handler refuses its own extracted stack.
                     sourceLevel.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(
                             sourceLevel, source.pos().getX() + 0.5, source.pos().getY() + 0.5,
                             source.pos().getZ() + 0.5, refund));
                 }
             }
-            remainingBudget -= Math.min(accepted, extracted.getCount() - notInserted.getCount());
+            remainingBudget -= insertedTotal;
         }
     }
 
