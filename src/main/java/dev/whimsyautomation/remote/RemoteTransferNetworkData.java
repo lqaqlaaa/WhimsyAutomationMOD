@@ -147,6 +147,7 @@ public final class RemoteTransferNetworkData extends SavedData {
                 member.putString("Dimension", endpoint.dimension().location().toString());
                 member.putLong("Pos", endpoint.pos().asLong());
                 member.putString("Kind", endpoint.kind().name());
+                member.putString("Block", endpoint.blockId());
                 members.add(member);
             }
             entry.put("Members", members);
@@ -190,7 +191,10 @@ public final class RemoteTransferNetworkData extends SavedData {
                     ResourceKey<Level> dimension = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, dimensionId);
                     EndpointKind kind = EndpointKind.valueOf(member.getString("Kind"));
                     UUID id = member.getUUID("Id");
-                    network.members().add(new Endpoint(id, dimension, BlockPos.of(member.getLong("Pos")), kind));
+                    String blockId = member.getString("Block");
+                    if (blockId.isBlank()) blockId = kind == EndpointKind.WORKSTATION
+                            ? "minecraft:crafting_table" : "minecraft:chest";
+                    network.members().add(new Endpoint(id, dimension, BlockPos.of(member.getLong("Pos")), kind, blockId));
                 } catch (RuntimeException ignored) {
                     // Ignore malformed entries while preserving the rest of the network.
                 }
@@ -240,16 +244,18 @@ public final class RemoteTransferNetworkData extends SavedData {
     public enum TransferDirection { INPUT, OUTPUT, BIDIRECTIONAL }
     public enum FilterMode { NONE, WHITELIST, BLACKLIST }
 
-    public record Endpoint(UUID id, ResourceKey<Level> dimension, BlockPos pos, EndpointKind kind) {
+    public record Endpoint(UUID id, ResourceKey<Level> dimension, BlockPos pos, EndpointKind kind, String blockId) {
         public Endpoint {
             Objects.requireNonNull(id);
             Objects.requireNonNull(dimension);
             pos = pos.immutable();
             Objects.requireNonNull(kind);
+            blockId = blockId == null || blockId.isBlank() ? "minecraft:chest" : blockId;
         }
 
-        public static Endpoint create(ResourceKey<Level> dimension, BlockPos pos, EndpointKind kind) {
-            return new Endpoint(UUID.randomUUID(), dimension, pos, kind);
+        public static Endpoint create(Level level, BlockPos pos, EndpointKind kind) {
+            String blockId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString();
+            return new Endpoint(UUID.randomUUID(), level.dimension(), pos, kind, blockId);
         }
     }
 
