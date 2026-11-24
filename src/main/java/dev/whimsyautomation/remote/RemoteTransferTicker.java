@@ -88,10 +88,12 @@ public final class RemoteTransferTicker {
                         binding.targetSlot(), binding.targetFace());
                 if (binding.direction() == RemoteTransferNetworkData.TransferDirection.INPUT) {
                     transfer(server, targetSlot, workstationSlot,
-                            RemoteTransferNetworkData.Filter.none(), RemoteTransferNetworkData.Filter.none());
+                            RemoteTransferNetworkData.Filter.none(),
+                            data.getSlotFilter(network.id(), workstation.id(), binding.workstationSlot()));
                 } else if (binding.direction() == RemoteTransferNetworkData.TransferDirection.OUTPUT) {
                     transfer(server, workstationSlot, targetSlot,
-                            RemoteTransferNetworkData.Filter.none(), RemoteTransferNetworkData.Filter.none());
+                            data.getSlotFilter(network.id(), workstation.id(), binding.workstationSlot()),
+                            RemoteTransferNetworkData.Filter.none());
                 }
             }
         }
