@@ -149,4 +149,3 @@ public final class RemoteTransferToolItem extends Item {
         return InteractionResult.SUCCESS;
     }
 }
-}
