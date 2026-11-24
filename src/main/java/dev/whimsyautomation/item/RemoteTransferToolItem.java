@@ -107,10 +107,18 @@ public final class RemoteTransferToolItem extends Item {
                 player.displayClientMessage(Component.literal("第二个方块必须是连接容器。"), true);
                 return InteractionResult.SUCCESS;
             }
-            var container = RemoteTransferNetworkData.Endpoint.create(level, pos, kind);
-            if (!data.addMember(networkId, container)) {
-                player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.target_exists"), true);
-                return InteractionResult.SUCCESS;
+            // Reuse an already registered container too, so one physical block can
+            // participate in both an INPUT and an OUTPUT connection.
+            var container = network.members().stream()
+                    .filter(member -> member.kind() == RemoteTransferNetworkData.EndpointKind.CONTAINER
+                            && member.dimension().equals(level.dimension()) && member.pos().equals(pos))
+                    .findFirst().orElse(null);
+            if (container == null) {
+                container = RemoteTransferNetworkData.Endpoint.create(level, pos, kind);
+                if (!data.addMember(networkId, container)) {
+                    player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.target_exists"), true);
+                    return InteractionResult.SUCCESS;
+                }
             }
             data.addConnection(networkId, RemoteTransferNetworkData.Connection.create(
                     pending.workstationId(), container.id(), pending.direction()));
