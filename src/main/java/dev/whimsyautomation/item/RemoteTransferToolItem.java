@@ -28,7 +28,8 @@ public final class RemoteTransferToolItem extends Item {
         // Sneaking with the configurator is reserved for block binding. Never open
         // the network screen from the fallback item-use callback in this case.
         if (player.isShiftKeyDown()) {
-            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+            // Do not let the fallback item-use path open the screen after a sneaking block click.
+            return InteractionResultHolder.fail(stack);
         }
         if (level.isClientSide) {
             if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
@@ -49,7 +50,7 @@ public final class RemoteTransferToolItem extends Item {
         if (context.getPlayer() == null || !context.getPlayer().isShiftKeyDown()) return InteractionResult.PASS;
         // Consume the interaction on the client so the target block's menu/use
         // callback cannot run after the configurator has claimed this click.
-        if (context.getLevel().isClientSide) return InteractionResult.SUCCESS;
+        if (context.getLevel().isClientSide) return InteractionResult.CONSUME;
         if (!(context.getPlayer() instanceof ServerPlayer player)) return InteractionResult.PASS;
         var level = context.getLevel();
         var pos = context.getClickedPos();
@@ -86,10 +87,18 @@ public final class RemoteTransferToolItem extends Item {
                 player.displayClientMessage(Component.literal("请先 Shift+右键选择工作方块。"), true);
                 return InteractionResult.SUCCESS;
             }
-            var workstation = RemoteTransferNetworkData.Endpoint.create(level, pos, kind);
-            if (!data.addMember(networkId, workstation)) {
-                player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.target_exists"), true);
-                return InteractionResult.SUCCESS;
+            // A workstation can serve both INPUT and OUTPUT bindings. Reuse the
+            // existing endpoint in this network instead of trying to add a duplicate.
+            var workstation = network.members().stream()
+                    .filter(member -> member.kind() == RemoteTransferNetworkData.EndpointKind.WORKSTATION
+                            && member.dimension().equals(level.dimension()) && member.pos().equals(pos))
+                    .findFirst().orElse(null);
+            if (workstation == null) {
+                workstation = RemoteTransferNetworkData.Endpoint.create(level, pos, kind);
+                if (!data.addMember(networkId, workstation)) {
+                    player.displayClientMessage(Component.translatable("message.whimsy_automation.remote.target_exists"), true);
+                    return InteractionResult.SUCCESS;
+                }
             }
             RemoteTransferSelection.setWorkstation(player.getUUID(), pending, workstation.id());
             player.displayClientMessage(Component.literal("工作方块已标记，请继续 Shift+右键选择连接容器。"), true);
