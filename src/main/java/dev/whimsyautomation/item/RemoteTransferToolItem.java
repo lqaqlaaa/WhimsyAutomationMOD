@@ -72,8 +72,7 @@ public final class RemoteTransferToolItem extends Item {
             RemoteTransferSelection.clear(player.getUUID());
             return InteractionResult.FAIL;
         }
-        boolean added = data.addMember(networkId, RemoteTransferNetworkData.Endpoint.create(
-                level.dimension(), pos, kind));
+        boolean added = data.addMember(networkId, RemoteTransferNetworkData.Endpoint.create(level, pos, kind));
         RemoteTransferSelection.clear(player.getUUID());
         player.displayClientMessage(Component.translatable(added
                 ? "message.whimsy_automation.remote.target_added"
