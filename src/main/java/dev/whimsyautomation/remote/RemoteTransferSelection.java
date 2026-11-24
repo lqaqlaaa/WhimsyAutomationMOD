@@ -1,6 +1,7 @@
 package dev.whimsyautomation.remote;
 
 import java.util.UUID;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -14,7 +15,7 @@ public final class RemoteTransferSelection {
 
     public static void beginAddMember(UUID player, UUID network) {
         ACTIVE_NETWORK.put(player, network);
-        PENDING.put(player, new Pending(network, Mode.ADD_MEMBER, null, -1, null));
+        PENDING.put(player, new Pending(network, Mode.ADD_MEMBER, null, -1, null, List.of()));
     }
 
     public static void beginSlotBinding(UUID player, UUID network, UUID workstation,
@@ -22,7 +23,17 @@ public final class RemoteTransferSelection {
                                         RemoteTransferNetworkData.TransferDirection direction) {
         ACTIVE_NETWORK.put(player, network);
         if (workstationSlot < 0) throw new IllegalArgumentException("Workstation slot must be non-negative");
-        PENDING.put(player, new Pending(network, Mode.BIND_SLOT, workstation, workstationSlot, direction));
+        PENDING.put(player, new Pending(network, Mode.BIND_SLOT, workstation, workstationSlot, direction, List.of(workstationSlot)));
+    }
+
+    public static void beginSlotBindings(UUID player, UUID network, UUID workstation,
+                                          List<Integer> workstationSlots,
+                                          RemoteTransferNetworkData.TransferDirection direction) {
+        ACTIVE_NETWORK.put(player, network);
+        List<Integer> validSlots = workstationSlots == null ? List.of()
+                : workstationSlots.stream().filter(slot -> slot != null && slot >= 0).distinct().sorted().toList();
+        if (validSlots.isEmpty()) throw new IllegalArgumentException("At least one workstation slot is required");
+        PENDING.put(player, new Pending(network, Mode.BIND_SLOT_BATCH, workstation, -1, direction, validSlots));
     }
 
     public static UUID activeNetwork(UUID player) { return ACTIVE_NETWORK.get(player); }
