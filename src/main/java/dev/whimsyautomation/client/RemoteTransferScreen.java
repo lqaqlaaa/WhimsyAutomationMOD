@@ -320,7 +320,7 @@ public final class RemoteTransferScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.fill(0, 0, width, height, BG);
         g.fill(6, 6, sideW + 14, height - 6, PANEL);
-        g.fill(contentX - 4, 28, width - 6, height - 6, 0xE6101724);
+        g.fill(contentX - 4, 28, width - 6, height - 6, 0xFF101724);
         g.renderOutline(6, 6, sideW + 8, height - 12, BORDER);
         g.renderOutline(contentX - 4, 28, width - contentX + 2, height - 34, BORDER);
         g.fill(6, 6, 9, height - 6, ACCENT);
@@ -404,24 +404,27 @@ public final class RemoteTransferScreen extends Screen {
             0xFF55DDFF, 0xFF6688FF, 0xFFCC66FF, 0xFFFF66CC};
 
     private ItemStack memberStack(CompoundTag member) {
-        Minecraft mc = Minecraft.getInstance();
-        BlockPos pos = BlockPos.of(member.getLong("Pos"));
-        if (mc.level != null && mc.level.dimension().location().toString().equals(member.getString("Dimension"))
-                && mc.level.hasChunkAt(pos)) {
-            ItemStack stack = new ItemStack(mc.level.getBlockState(pos).getBlock());
-            if (!stack.isEmpty()) return stack;
+        ResourceLocation id;
+        try {
+            id = ResourceLocation.parse(member.getString("Block"));
+        } catch (RuntimeException exception) {
+            id = ResourceLocation.withDefaultNamespace(
+                    member.getString("Kind").equals("WORKSTATION") ? "crafting_table" : "chest");
         }
-        return new ItemStack(member.getString("Kind").equals("WORKSTATION") ? Items.CRAFTING_TABLE : Items.CHEST);
+        Block block = BuiltInRegistries.BLOCK.getOptional(id).orElse(Blocks.CHEST);
+        ItemStack stack = new ItemStack(block);
+        return stack.isEmpty() ? new ItemStack(Items.BARRIER) : stack;
     }
 
     private String memberLabel(CompoundTag member) {
-        Minecraft mc = Minecraft.getInstance();
-        BlockPos pos = BlockPos.of(member.getLong("Pos"));
-        if (mc.level != null && mc.level.dimension().location().toString().equals(member.getString("Dimension"))
-                && mc.level.hasChunkAt(pos)) {
-            return mc.level.getBlockState(pos).getBlock().getName().getString();
+        ResourceLocation id;
+        try {
+            id = ResourceLocation.parse(member.getString("Block"));
+        } catch (RuntimeException exception) {
+            id = ResourceLocation.withDefaultNamespace(
+                    member.getString("Kind").equals("WORKSTATION") ? "crafting_table" : "chest");
         }
-        return member.getString("Kind").equals("WORKSTATION") ? "工作方块（未加载）" : "容器（未加载）";
+        return BuiltInRegistries.BLOCK.getOptional(id).orElse(Blocks.CHEST).getName().getString();
     }
 
     private CompoundTag findSelectedLink() {
