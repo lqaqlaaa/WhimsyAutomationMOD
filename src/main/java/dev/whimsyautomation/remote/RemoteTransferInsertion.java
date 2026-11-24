@@ -30,6 +30,11 @@ final class RemoteTransferInsertion {
 
     private RemoteTransferInsertion() {}
 
+    /** True when the underlying handler persists full slot counts inside ItemStacks. */
+    static boolean requiresBoundedStoredStack(IItemHandler handler) {
+        return findSophisticatedHandler(handler) != null;
+    }
+
     static ItemStack insert(IItemHandler handler, int slot, ItemStack stack, boolean simulate) {
         Object sophisticatedHandler = findSophisticatedHandler(handler);
         if (sophisticatedHandler == null) {
