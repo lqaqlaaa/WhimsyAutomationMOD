@@ -107,9 +107,8 @@ public final class RemoteTransferTicker {
         if (sourceLevel == null || targetLevel == null
                 || !sourceLevel.hasChunkAt(source.pos()) || !targetLevel.hasChunkAt(target.pos())) return;
 
-        IItemHandler sourceHandler = findHandler(sourceLevel, source, true);
-        IItemHandler targetHandler = findHandler(targetLevel, target, false);
-        if (sourceHandler == null || targetHandler == null) return;
+        IItemHandler sourceHandler = findHandler(sourceLevel, source, true, ItemStack.EMPTY);
+        if (sourceHandler == null) return;
 
         int remainingBudget = MAX_ITEMS_PER_LINK_PER_TICK;
         int firstSourceSlot = source.slotIndex() >= 0 ? source.slotIndex() : 0;
@@ -121,6 +120,11 @@ public final class RemoteTransferTicker {
             int request = Math.min(remainingBudget, offered.getCount());
             ItemStack simulated = sourceHandler.extractItem(slot, request, true);
             if (simulated.isEmpty() || !targetFilter.allows(simulated)) continue;
+            // Pick the target face that can actually accept this item in the
+            // requested slot. This is required for sided inventories such as
+            // vanilla furnaces (top=input, sides=fuel, bottom=output).
+            IItemHandler targetHandler = findHandler(targetLevel, target, false, simulated);
+            if (targetHandler == null) continue;
 
             int accepted = 0;
             int firstTargetSlot = target.slotIndex() >= 0 ? target.slotIndex() : 0;
@@ -160,7 +164,7 @@ public final class RemoteTransferTicker {
 
     private static IItemHandler findHandler(ServerLevel level,
                                              RemoteTransferNetworkData.Endpoint endpoint,
-                                             boolean extracting) {
+                                             boolean extracting, ItemStack probe) {
         var blockEntity = level.getBlockEntity(endpoint.pos());
         boolean workstation = endpoint.kind() == RemoteTransferNetworkData.EndpointKind.WORKSTATION;
         if (endpoint.face() != null) {
@@ -169,22 +173,39 @@ public final class RemoteTransferTicker {
                 int mode = config.getSideMode(side);
                 if (extracting ? mode != 2 : mode != 1) return null;
             }
-            return level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), side);
+            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), side);
+            return supports(handler, endpoint, extracting, probe) ? handler : null;
         }
         for (Direction side : Direction.values()) {
             if (workstation && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity config) {
                 int mode = config.getSideMode(side);
                 if (extracting ? mode != 2 : mode != 1) continue;
             }
-            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK,
-                    endpoint.pos(), side);
-            if (handler != null) return handler;
+            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), side);
+            if (supports(handler, endpoint, extracting, probe)) return handler;
         }
-        if (workstation && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity config) {
-            // Remote links still respect the six-face input/output policy. A
-            // workstation with no configured eligible face is intentionally idle.
+        if (workstation && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity) {
             return null;
         }
-        return level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), null);
+        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), null);
+        return supports(handler, endpoint, extracting, probe) ? handler : null;
+    }
+
+    private static boolean supports(IItemHandler handler,
+                                    RemoteTransferNetworkData.Endpoint endpoint,
+                                    boolean extracting, ItemStack probe) {
+        if (handler == null) return false;
+        int first = endpoint.slotIndex() >= 0 ? endpoint.slotIndex() : 0;
+        int last = endpoint.slotIndex() >= 0 ? endpoint.slotIndex() + 1 : handler.getSlots();
+        if (last > handler.getSlots()) return false;
+        for (int slot = first; slot < last; slot++) {
+            if (extracting) {
+                if (!handler.extractItem(slot, 1, true).isEmpty()) return true;
+            } else if (probe.isEmpty()
+                    || handler.insertItem(slot, probe.copyWithCount(1), true).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
