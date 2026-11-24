@@ -101,6 +101,20 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 .bounds(startX + (buttonW + gap) * 3, buttonY, buttonW, 20).build();
         filter.active = selectedSlot >= 0 && available;
         addRenderableWidget(filter);
+        int autoY = height - 52;
+        int autoGap = 6;
+        int autoW = Math.min(150, (width - 32 - autoGap) / 2);
+        int autoStartX = (width - (autoW * 2 + autoGap)) / 2;
+        Button autoInput = Button.builder(Component.literal("自动识别输入"),
+                b -> beginAutoBinding("INPUT"))
+                .bounds(autoStartX, autoY, autoW, 20).build();
+        autoInput.active = available && memberId != null && supportsAutoRecognition();
+        addRenderableWidget(autoInput);
+        Button autoOutput = Button.builder(Component.literal("自动识别输出"),
+                b -> beginAutoBinding("OUTPUT"))
+                .bounds(autoStartX + autoW + autoGap, autoY, autoW, 20).build();
+        autoOutput.active = available && memberId != null && supportsAutoRecognition();
+        addRenderableWidget(autoOutput);
         if (pagedMachineLayout && pageCount > 1) {
             addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
                 page = Math.max(0, page - 1);
@@ -161,6 +175,19 @@ public final class RemoteTransferInventoryScreen extends Screen {
                     entry.getBoolean("MatchTags"));
         }
         return RemoteTransferNetworkData.Filter.none();
+    }
+
+    private boolean supportsAutoRecognition() {
+        return furnaceLayout || deconstructionLayout || extractorLayout || conversionLayout;
+    }
+
+    private void beginAutoBinding(String direction) {
+        if (!supportsAutoRecognition() || !available || networkId == null || memberId == null) return;
+        PacketDistributor.sendToServer(new RemoteTransferActionPayload(
+                24, networkId, memberId, null, 0, direction));
+        // The server determines the authoritative slot list; the next
+        // Shift+right-click applies one target to every recognized slot.
+        minecraft.setScreen(null);
     }
 
     private void beginBinding(String direction) {
@@ -312,7 +339,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
 
         if (selectedSlot >= 0) {
             g.drawCenteredString(font, "当前选择：" + slotRole(selectedSlot)
-                    + "（槽位 " + selectedSlot + "）", width / 2, height - 42, 0xFFFFFFFF);
+                    + "（槽位 " + selectedSlot + "）", width / 2, height - 76, 0xFFFFFFFF);
         }
     }
 
