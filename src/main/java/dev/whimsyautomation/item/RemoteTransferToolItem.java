@@ -14,6 +14,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -25,11 +26,21 @@ public final class RemoteTransferToolItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, net.minecraft.world.entity.player.Player player,
                                                    InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        // Sneaking with the configurator is reserved for block binding. Never open
-        // the network screen from the fallback item-use callback in this case.
         if (player.isShiftKeyDown()) {
-            // Do not let the fallback item-use path open the screen after a sneaking block click.
-            return InteractionResultHolder.fail(stack);
+            // Shift+right-click in the world removes the slot-binding line under
+            // the crosshair. useOn performs the same test when a block is behind it.
+            if (level.isClientSide) return InteractionResultHolder.sidedSuccess(stack, true);
+            if (player instanceof ServerPlayer serverPlayer) {
+                RemoteTransferNetworkData data = RemoteTransferNetworkData.get(serverPlayer.server);
+                java.util.UUID networkId = RemoteTransferSelection.activeNetwork(serverPlayer.getUUID());
+                var network = networkId == null ? null : data.getNetwork(networkId);
+                java.util.UUID bindingId = network == null ? null : findBindingUnderRay(serverPlayer, network, 64.0D);
+                if (bindingId != null && data.removeSlotBinding(networkId, bindingId)) {
+                    serverPlayer.displayClientMessage(Component.literal("已删除准星指向的槽位连接。"), true);
+                    PacketDistributor.sendToPlayer(serverPlayer, RemoteTransferSnapshotPayload.from(data, serverPlayer.getUUID()));
+                }
+            }
+            return InteractionResultHolder.sidedSuccess(stack, false);
         }
         if (level.isClientSide) {
             if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
@@ -76,25 +87,19 @@ public final class RemoteTransferToolItem extends Item {
         var pos = context.getClickedPos();
         RemoteTransferSelection.Pending pending = RemoteTransferSelection.get(player.getUUID());
         RemoteTransferNetworkData data = RemoteTransferNetworkData.get(player.server);
-        if (pending == null) {
-            // With no pending add/bind operation, Shift+right-click toggles
-            // membership in the currently active network.
-            var activeId = RemoteTransferSelection.activeNetwork(player.getUUID());
-            var activeNetwork = activeId == null ? null : data.getNetwork(activeId);
-            if (activeNetwork == null || !activeNetwork.owner().equals(player.getUUID())) {
-                player.displayClientMessage(Component.literal("请先在网络界面选择一个网络。"), true);
-                return InteractionResult.SUCCESS;
-            }
-            var member = activeNetwork.members().stream()
-                    .filter(m -> m.dimension().equals(level.dimension()) && m.pos().equals(pos))
-                    .findFirst().orElse(null);
-            if (member == null) {
-                player.displayClientMessage(Component.literal("该方块不在当前网络中。"), true);
-                return InteractionResult.SUCCESS;
-            }
-            data.removeMember(activeId, member.id());
-            player.displayClientMessage(Component.literal("已从当前网络移除该方块。"), true);
+        var activeId = RemoteTransferSelection.activeNetwork(player.getUUID());
+        var activeNetwork = activeId == null ? null : data.getNetwork(activeId);
+        java.util.UUID lineBinding = activeNetwork == null ? null
+                : findBindingUnderRay(player, activeNetwork,
+                    player.getEyePosition().distanceTo(context.getClickLocation()) + 0.08D);
+        if (lineBinding != null && data.removeSlotBinding(activeId, lineBinding)) {
+            player.displayClientMessage(Component.literal("已删除准星指向的槽位连接。"), true);
             PacketDistributor.sendToPlayer(player, RemoteTransferSnapshotPayload.from(data, player.getUUID()));
+            return InteractionResult.SUCCESS;
+        }
+        if (pending == null) {
+            // Do not remove network members by clicking their blocks anymore.
+            player.displayClientMessage(Component.literal("请在网络界面选择添加或绑定操作；删除连接请 Shift+右键连接线。"), true);
             return InteractionResult.SUCCESS;
         }
 
@@ -164,7 +169,63 @@ public final class RemoteTransferToolItem extends Item {
             RemoteTransferSelection.clear(player.getUUID());
         }
 
-        PacketDistributor.sendToPlayer(player, RemoteTransferSnapshotPayload.from(data, player.getUUID()));
+        PacketDistributor.sendToPlayer(player, reopenConfigurator
+                ? RemoteTransferSnapshotPayload.openConfigurator(data, player.getUUID())
+                : RemoteTransferSnapshotPayload.from(data, player.getUUID()));
         return InteractionResult.SUCCESS;
+    }
+
+    private static java.util.UUID findBindingUnderRay(ServerPlayer player,
+                                             RemoteTransferNetworkData.Network network,
+                                             double maxDistance) {
+        Vec3 origin = player.getEyePosition();
+        Vec3 direction = player.getLookAngle().normalize();
+        java.util.UUID bestId = null;
+        double bestAlongRay = maxDistance;
+        for (var binding : network.slotBindings()) {
+            if (!binding.enabled()) continue;
+            var workstation = network.members().stream()
+                    .filter(member -> member.id().equals(binding.workstationMember()))
+                    .findFirst().orElse(null);
+            var target = network.members().stream()
+                    .filter(member -> member.id().equals(binding.targetMember()))
+                    .findFirst().orElse(null);
+            if (workstation == null || target == null
+                    || !workstation.dimension().equals(player.level().dimension())
+                    || !target.dimension().equals(player.level().dimension())
+                    || !player.level().hasChunkAt(workstation.pos())
+                    || !player.level().hasChunkAt(target.pos())) continue;
+
+            Vec3 a = Vec3.atCenterOf(workstation.pos());
+            Vec3 b = Vec3.atCenterOf(target.pos());
+            Vec3 segment = b.subtract(a);
+            if (segment.lengthSqr() < 1.0E-6D) continue;
+            Vec3 unit = segment.normalize();
+            Vec3 reference = Math.abs(unit.y) < 0.9D ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+            Vec3 lateral = unit.cross(reference).normalize()
+                    .scale(((binding.workstationSlot() % 7) - 3) * 0.065D);
+            a = a.add(lateral);
+            b = b.add(lateral);
+            segment = b.subtract(a);
+
+            Vec3 w = origin.subtract(a);
+            double dot = direction.dot(segment);
+            double c = segment.lengthSqr();
+            double d = direction.dot(w);
+            double e = segment.dot(w);
+            double denominator = c - dot * dot;
+            if (Math.abs(denominator) < 1.0E-8D) continue;
+            double t = (e - dot * d) / denominator;
+            if (t < 0.08D || t > 0.92D) continue;
+            double along = Math.max(0.0D, dot * t - d);
+            if (along > maxDistance || along >= bestAlongRay) continue;
+            Vec3 rayPoint = origin.add(direction.scale(along));
+            Vec3 linePoint = a.add(segment.scale(t));
+            if (rayPoint.distanceToSqr(linePoint) <= 0.20D * 0.20D) {
+                bestAlongRay = along;
+                bestId = binding.id();
+            }
+        }
+        return bestId;
     }
 }
