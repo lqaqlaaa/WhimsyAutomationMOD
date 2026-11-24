@@ -71,7 +71,7 @@ public class LongCountItemStackHandler extends ItemStackHandler {
         ItemStack current = getStoredTemplate(slot);
         if (!current.isEmpty() && !ItemStack.isSameItemSameComponents(current, stack)) return stack;
         long stored = counts.get(slot);
-        long accepted = Math.min((long) stack.getCount(), Long.MAX_VALUE - stored);
+        long accepted = Math.min(Math.min((long) stack.getCount(), (long) apiLimit(slot, stack)), Long.MAX_VALUE - stored);
         if (accepted <= 0L) return stack;
         if (!simulate) {
             if (current.isEmpty()) templates.set(slot, stack.copyWithCount(1));
