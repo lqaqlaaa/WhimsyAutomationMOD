@@ -647,11 +647,8 @@ public final class RemoteTransferScreen extends Screen {
             return true;
         }
         if (activePage == 2) {
-            if (contentW > 220 && mouseX < contentX + contentW / 2) {
-                memberScroll = Math.max(0, Math.min(Math.max(0, members.size() - 4), memberScroll + delta));
-            } else {
-                connectionScroll = Math.max(0, Math.min(Math.max(0, links.size() - 5), connectionScroll + delta));
-            }
+            connectionScroll = Math.max(0, Math.min(
+                    Math.max(0, slotBindings.size() - 8), connectionScroll + delta));
             init();
             return true;
         }
