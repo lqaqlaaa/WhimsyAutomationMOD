@@ -70,6 +70,28 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     var workstation = network == null ? null : network.members().stream()
                             .filter(member -> member.id().equals(p.firstId())).findFirst().orElse(null);
                     if (workstation != null) {
+                        ServerLevel workstationLevel = player.server.getLevel(workstation.dimension());
+                        if (workstationLevel == null || !workstationLevel.hasChunkAt(workstation.pos())) {
+                            player.displayClientMessage(Component.literal("工作方块所在区块未加载，无法读取库存槽位。"), true);
+                            return;
+                        }
+                        net.neoforged.neoforge.items.IItemHandler handler =
+                                workstationLevel.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                        workstation.pos(), null);
+                        if (handler == null) {
+                            for (Direction side : Direction.values()) {
+                                handler = workstationLevel.getCapability(
+                                        net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                        workstation.pos(), side);
+                                if (handler != null) break;
+                            }
+                        }
+                        if (handler == null || p.value() >= handler.getSlots()) {
+                            player.displayClientMessage(Component.literal("该方块没有对应的物品库存槽位。"), true);
+                            return;
+                        }
+                        data.setMemberKind(p.networkId(), workstation.id(),
+                                RemoteTransferNetworkData.EndpointKind.WORKSTATION);
                         var direction = "INPUT".equals(p.text())
                                 ? RemoteTransferNetworkData.TransferDirection.INPUT
                                 : RemoteTransferNetworkData.TransferDirection.OUTPUT;
