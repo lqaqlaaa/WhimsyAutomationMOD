@@ -114,6 +114,19 @@ public final class RemoteTransferNetworkData extends SavedData {
         return true;
     }
 
+    public boolean updateSlotBinding(UUID networkId, SlotBinding replacement) {
+        Network network = networks.get(networkId);
+        if (network == null || replacement == null) return false;
+        for (int i = 0; i < network.slotBindings().size(); i++) {
+            if (network.slotBindings().get(i).id().equals(replacement.id())) {
+                network.slotBindings().set(i, replacement);
+                setDirty();
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean removeSlotBinding(UUID networkId, UUID bindingId) {
         Network network = networks.get(networkId);
         if (network == null) return false;
