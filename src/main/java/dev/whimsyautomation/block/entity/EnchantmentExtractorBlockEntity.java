@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Input slot 0; output slots 1-216. Each enchantment level can become a level-I book. */
-public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity {
+public final class EnchantmentExtractorBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity, dev.whimsyautomation.remote.RemoteTransferInventoryProvider {
         
     
     public static final int OUTPUT_START = 1;
@@ -331,6 +331,7 @@ public final class EnchantmentExtractorBlockEntity extends BlockEntity implement
         super(ModBlockEntities.ENCHANTMENT_EXTRACTOR.get(), pos, state);
     }
 
+    @Override public IItemHandler getRemoteTransferInventory() { return inventory; }
     public ItemStackHandler getInventory() { return inventory; }
     public ItemStackHandler getInputBuffer() { return inputBuffer; }
 
