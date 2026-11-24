@@ -24,6 +24,8 @@ import org.joml.Vector3f;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /** Renders selected network members and thick, direction-colored connection beams. */
@@ -35,6 +37,13 @@ public final class RemoteTransferOverlay {
 
     private static final int INPUT_COLOR = 0xFF35C8FF;
     private static final int OUTPUT_COLOR = 0xFFFFA33B;
+    // Stable palette: every workstation slot keeps one color across its bound container and beam.
+    private static final int[] SLOT_COLORS = {
+            0xFF35C8FF, 0xFFFFA33B, 0xFF72D572, 0xFFD17CFF,
+            0xFFFFD34E, 0xFFFF6F91, 0xFF63D6C5, 0xFF9BA8FF,
+            0xFFFF9B55, 0xFFB8D66B
+    };
+    private static final int MEMBER_COLOR = 0xFF7890AA;
     // Same order of magnitude as the 0.035-wide side-config face frames.
     private static final float BEAM_RADIUS = 0.035F;
 
@@ -106,19 +115,35 @@ public final class RemoteTransferOverlay {
         pose.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
 
+        ListTag slotBindings = network.getList("SlotBindings", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        Map<UUID, List<Integer>> boundTargetColors = new HashMap<>();
+        for (int i = 0; i < slotBindings.size(); i++) {
+            CompoundTag binding = slotBindings.getCompound(i);
+            if (!binding.hasUUID("Target") || !binding.hasUUID("Workstation")) continue;
+            UUID targetId = binding.getUUID("Target");
+            int slotIndex = Math.max(0, binding.getInt("WorkstationSlot"));
+            boundTargetColors.computeIfAbsent(targetId, ignored -> new ArrayList<>())
+                    .add(SLOT_COLORS[slotIndex % SLOT_COLORS.length]);
+        }
+
         VertexConsumer boxLines = buffers.getBuffer(RenderType.lines());
-        int[] memberColors = {0xFFFF5555, 0xFFFFAA33, 0xFFFFFF55, 0xFF55FF77,
-                0xFF55DDFF, 0xFF6688FF, 0xFFCC66FF, 0xFFFF66CC};
         for (int i = 0; i < members.size(); i++) {
             CompoundTag member = members.getCompound(i);
             if (!level.dimension().location().toString().equals(member.getString("Dimension"))) continue;
             BlockPos pos = BlockPos.of(member.getLong("Pos"));
             if (!level.hasChunkAt(pos)) continue;
-            int color = memberColors[i % memberColors.length];
-            float red = ((color >> 16) & 255) / 255.0F;
-            float green = ((color >> 8) & 255) / 255.0F;
-            float blue = (color & 255) / 255.0F;
-            LevelRenderer.renderLineBox(pose, boxLines, new AABB(pos).inflate(0.003D), red, green, blue, 1.0F);
+            List<Integer> colors = member.hasUUID("Id")
+                    ? boundTargetColors.get(member.getUUID("Id")) : null;
+            if (colors == null || colors.isEmpty()) {
+                renderMemberBox(pose, boxLines, pos, MEMBER_COLOR, 0.003D);
+            } else {
+                // If one physical container serves multiple workstation slots,
+                // show nested colored outlines instead of silently losing a binding color.
+                for (int colorIndex = 0; colorIndex < colors.size(); colorIndex++) {
+                    renderMemberBox(pose, boxLines, pos, colors.get(colorIndex),
+                            0.003D + colorIndex * 0.012D);
+                }
+            }
         }
         buffers.endBatch(RenderType.lines());
 
@@ -138,9 +163,35 @@ public final class RemoteTransferOverlay {
                         target.getX() + 0.5F, target.getY() + 0.5F, target.getZ() + 0.5F,
                         color);
             }
+
+            // Per-slot bindings are the active routing model. Draw a dedicated
+            // beam for each one, colored exactly like its target block outline.
+            for (int i = 0; i < slotBindings.size(); i++) {
+                CompoundTag binding = slotBindings.getCompound(i);
+                if (!binding.getBoolean("Enabled")
+                        || !binding.hasUUID("Workstation") || !binding.hasUUID("Target")) continue;
+                BlockPos workstation = positions.get(binding.getUUID("Workstation"));
+                BlockPos target = positions.get(binding.getUUID("Target"));
+                if (workstation == null || target == null) continue;
+                int slotIndex = Math.max(0, binding.getInt("WorkstationSlot"));
+                int color = SLOT_COLORS[slotIndex % SLOT_COLORS.length];
+                drawBeam(beams, matrix,
+                        workstation.getX() + 0.5F, workstation.getY() + 0.5F, workstation.getZ() + 0.5F,
+                        target.getX() + 0.5F, target.getY() + 0.5F, target.getZ() + 0.5F,
+                        color);
+            }
             buffers.endBatch(CONNECTION_BEAM);
         }
         pose.popPose();
+    }
+
+    private static void renderMemberBox(PoseStack pose, VertexConsumer lines, BlockPos pos,
+                                        int color, double inflate) {
+        float red = ((color >> 16) & 255) / 255.0F;
+        float green = ((color >> 8) & 255) / 255.0F;
+        float blue = (color & 255) / 255.0F;
+        LevelRenderer.renderLineBox(pose, lines, new AABB(pos).inflate(inflate),
+                red, green, blue, 1.0F);
     }
 
     /** A solid rectangular beam, not a debug line: its visible width is stable on all clients. */
