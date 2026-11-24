@@ -65,9 +65,14 @@ public final class RemoteTransferSelection {
 
     public enum Mode {
         ADD_MEMBER,
-        BIND_SLOT
+        BIND_SLOT,
+        BIND_SLOT_BATCH
     }
 
     public record Pending(UUID networkId, Mode mode, UUID workstationId, int workstationSlot,
-                          RemoteTransferNetworkData.TransferDirection direction) {}
+                          RemoteTransferNetworkData.TransferDirection direction, List<Integer> workstationSlots) {
+        public Pending {
+            workstationSlots = workstationSlots == null ? List.of() : List.copyOf(workstationSlots);
+        }
+    }
 }
