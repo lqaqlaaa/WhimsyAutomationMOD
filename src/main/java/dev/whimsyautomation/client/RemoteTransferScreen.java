@@ -237,7 +237,7 @@ public final class RemoteTransferScreen extends Screen {
                     init();
                 }))).bounds(secondPickerX, secondPickerY, half, 20).build());
         memberY += pickerRowH;
-        int memberRows = Math.max(1, Math.min(4, (height - memberY - 44) / 22));
+        int memberRows = columns == 2 ? Math.max(1, Math.min(4, (height - memberY - 44) / 22)) : 0;
         for (int i = memberScroll; i < Math.min(members.size(), memberScroll + memberRows); i++) {
             CompoundTag m = members.get(i);
             UUID id = m.getUUID("Id");
@@ -529,7 +529,11 @@ public final class RemoteTransferScreen extends Screen {
             return true;
         }
         if (activePage == 2) {
-            connectionScroll = Math.max(0, Math.min(Math.max(0, links.size() - 5), connectionScroll + delta));
+            if (contentW > 220 && mouseX < contentX + contentW / 2) {
+                memberScroll = Math.max(0, Math.min(Math.max(0, members.size() - 4), memberScroll + delta));
+            } else {
+                connectionScroll = Math.max(0, Math.min(Math.max(0, links.size() - 5), connectionScroll + delta));
+            }
             init();
             return true;
         }
