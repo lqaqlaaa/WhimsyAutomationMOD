@@ -139,7 +139,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private String slotRole(int index) {
-        if (!furnaceLayout || menuLayout) return "槽位 " + index;
+        if (!furnaceLayout) return "槽位 " + index;
         return switch (index) {
             case 0 -> "原料";
             case 1 -> "燃料";
@@ -166,7 +166,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
         g.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF192638);
         g.renderOutline(panelX, panelY, panelWidth, panelHeight, 0xFF58718F);
 
-        if (furnaceLayout && !menuLayout) {
+        if (furnaceLayout) {
             g.drawString(font, "原料", panelX + 24, panelY + 22, 0xFFBFCBDD, false);
             g.drawString(font, "燃料", panelX + 24, panelY + 58, 0xFFBFCBDD, false);
             g.drawString(font, "成品", panelX + 137, panelY + 40, 0xFFBFCBDD, false);
@@ -188,10 +188,8 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 g.renderItem(stack, x + 1, y + 1);
                 g.renderItemDecorations(font, stack, x + 1, y + 1);
             }
-            if (!furnaceLayout) {
-                g.drawCenteredString(font, Integer.toString(index), x + SLOT_SIZE / 2,
-                        y + SLOT_SIZE + 2, 0xFFBFCBDD);
-            }
+            g.drawCenteredString(font, Integer.toString(index), x + SLOT_SIZE / 2,
+                    y + SLOT_SIZE + 2, 0xFFBFCBDD);
         }
 
         super.render(g, mouseX, mouseY, partialTick);
