@@ -38,7 +38,7 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
     private final LongCountItemStackHandler inventory = new LongCountItemStackHandler(SLOT_COUNT) {
         @Override
         public int getSlotLimit(int slot) {
-            return slot == INPUT_SLOT ? 1 : MAX_COPY_COUNT;
+            return slot == INPUT_SLOT ? 1 : 99;
         }
 
         @Override
