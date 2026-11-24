@@ -119,8 +119,7 @@ public final class RemoteTransferTicker {
         for (int slot = firstSourceSlot; slot < lastSourceSlot && remainingBudget > 0; slot++) {
             ItemStack offered = sourceHandler.getStackInSlot(slot);
             if (offered.isEmpty() || !sourceFilter.allows(offered)) continue;
-            int request = Math.min(MAX_HANDLER_INSERT_BATCH,
-                    Math.min(remainingBudget, offered.getCount()));
+            int request = Math.min(remainingBudget, offered.getCount());
             ItemStack simulated = sourceHandler.extractItem(slot, request, true);
             if (simulated.isEmpty() || !targetFilter.allows(simulated)) continue;
             // Pick the target face that can actually accept this item in the
