@@ -82,6 +82,21 @@ public final class RemoteTransferNetworkData extends SavedData {
         return true;
     }
 
+    public boolean setMemberKind(UUID networkId, UUID memberId, EndpointKind kind) {
+        Network network = networks.get(networkId);
+        if (network == null || memberId == null || kind == null) return false;
+        for (int i = 0; i < network.members().size(); i++) {
+            Endpoint old = network.members().get(i);
+            if (!old.id().equals(memberId)) continue;
+            if (old.kind() == kind) return true;
+            network.members().set(i, new Endpoint(old.id(), old.dimension(), old.pos(), kind,
+                    old.blockId(), old.slotIndex(), old.face()));
+            setDirty();
+            return true;
+        }
+        return false;
+    }
+
     public boolean addSlotBinding(UUID networkId, SlotBinding binding) {
         Network network = networks.get(networkId);
         if (network == null) return false;
