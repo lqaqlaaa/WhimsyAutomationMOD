@@ -39,7 +39,7 @@ public final class RemoteTransferScreen extends Screen {
     private static final int BORDER = 0xFF58718F;
 
     private CompoundTag snapshot = new CompoundTag();
-    private UUID selectedNetwork, selectedMember, selectedSecond, selectedConnection;
+    private UUID selectedNetwork, selectedMember, selectedSecond, selectedConnection, selectedSlotBinding;
     private int activePage;
     private int networkScroll, memberScroll, connectionScroll;
     private EditBox createNameBox, renameBox, inputFilterBox, outputFilterBox;
@@ -83,6 +83,8 @@ public final class RemoteTransferScreen extends Screen {
         if (selectedMember != null && members.stream().noneMatch(m -> m.getUUID("Id").equals(selectedMember))) selectedMember = null;
         if (selectedSecond != null && members.stream().noneMatch(m -> m.getUUID("Id").equals(selectedSecond))) selectedSecond = null;
         if (selectedConnection != null && links.stream().noneMatch(c -> c.getUUID("Id").equals(selectedConnection))) selectedConnection = null;
+        if (selectedSlotBinding != null && slotBindings.stream()
+                .noneMatch(binding -> binding.getUUID("Id").equals(selectedSlotBinding))) selectedSlotBinding = null;
         RemoteTransferOverlay.selectNetwork(selectedNetwork);
     }
 
@@ -147,7 +149,7 @@ public final class RemoteTransferScreen extends Screen {
         }).bounds(8, height - 26, sideW, 20).build());
 
         // Main navigation tabs.
-        String[] tabs = {"网络概览", "成员方块", "连接管理", "过滤规则"};
+        String[] tabs = {"网络概览", "成员方块", "槽位绑定", "过滤规则"};
         int tabGap = 3;
         int tabW = Math.max(42, (contentW - tabGap * 3) / 4);
         for (int i = 0; i < tabs.length; i++) {
@@ -161,7 +163,7 @@ public final class RemoteTransferScreen extends Screen {
         if (selectedNetwork == null) return;
         if (activePage == 0) buildOverviewWidgets();
         else if (activePage == 1) buildMemberWidgets();
-        else if (activePage == 2) buildConnectionWidgets();
+        else if (activePage == 2) buildSlotBindingWidgets();
         else buildFilterWidgets();
     }
 
@@ -251,6 +253,44 @@ public final class RemoteTransferScreen extends Screen {
         if (member == null || !"CONTAINER".equals(member.getString("Kind"))) return null;
         for (CompoundTag link : links) {
             if (link.getUUID("Target").equals(memberId)) return link;
+        }
+        return null;
+    }
+
+    private void buildSlotBindingWidgets() {
+        int visible = Math.max(1, Math.min(8, (height - 132) / 24));
+        for (int row = 0; row < visible && row + connectionScroll < slotBindings.size(); row++) {
+            CompoundTag binding = slotBindings.get(row + connectionScroll);
+            UUID id = binding.getUUID("Id");
+            String direction = "INPUT".equals(binding.getString("Direction")) ? "输入" : "输出";
+            String state = binding.getBoolean("Enabled") ? "运行中" : "已暂停";
+            String label = memberName(binding.getUUID("Workstation")) + " 槽位 "
+                    + binding.getInt("WorkstationSlot") + " → "
+                    + memberName(binding.getUUID("Target")) + " · " + direction + " · " + state;
+            addRenderableWidget(Button.builder(Component.literal(
+                    (id.equals(selectedSlotBinding) ? "▸ " : "") + label), b -> {
+                selectedSlotBinding = id;
+                init();
+            }).bounds(contentX + 6, 76 + row * 24, Math.max(48, contentW - 12), 20).build());
+        }
+        if (selectedSlotBinding == null) return;
+        CompoundTag selected = findSelectedSlotBinding();
+        if (selected == null) return;
+        int actionY = Math.max(80, Math.min(height - 52, 80 + visible * 24));
+        int half = Math.max(40, (contentW - 18) / 2);
+        addRenderableWidget(Button.builder(Component.literal(
+                selected.getBoolean("Enabled") ? "暂停此槽位绑定" : "恢复此槽位绑定"), b ->
+                send(18, selectedNetwork, selectedSlotBinding, null, 0, ""))
+                .bounds(contentX + 6, actionY, half, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("删除此槽位绑定"), b ->
+                send(19, selectedNetwork, selectedSlotBinding, null, 0, ""))
+                .bounds(contentX + 12 + half, actionY, Math.max(40, contentW - half - 18), 20).build());
+    }
+
+    private CompoundTag findSelectedSlotBinding() {
+        if (selectedSlotBinding == null) return null;
+        for (CompoundTag binding : slotBindings) {
+            if (binding.getUUID("Id").equals(selectedSlotBinding)) return binding;
         }
         return null;
     }
@@ -445,12 +485,10 @@ public final class RemoteTransferScreen extends Screen {
         } else if (activePage == 1) {
             drawMemberForeground(g, mouseX, mouseY);
         } else if (activePage == 2) {
-            g.drawString(font, "选择工作方块的具体库存槽位，再为该槽位设置输入或输出目标。",
+            g.drawString(font, "每一条记录对应工作方块中的一个具体槽位。",
                     contentX + 6, 52, MUTED, false);
-            g.drawString(font, "选中容器后，可直接调整输入/输出、传输开关和连接线显示。",
-                    contentX + 6, height - 48, TEXT, false);
-            g.drawString(font, "已有连接",
-                    contentX + Math.max(44, (contentW - 14) / 2) + 12, 82, MUTED, false);
+            g.drawString(font, "可单独暂停或删除绑定；未加载的区块会自动跳过，不会强制加载。",
+                    contentX + 6, height - 24, MUTED, false);
         } else if (activePage == 3) {
             g.drawString(font, "先选择一条连接，再分别配置输入端与输出端。",
                     contentX + 6, 52, MUTED, false);
