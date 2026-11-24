@@ -86,7 +86,10 @@ public final class RemoteTransferTicker {
         if (sourceHandler == null || targetHandler == null) return;
 
         int remainingBudget = MAX_ITEMS_PER_LINK_PER_TICK;
-        for (int slot = 0; slot < sourceHandler.getSlots() && remainingBudget > 0; slot++) {
+        int firstSourceSlot = source.slotIndex() >= 0 ? source.slotIndex() : 0;
+        int lastSourceSlot = source.slotIndex() >= 0 ? source.slotIndex() + 1 : sourceHandler.getSlots();
+        if (lastSourceSlot > sourceHandler.getSlots()) return;
+        for (int slot = firstSourceSlot; slot < lastSourceSlot && remainingBudget > 0; slot++) {
             ItemStack offered = sourceHandler.getStackInSlot(slot);
             if (offered.isEmpty() || !sourceFilter.allows(offered)) continue;
             int request = Math.min(remainingBudget, offered.getCount());
@@ -94,7 +97,10 @@ public final class RemoteTransferTicker {
             if (simulated.isEmpty() || !targetFilter.allows(simulated)) continue;
 
             int accepted = 0;
-            for (int targetSlot = 0; targetSlot < targetHandler.getSlots(); targetSlot++) {
+            int firstTargetSlot = target.slotIndex() >= 0 ? target.slotIndex() : 0;
+            int lastTargetSlot = target.slotIndex() >= 0 ? target.slotIndex() + 1 : targetHandler.getSlots();
+            if (lastTargetSlot > targetHandler.getSlots()) continue;
+            for (int targetSlot = firstTargetSlot; targetSlot < lastTargetSlot; targetSlot++) {
                 ItemStack remainder = targetHandler.insertItem(targetSlot, simulated.copyWithCount(
                         Math.min(simulated.getCount() - accepted, remainingBudget)), true);
                 int inserted = Math.min(simulated.getCount() - accepted, remainingBudget) - remainder.getCount();
@@ -106,7 +112,7 @@ public final class RemoteTransferTicker {
             ItemStack extracted = sourceHandler.extractItem(slot, accepted, false);
             if (extracted.isEmpty()) continue;
             ItemStack notInserted = extracted;
-            for (int targetSlot = 0; targetSlot < targetHandler.getSlots() && !notInserted.isEmpty(); targetSlot++) {
+            for (int targetSlot = firstTargetSlot; targetSlot < lastTargetSlot && !notInserted.isEmpty(); targetSlot++) {
                 notInserted = targetHandler.insertItem(targetSlot, notInserted, false);
             }
             // If a handler changed between simulation and execution, put any
@@ -131,6 +137,14 @@ public final class RemoteTransferTicker {
                                              boolean extracting) {
         var blockEntity = level.getBlockEntity(endpoint.pos());
         boolean workstation = endpoint.kind() == RemoteTransferNetworkData.EndpointKind.WORKSTATION;
+        if (endpoint.face() != null) {
+            Direction side = endpoint.face();
+            if (workstation && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity config) {
+                int mode = config.getSideMode(side);
+                if (extracting ? mode != 2 : mode != 1) return null;
+            }
+            return level.getCapability(Capabilities.ItemHandler.BLOCK, endpoint.pos(), side);
+        }
         for (Direction side : Direction.values()) {
             if (workstation && blockEntity instanceof dev.whimsyautomation.block.entity.SideConfigurableBlockEntity config) {
                 int mode = config.getSideMode(side);
