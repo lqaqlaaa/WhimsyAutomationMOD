@@ -21,7 +21,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
-public final class EnchantmentConversionTableBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity {
+public final class EnchantmentConversionTableBlockEntity extends BlockEntity implements MenuProvider, SideConfigurableBlockEntity, dev.whimsyautomation.remote.RemoteTransferInventoryProvider {
     private boolean autoMode;
     private int copyCount = 64;
     private final int[] sideModes = new int[6];
@@ -124,6 +124,8 @@ public final class EnchantmentConversionTableBlockEntity extends BlockEntity imp
         }
         return sidedHandlers[index];
     }
+
+    @Override public net.neoforged.neoforge.items.IItemHandler getRemoteTransferInventory() { return inventory; }
 
     public ItemStackHandler getInventory() {
         return inventory;
