@@ -240,6 +240,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
             g.drawString(font, "复制结果", panelX + 126, panelY + 34, 0xFFBFCBDD, false);
         }
 
+        super.render(g, mouseX, mouseY, partialTick);
         for (int i = 0; i < slots.size(); i++) {
             CompoundTag slot = slots.getCompound(i);
             if (!isSlotVisible(slot.getInt("Index"))) continue;
@@ -263,7 +264,6 @@ public final class RemoteTransferInventoryScreen extends Screen {
                     y + SLOT_SIZE + 2, 0xFFBFCBDD);
         }
 
-        super.render(g, mouseX, mouseY, partialTick);
         if (selectedSlot >= 0) {
             g.drawCenteredString(font, "当前选择：" + slotRole(selectedSlot)
                     + "（槽位 " + selectedSlot + "）", width / 2, height - 42, 0xFFFFFFFF);
