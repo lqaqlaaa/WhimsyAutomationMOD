@@ -160,6 +160,7 @@ public final class RemoteTransferNetworkData extends SavedData {
                 link.putUUID("Target", connection.targetMember());
                 link.putString("Direction", connection.direction().name());
                 link.putBoolean("Enabled", connection.enabled());
+                link.putBoolean("LineVisible", connection.lineVisible());
                 link.putString("InputFilterMode", connection.inputFilter().mode().name());
                 link.putBoolean("InputExact", connection.inputFilter().exactComponents());
                 link.putString("OutputFilterMode", connection.outputFilter().mode().name());
@@ -206,7 +207,8 @@ public final class RemoteTransferNetworkData extends SavedData {
                     network.connections().add(new Connection(
                             link.getUUID("Id"), link.getUUID("Source"), link.getUUID("Target"),
                             TransferDirection.valueOf(link.getString("Direction")), link.getBoolean("Enabled"),
-                            readFilter(link, "Input"), readFilter(link, "Output")));
+                            readFilter(link, "Input"), readFilter(link, "Output"),
+                            !link.contains("LineVisible") || link.getBoolean("LineVisible")));
                 } catch (RuntimeException ignored) {
                     // A malformed connection must not invalidate other saved connections.
                 }
@@ -311,7 +313,11 @@ public final class RemoteTransferNetworkData extends SavedData {
     }
 
     public record Connection(UUID id, UUID sourceMember, UUID targetMember, TransferDirection direction,
-                             boolean enabled, Filter inputFilter, Filter outputFilter) {
+                             boolean enabled, Filter inputFilter, Filter outputFilter, boolean lineVisible) {
+        public Connection(UUID id, UUID sourceMember, UUID targetMember, TransferDirection direction,
+                          boolean enabled, Filter inputFilter, Filter outputFilter) {
+            this(id, sourceMember, targetMember, direction, enabled, inputFilter, outputFilter, true);
+        }
         public Connection {
             Objects.requireNonNull(id);
             Objects.requireNonNull(sourceMember);
@@ -322,7 +328,7 @@ public final class RemoteTransferNetworkData extends SavedData {
         }
 
         public static Connection create(UUID source, UUID target, TransferDirection direction) {
-            return new Connection(UUID.randomUUID(), source, target, direction, true, Filter.none(), Filter.none());
+            return new Connection(UUID.randomUUID(), source, target, direction, true, Filter.none(), Filter.none(), true);
         }
     }
 

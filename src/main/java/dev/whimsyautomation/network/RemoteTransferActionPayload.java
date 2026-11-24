@@ -101,7 +101,32 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     if (network != null) for (var old : network.connections()) if (old.id().equals(p.firstId())) {
                         data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
                                 old.sourceMember(), old.targetMember(), old.direction(), !old.enabled(),
-                                old.inputFilter(), old.outputFilter()));
+                                old.inputFilter(), old.outputFilter(), old.lineVisible()));
+                        break;
+                    }
+                }
+            }
+            case 13 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null) {
+                    var network = data.getNetwork(p.networkId());
+                    if (network != null) for (var old : network.connections()) if (old.id().equals(p.firstId())) {
+                        var next = old.direction() == RemoteTransferNetworkData.TransferDirection.INPUT
+                                ? RemoteTransferNetworkData.TransferDirection.OUTPUT
+                                : RemoteTransferNetworkData.TransferDirection.INPUT;
+                        data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
+                                old.sourceMember(), old.targetMember(), next, old.enabled(),
+                                old.inputFilter(), old.outputFilter(), old.lineVisible()));
+                        break;
+                    }
+                }
+            }
+            case 14 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null) {
+                    var network = data.getNetwork(p.networkId());
+                    if (network != null) for (var old : network.connections()) if (old.id().equals(p.firstId())) {
+                        data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
+                                old.sourceMember(), old.targetMember(), old.direction(), old.enabled(),
+                                old.inputFilter(), old.outputFilter(), !old.lineVisible()));
                         break;
                     }
                 }

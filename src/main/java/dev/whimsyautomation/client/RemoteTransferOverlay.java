@@ -128,7 +128,7 @@ public final class RemoteTransferOverlay {
             Matrix4f matrix = pose.last().pose();
             for (int i = 0; i < connections.size(); i++) {
                 CompoundTag connection = connections.getCompound(i);
-                if (!connection.getBoolean("Enabled")) continue;
+                if (!connection.getBoolean("ShowLine")) continue;
                 BlockPos source = positions.get(connection.getUUID("Source"));
                 BlockPos target = positions.get(connection.getUUID("Target"));
                 if (source == null || target == null) continue;

@@ -45,6 +45,7 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                 c.putUUID("Id", link.id()); c.putUUID("Source", link.sourceMember());
                 c.putUUID("Target", link.targetMember()); c.putString("Direction", link.direction().name());
                 c.putBoolean("Enabled", link.enabled());
+                c.putBoolean("ShowLine", link.lineVisible());
                 c.putString("InputMode", link.inputFilter().mode().name());
                 c.putBoolean("InputExact", link.inputFilter().exactComponents());
                 c.putBoolean("InputIgnoreDurability", link.inputFilter().ignoreDurability());

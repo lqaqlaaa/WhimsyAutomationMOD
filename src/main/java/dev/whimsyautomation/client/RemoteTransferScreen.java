@@ -239,9 +239,17 @@ public final class RemoteTransferScreen extends Screen {
                 selected.getBoolean("Enabled") ? "关闭此连接" : "开启此连接"), b ->
                 send(12, selectedNetwork, selectedConnection, null, 0, ""))
                 .bounds(contentX + 6, actionY, half, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("切换输入 / 输出"), b ->
+                send(13, selectedNetwork, selectedConnection, null, 0, ""))
+                .bounds(contentX + 12 + half, actionY, Math.max(40, contentW - half - 18), 20).build());
+        int secondY = Math.min(height - 28, actionY + 26);
+        addRenderableWidget(Button.builder(Component.literal(selected.getBoolean("ShowLine")
+                ? "关闭此容器的连接线" : "开启此容器的连接线"), b ->
+                send(14, selectedNetwork, selectedConnection, null, 0, ""))
+                .bounds(contentX + 6, secondY, half, 20).build());
         addRenderableWidget(Button.builder(Component.literal("移除此连接"), b ->
                 send(7, selectedNetwork, selectedConnection, null, 0, ""))
-                .bounds(contentX + 12 + half, actionY, Math.max(40, contentW - half - 18), 20).build());
+                .bounds(contentX + 12 + half, secondY, Math.max(40, contentW - half - 18), 20).build());
     }
 
     private void buildFilterWidgets() {
