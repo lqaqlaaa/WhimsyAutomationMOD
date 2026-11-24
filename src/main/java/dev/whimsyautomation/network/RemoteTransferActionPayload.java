@@ -45,6 +45,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
     private static void handle(RemoteTransferActionPayload p, ServerPlayer player) {
         RemoteTransferNetworkData data = RemoteTransferNetworkData.get(player.server);
         UUID inventoryRequestMember = null;
+        boolean suppressSnapshot = false;
         switch (p.action()) {
             case 0 -> { /* request current snapshot */ }
             case 1 -> data.createNetwork(player.getUUID(), p.text().isBlank()
@@ -99,6 +100,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                         RemoteTransferSelection.beginSlotBinding(player.getUUID(), p.networkId(),
                                 workstation.id(), p.value(), direction);
                         player.displayClientMessage(Component.literal("槽位绑定模式已启动：Shift+右键选择目标容器。"), true);
+                        suppressSnapshot = true;
                     }
                 }
             }
@@ -241,9 +243,11 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
             }
             default -> { return; }
         }
-        PacketDistributor.sendToPlayer(player, inventoryRequestMember == null
-                ? RemoteTransferSnapshotPayload.from(data, player.getUUID())
-                : RemoteTransferSnapshotPayload.withInventory(data, player, p.networkId(), inventoryRequestMember));
+        if (!suppressSnapshot) {
+            PacketDistributor.sendToPlayer(player, inventoryRequestMember == null
+                    ? RemoteTransferSnapshotPayload.from(data, player.getUUID())
+                    : RemoteTransferSnapshotPayload.withInventory(data, player, p.networkId(), inventoryRequestMember));
+        }
     }
 
 
