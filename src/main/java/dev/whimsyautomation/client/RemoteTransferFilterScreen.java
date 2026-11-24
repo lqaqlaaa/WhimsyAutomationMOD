@@ -113,7 +113,8 @@ public final class RemoteTransferFilterScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.fill(0, 0, width, height, 0xFF101722);
+        // Draw background and widgets first; the background pass otherwise covers custom slot cells.
+        super.render(g, mouseX, mouseY, partialTick);
         g.drawCenteredString(font, "槽位过滤规则 · 槽位 " + workstationSlot, width / 2, 12, 0xFFFFFFFF);
         g.drawCenteredString(font, entries.stream().anyMatch(e -> !e.isBlank())
                 ? "点击有物品的过滤格可清空；选择空格后点击背包物品可复制模板"
@@ -144,7 +145,6 @@ public final class RemoteTransferFilterScreen extends Screen {
         for (int col = 0; col < 9; col++)
             drawPlayerSlot(g, col, inventoryX + col * SLOT, inventoryY + 3 * SLOT + 6, mouseX, mouseY);
 
-        super.render(g, mouseX, mouseY, partialTick);
     }
 
     private void drawPlayerSlot(GuiGraphics g, int index, int x, int y, int mouseX, int mouseY) {
