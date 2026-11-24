@@ -162,7 +162,8 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                                 true, entries, true, current.ignoreDurability(), current.ignoreNbt(), current.matchTags());
                         data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
                                 old.sourceMember(), old.targetMember(), old.direction(), old.enabled(),
-                                inputSide ? updated : old.inputFilter(), inputSide ? old.outputFilter() : updated));
+                                inputSide ? updated : old.inputFilter(), inputSide ? old.outputFilter() : updated,
+                                old.lineVisible()));
                         break;
                     }
                 }
@@ -188,7 +189,8 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                                 exact, entries, mode != 0, ignoreDurability, ignoreNbt, matchTags);
                         data.updateConnection(p.networkId(), new RemoteTransferNetworkData.Connection(old.id(),
                                 old.sourceMember(), old.targetMember(), old.direction(), old.enabled(),
-                                side == 0 ? filter : old.inputFilter(), side == 1 ? filter : old.outputFilter()));
+                                side == 0 ? filter : old.inputFilter(), side == 1 ? filter : old.outputFilter(),
+                                old.lineVisible()));
                         break;
                     }
                 }
