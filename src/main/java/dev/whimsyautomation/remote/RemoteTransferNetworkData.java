@@ -82,6 +82,31 @@ public final class RemoteTransferNetworkData extends SavedData {
         return true;
     }
 
+    public boolean addSlotBinding(UUID networkId, SlotBinding binding) {
+        Network network = networks.get(networkId);
+        if (network == null) return false;
+        boolean workstationExists = network.members().stream().anyMatch(m -> m.id().equals(binding.workstationMember()));
+        boolean targetExists = network.members().stream().anyMatch(m -> m.id().equals(binding.targetMember()));
+        if (!workstationExists || !targetExists || binding.workstationMember().equals(binding.targetMember())
+                || network.slotBindings().stream().anyMatch(existing ->
+                    existing.workstationMember().equals(binding.workstationMember())
+                    && existing.workstationSlot() == binding.workstationSlot()
+                    && existing.direction() == binding.direction()
+                    && existing.targetMember().equals(binding.targetMember())
+                    && existing.targetFace() == binding.targetFace())) return false;
+        network.slotBindings().add(binding);
+        setDirty();
+        return true;
+    }
+
+    public boolean removeSlotBinding(UUID networkId, UUID bindingId) {
+        Network network = networks.get(networkId);
+        if (network == null) return false;
+        boolean removed = network.slotBindings().removeIf(binding -> binding.id().equals(bindingId));
+        if (removed) setDirty();
+        return removed;
+    }
+
     public boolean removeMember(UUID networkId, UUID memberId) {
         Network network = networks.get(networkId);
         if (network == null) return false;
@@ -89,6 +114,8 @@ public final class RemoteTransferNetworkData extends SavedData {
         if (removed) {
             network.connections().removeIf(connection ->
                     connection.sourceMember().equals(memberId) || connection.targetMember().equals(memberId));
+            network.slotBindings().removeIf(binding ->
+                    binding.workstationMember().equals(memberId) || binding.targetMember().equals(memberId));
             setDirty();
         }
         return removed;
@@ -108,6 +135,8 @@ public final class RemoteTransferNetworkData extends SavedData {
                 changed |= network.members().removeIf(member -> member.id().equals(memberId));
                 changed |= network.connections().removeIf(connection ->
                         connection.sourceMember().equals(memberId) || connection.targetMember().equals(memberId));
+                changed |= network.slotBindings().removeIf(binding ->
+                        binding.workstationMember().equals(memberId) || binding.targetMember().equals(memberId));
             }
         }
         if (changed) setDirty();
@@ -191,6 +220,21 @@ public final class RemoteTransferNetworkData extends SavedData {
                 connections.add(link);
             }
             entry.put("Connections", connections);
+
+            ListTag slotBindings = new ListTag();
+            for (SlotBinding binding : network.slotBindings()) {
+                CompoundTag slot = new CompoundTag();
+                slot.putUUID("Id", binding.id());
+                slot.putUUID("Workstation", binding.workstationMember());
+                slot.putInt("WorkstationSlot", binding.workstationSlot());
+                slot.putString("Direction", binding.direction().name());
+                slot.putUUID("Target", binding.targetMember());
+                slot.putInt("TargetFace", binding.targetFace() == null ? -1 : binding.targetFace().ordinal());
+                slot.putInt("TargetSlot", binding.targetSlot());
+                slot.putBoolean("Enabled", binding.enabled());
+                slotBindings.add(slot);
+            }
+            entry.put("SlotBindings", slotBindings);
             networkList.add(entry);
         }
         tag.put("Networks", networkList);
@@ -234,6 +278,25 @@ public final class RemoteTransferNetworkData extends SavedData {
                     // A malformed connection must not invalidate other saved connections.
                 }
             }
+            ListTag slotBindings = entry.getList("SlotBindings", Tag.TAG_COMPOUND);
+            for (int j = 0; j < slotBindings.size(); j++) {
+                CompoundTag slot = slotBindings.getCompound(j);
+                try {
+                    int face = slot.contains("TargetFace") ? slot.getInt("TargetFace") : -1;
+                    net.minecraft.core.Direction targetFace = face >= 0
+                            && face < net.minecraft.core.Direction.values().length
+                            ? net.minecraft.core.Direction.values()[face] : null;
+                    network.slotBindings().add(new SlotBinding(
+                            slot.getUUID("Id"), slot.getUUID("Workstation"),
+                            slot.getInt("WorkstationSlot"),
+                            TransferDirection.valueOf(slot.getString("Direction")),
+                            slot.getUUID("Target"), targetFace,
+                            slot.contains("TargetSlot") ? slot.getInt("TargetSlot") : -1,
+                            !slot.contains("Enabled") || slot.getBoolean("Enabled")));
+                } catch (RuntimeException ignored) {
+                    // Ignore malformed slot bindings without losing the rest of the network.
+                }
+            }
             if (!network.name().isEmpty()) data.networks.put(network.id(), network);
         }
         return data;
@@ -267,6 +330,33 @@ public final class RemoteTransferNetworkData extends SavedData {
 
     public enum EndpointKind { WORKSTATION, CONTAINER }
     public enum TransferDirection { INPUT, OUTPUT, BIDIRECTIONAL }
+
+    /** One independently routed inventory slot on a workstation. */
+    public record SlotBinding(UUID id, UUID workstationMember, int workstationSlot,
+                              TransferDirection direction, UUID targetMember,
+                              net.minecraft.core.Direction targetFace, int targetSlot,
+                              boolean enabled) {
+        public SlotBinding {
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(workstationMember);
+            Objects.requireNonNull(direction);
+            Objects.requireNonNull(targetMember);
+            if (workstationSlot < 0) throw new IllegalArgumentException("Workstation slot must be non-negative");
+            if (targetSlot < -1) throw new IllegalArgumentException("Target slot must be -1 or non-negative");
+        }
+
+        public static SlotBinding create(UUID workstation, int workstationSlot,
+                                          TransferDirection direction, UUID target,
+                                          net.minecraft.core.Direction targetFace) {
+            return new SlotBinding(UUID.randomUUID(), workstation, workstationSlot,
+                    direction, target, targetFace, -1, true);
+        }
+
+        public SlotBinding withEnabled(boolean value) {
+            return new SlotBinding(id, workstationMember, workstationSlot, direction,
+                    targetMember, targetFace, targetSlot, value);
+        }
+    }
     public enum FilterMode { NONE, WHITELIST, BLACKLIST }
 
     public record Endpoint(UUID id, ResourceKey<Level> dimension, BlockPos pos, EndpointKind kind, String blockId, int slotIndex, net.minecraft.core.Direction face) {
@@ -368,6 +458,7 @@ public final class RemoteTransferNetworkData extends SavedData {
         private String name;
         private final List<Endpoint> members = new ArrayList<>();
         private final List<Connection> connections = new ArrayList<>();
+        private final List<SlotBinding> slotBindings = new ArrayList<>();
 
         private Network(UUID id, UUID owner, String name) {
             this.id = id;
@@ -380,6 +471,7 @@ public final class RemoteTransferNetworkData extends SavedData {
         public String name() { return name; }
         public List<Endpoint> members() { return members; }
         public List<Connection> connections() { return connections; }
+        public List<SlotBinding> slotBindings() { return slotBindings; }
         private void setName(String name) { this.name = name; }
     }
 }
