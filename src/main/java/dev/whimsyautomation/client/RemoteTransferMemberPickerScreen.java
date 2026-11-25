@@ -54,11 +54,11 @@ public final class RemoteTransferMemberPickerScreen extends Screen {
         int by = Math.min(height - 22, gridY + gh + 6);
         int bw = Math.max(40, Math.min(90, (width - 26) / 3)), gap = 4;
         int totalW = bw * 3 + gap * 2, bx = cx - totalW / 2;
-        addRenderableWidget(Button.builder(Component.literal("上一页"), b -> scrollRow = Math.max(0, scrollRow - ROWS))
+        addRenderableWidget(TechButton.builder(Component.literal("上一页"), b -> scrollRow = Math.max(0, scrollRow - ROWS))
                 .bounds(bx, by, bw, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("下一页"), b -> scrollRow = Math.min(maxRow(), scrollRow + ROWS))
+        addRenderableWidget(TechButton.builder(Component.literal("下一页"), b -> scrollRow = Math.min(maxRow(), scrollRow + ROWS))
                 .bounds(bx + bw + gap, by, bw, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("取消"), b -> minecraft.setScreen(parent))
+        addRenderableWidget(TechButton.builder(Component.literal("取消"), b -> minecraft.setScreen(parent))
                 .bounds(bx + (bw + gap) * 2, by, bw, 18).build());
     }
 
