@@ -53,6 +53,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
     private int panelX;
     private int panelY;
     private int panelHeight;
+    private Button multiSelectButton;
     private Button bindInputButton;
     private Button bindOutputButton;
     private Button filterButton;
@@ -99,14 +100,15 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 .bounds(startX, firstRowY, buttonWidth, 20).build());
         addRenderableWidget(TechButton.builder(Component.literal("全选输出"), b -> selectAllByRole("OutputRole"))
                 .bounds(startX + buttonWidth + gap, firstRowY, buttonWidth, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal(
+        multiSelectButton = TechButton.builder(Component.literal(
                         multiSelectMode ? "多选：开启" : "多选：关闭"), b -> {
                     multiSelectMode = !multiSelectMode;
                     selectedSlots.clear();
                     selectedSlot = -1;
                     updateSelectionButtons();
                     init();
-                }).bounds(startX + (buttonWidth + gap) * 2, firstRowY, buttonWidth, 20).build());
+                }).bounds(startX + (buttonWidth + gap) * 2, firstRowY, buttonWidth, 20).build();
+        addRenderableWidget(multiSelectButton);
         addRenderableWidget(TechButton.builder(Component.literal("清空"), b -> {
                     selectedSlots.clear();
                     selectedSlot = -1;
@@ -164,6 +166,8 @@ public final class RemoteTransferInventoryScreen extends Screen {
         if (bindInputButton != null) bindInputButton.active = available && hasSelection;
         if (bindOutputButton != null) bindOutputButton.active = available && hasSelection;
         if (filterButton != null) filterButton.active = available && selectedSlot >= 0;
+        if (multiSelectButton != null) multiSelectButton.setMessage(
+                Component.literal(multiSelectMode ? "多选：开启" : "多选：关闭"));
     }
 
     private void selectAllByRole(String roleKey) {
@@ -323,7 +327,8 @@ public final class RemoteTransferInventoryScreen extends Screen {
         String selectionText = multiSelectMode
                 ? "多选模式 · 已选择 " + selectedSlots.size() + " 格（Shift+拖动可连续选择）"
                 : selectedSlot >= 0 ? "当前选择：" + slotRole(selectedSlot) : "点击格子选择；Shift+拖动可快速多选";
-        g.drawCenteredString(font, selectionText, width / 2, height - 62, 0xFFFFFFFF);
+        int selectionY = Math.min(height - 62, panelY + panelHeight + 2);
+        g.drawCenteredString(font, selectionText, width / 2, selectionY, 0xFFFFFFFF);
     }
 
     @Override
