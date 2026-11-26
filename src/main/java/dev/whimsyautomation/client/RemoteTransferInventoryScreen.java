@@ -119,31 +119,6 @@ public final class RemoteTransferInventoryScreen extends Screen {
         filterButton = TechButton.create(Component.literal("过滤"), b -> openFilter())
             .bounds(startX + (buttonWidth + gap) * 3, secondRowY, buttonWidth, 20).build(); addRenderableWidget(filterButton);
         updateSelectionButtons();
-                    init();
-                }).bounds(startX + (buttonWidth + gap) * 2, firstRowY, buttonWidth, 20).build();
-        addRenderableWidget(multiSelectButton);
-        addRenderableWidget(TechButton.create(Component.literal("清空"), b -> {
-                    selectedSlots.clear();
-                    selectedSlot = -1;
-                    updateSelectionButtons();
-                }).bounds(startX + (buttonWidth + gap) * 3, firstRowY, buttonWidth, 20).build());
-
-        addRenderableWidget(TechButton.create(Component.literal("返回"), b -> minecraft.setScreen(parent))
-                .bounds(startX, secondRowY, buttonWidth, 20).build());
-
-        bindInputButton = TechButton.create(Component.literal("绑定输入"), b -> beginBinding("INPUT"))
-                .bounds(startX + buttonWidth + gap, secondRowY, buttonWidth, 20).build();
-        addRenderableWidget(bindInputButton);
-
-        bindOutputButton = TechButton.create(Component.literal("绑定输出"), b -> beginBinding("OUTPUT"))
-                .bounds(startX + (buttonWidth + gap) * 2, secondRowY, buttonWidth, 20).build();
-        addRenderableWidget(bindOutputButton);
-
-        filterButton = TechButton.create(Component.literal("过滤"), b -> openFilter())
-                .bounds(startX + (buttonWidth + gap) * 3, secondRowY, buttonWidth, 20).build();
-        addRenderableWidget(filterButton);
-        updateSelectionButtons();
-
         if (pageCount > 1) {
             addRenderableWidget(TechButton.create(Component.literal("‹"), b -> {
                         page = Math.max(0, page - 1);
@@ -181,6 +156,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
         if (filterButton != null) filterButton.active = available && selectedSlot >= 0;
         if (multiSelectButton != null) multiSelectButton.setMessage(
                 Component.literal(multiSelectMode ? "多选：开" : "多选：关"));
+        if (selectAllButton != null) selectAllButton.visible = multiSelectMode;
     }
 
     private void selectAllSlots() {
