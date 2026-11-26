@@ -198,7 +198,9 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private boolean supportsAutoRecognition() {
-        return furnaceLayout || deconstructionLayout || extractorLayout || conversionLayout;
+        // The server first applies known machine layouts, then probes generic
+        // ItemHandler insertion/extraction behavior for modded inventories.
+        return true;
     }
 
     private void beginAutoBinding(String direction) {
@@ -312,7 +314,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
         g.fill(0, 0, width, height, 0xFF101722);
         g.drawCenteredString(font, "工作方块库存槽位", width / 2, 16, 0xFFFFFFFF);
         g.drawCenteredString(font, available
-                ? (menuLayout
+                ? ("存储：完整库存可用 · " + (menuLayout
                     ? "槽位位置取自该方块原生菜单；编号对应真实库存槽位。"
                     : furnaceLayout
                         ? "原料、燃料、成品按熔炉原生槽位位置显示。"
@@ -322,7 +324,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
                                 ? "附魔提取台：处理槽与当前输出页按原生菜单位置显示。"
                                 : conversionLayout
                                     ? "复制台：输入与结果槽按原生菜单位置显示。"
-                                    : "通用库存视图：编号对应服务端 ItemHandler 的真实槽位索引。")
+                                    : "通用库存视图：编号对应服务端 ItemHandler 的真实槽位索引。"))
                 : "该方块当前没有可读取的 ItemHandler 库存接口。",
                 width / 2, 30, available ? 0xFFD0D9E5 : 0xFFFF9A8B);
 
