@@ -54,6 +54,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
     private int panelY;
     private int panelHeight;
     private Button multiSelectButton;
+    private Button selectAllButton;
     private Button bindInputButton;
     private Button bindOutputButton;
     private Button filterButton;
@@ -89,23 +90,35 @@ public final class RemoteTransferInventoryScreen extends Screen {
         panelY = 44;
         panelHeight = HEADER_HEIGHT + visibleRows * SLOT_SIZE + 8;
 
-        int gap = 3;
-        int buttonWidth = Math.max(48, Math.min(88, (width - 24 - gap * 3) / 4));
+        int gap = 4;
+        int firstRowWidth = Math.min(width - 24, 300);
+        int firstButtonWidth = (firstRowWidth - gap * 2) / 3;
+        int firstStartX = (width - firstRowWidth) / 2;
+        int buttonWidth = Math.max(42, Math.min(76, (width - 24 - gap * 3) / 4));
         int totalWidth = buttonWidth * 4 + gap * 3;
         int startX = (width - totalWidth) / 2;
         int firstRowY = height - 48;
         int secondRowY = height - 24;
-
-        addRenderableWidget(TechButton.create(Component.literal("全选输入"), b -> selectAllByRole("InputRole"))
-                .bounds(startX, firstRowY, buttonWidth, 20).build());
-        addRenderableWidget(TechButton.create(Component.literal("全选输出"), b -> selectAllByRole("OutputRole"))
-                .bounds(startX + buttonWidth + gap, firstRowY, buttonWidth, 20).build());
-        multiSelectButton = TechButton.create(Component.literal(
-                        multiSelectMode ? "多选：开启" : "多选：关闭"), b -> {
-                    multiSelectMode = !multiSelectMode;
-                    selectedSlots.clear();
-                    selectedSlot = -1;
-                    updateSelectionButtons();
+        multiSelectButton = TechButton.create(Component.literal(multiSelectMode ? "多选：开" : "多选：关"), b -> {
+            multiSelectMode = !multiSelectMode; selectedSlots.clear(); selectedSlot = -1; dragSelecting = false;
+            updateSelectionButtons(); init();
+        }).bounds(firstStartX, firstRowY, firstButtonWidth, 20).build();
+        addRenderableWidget(multiSelectButton);
+        selectAllButton = TechButton.create(Component.literal("全选格子"), b -> selectAllSlots())
+            .bounds(firstStartX + firstButtonWidth + gap, firstRowY, firstButtonWidth, 20).build();
+        selectAllButton.visible = multiSelectMode; addRenderableWidget(selectAllButton);
+        addRenderableWidget(TechButton.create(Component.literal("清空"), b -> {
+            selectedSlots.clear(); selectedSlot = -1; updateSelectionButtons();
+        }).bounds(firstStartX + (firstButtonWidth + gap) * 2, firstRowY, firstButtonWidth, 20).build());
+        addRenderableWidget(TechButton.create(Component.literal("返回"), b -> minecraft.setScreen(parent))
+            .bounds(startX, secondRowY, buttonWidth, 20).build());
+        bindInputButton = TechButton.create(Component.literal("绑定输入"), b -> beginBinding("INPUT"))
+            .bounds(startX + buttonWidth + gap, secondRowY, buttonWidth, 20).build(); addRenderableWidget(bindInputButton);
+        bindOutputButton = TechButton.create(Component.literal("绑定输出"), b -> beginBinding("OUTPUT"))
+            .bounds(startX + (buttonWidth + gap) * 2, secondRowY, buttonWidth, 20).build(); addRenderableWidget(bindOutputButton);
+        filterButton = TechButton.create(Component.literal("过滤"), b -> openFilter())
+            .bounds(startX + (buttonWidth + gap) * 3, secondRowY, buttonWidth, 20).build(); addRenderableWidget(filterButton);
+        updateSelectionButtons();
                     init();
                 }).bounds(startX + (buttonWidth + gap) * 2, firstRowY, buttonWidth, 20).build();
         addRenderableWidget(multiSelectButton);
@@ -167,20 +180,15 @@ public final class RemoteTransferInventoryScreen extends Screen {
         if (bindOutputButton != null) bindOutputButton.active = available && hasSelection;
         if (filterButton != null) filterButton.active = available && selectedSlot >= 0;
         if (multiSelectButton != null) multiSelectButton.setMessage(
-                Component.literal(multiSelectMode ? "多选：开启" : "多选：关闭"));
+                Component.literal(multiSelectMode ? "多选：开" : "多选：关"));
     }
 
-    private void selectAllByRole(String roleKey) {
+    private void selectAllSlots() {
+        if (!multiSelectMode) return;
         selectedSlots.clear();
-        selectedSlot = -1;
-        for (int i = 0; i < slots.size(); i++) {
-            if (slots.getCompound(i).getBoolean(roleKey)) selectedSlots.add(slots.getCompound(i).getInt("Index"));
-        }
-        multiSelectMode = true;
-        updateSelectionButtons();
-        init();
+        for (int i = 0; i < slots.size(); i++) selectedSlots.add(slots.getCompound(i).getInt("Index"));
+        selectedSlot = -1; updateSelectionButtons();
     }
-
     private void toggleSlotSelection(int index) {
         if (!multiSelectMode) {
             selectedSlot = index;
@@ -297,12 +305,8 @@ public final class RemoteTransferInventoryScreen extends Screen {
 
         g.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + panelHeight, 0xFF192638);
         g.renderOutline(panelX, panelY, PANEL_WIDTH, panelHeight, 0xFF58718F);
-        if (pageCount() > 1) {
-            g.drawString(font, "第 " + (page + 1) + " / " + pageCount() + " 页",
-                    panelX + 8, panelY + 4, 0xFFBFCBDD, false);
-        } else {
-            g.drawString(font, "库存槽位", panelX + 8, panelY + 4, 0xFFBFCBDD, false);
-        }
+        g.drawString(font, "第 " + (page + 1) + " / " + pageCount() + " 页",
+                panelX + 8, panelY + 4, 0xFFBFCBDD, false);
 
         super.render(g, mouseX, mouseY, partialTick);
         for (int i = page * pageCapacity; i < Math.min(slots.size(), (page + 1) * pageCapacity); i++) {
@@ -322,6 +326,12 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 g.renderItem(stack, x + 1, y + 1);
                 g.renderItemDecorations(font, stack, x + 1, y + 1);
             }
+            String slotNumber = Integer.toString(index + 1);
+            int numberWidth = font.width(slotNumber);
+            int numberX = x + SLOT_SIZE - numberWidth - 1;
+            int numberY = y + SLOT_SIZE - 6;
+            g.fill(numberX - 1, numberY - 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1, 0xB9000000);
+            g.drawString(font, slotNumber, numberX, numberY, 0xFFEAF0F7, false);
         }
 
         String selectionText = multiSelectMode
