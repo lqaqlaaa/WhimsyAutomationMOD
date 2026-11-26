@@ -1,0 +1,389 @@
+package dev.whimsyautomation.menu;
+
+import dev.whimsyautomation.block.entity.EnchantmentExtractorBlockEntity;
+import dev.whimsyautomation.registry.ModBlocks;
+import dev.whimsyautomation.registry.ModMenus;
+import dev.whimsyautomation.util.PlayerStackRules;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.items.SlotItemHandler;
+import java.util.Arrays;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
+
+public final class EnchantmentExtractorMenu extends AbstractContainerMenu {
+    private static final int PAGE_SIZE = 27;
+    private static final int MIN_OUTPUT_PAGES = 10;
+    private static final int OUTPUT_START = 1;
+    private static final int OUTPUT_MENU_START = 1;
+    private static final int BUFFER_PAGE_SIZE = 18;
+    private static final int BUFFER_MENU_START = OUTPUT_MENU_START + PAGE_SIZE;
+    private static final int MACHINE_SLOT_COUNT = BUFFER_MENU_START + BUFFER_PAGE_SIZE;
+    private final EnchantmentExtractorBlockEntity machine;
+    private final Level level;
+    private final ItemStack[] clientPageStacks = new ItemStack[PAGE_SIZE];
+    private final ItemStack[] clientBufferStacks = new ItemStack[BUFFER_PAGE_SIZE];
+    private final ContainerLevelAccess access;
+    private final IItemHandler pageHandler;
+    private final IItemHandler bufferPageHandler;
+    private int syncedPage;
+    private int syncedBufferPage;
+    private int syncedBufferSlotCount = BUFFER_PAGE_SIZE;
+    private int syncedOutputSlotCount = OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES;
+    private boolean syncedAutoMode;
+    private boolean syncedPersistentOutputMode;
+    private boolean quickMoveSingle;
+    private int syncedOutputMode = 1;
+    private final int[] syncedSideModes = new int[] {0, 0, 0, 0, 0, 0};
+
+    public EnchantmentExtractorMenu(int id, Inventory playerInventory, FriendlyByteBuf data) {
+        this(id, playerInventory, data.readBlockPos());
+    }
+
+    public EnchantmentExtractorMenu(int id, Inventory playerInventory, BlockPos pos) {
+        super(ModMenus.ENCHANTMENT_EXTRACTOR.get(), id);
+        this.level = playerInventory.player.level();
+        this.machine = level.getBlockEntity(pos) instanceof EnchantmentExtractorBlockEntity be ? be : null;
+        Arrays.fill(clientPageStacks, ItemStack.EMPTY);
+        Arrays.fill(clientBufferStacks, ItemStack.EMPTY);
+        this.access = ContainerLevelAccess.create(playerInventory.player.level(), pos);
+        this.pageHandler = new IItemHandlerModifiable() {
+            private int actualSlot(int pageSlot) {
+                return OUTPUT_START + getPage() * PAGE_SIZE + pageSlot;
+            }
+
+            @Override public int getSlots() { return PAGE_SIZE; }
+
+            @Override public void setStackInSlot(int slot, ItemStack stack) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return;
+                if (level.isClientSide) {
+                    clientPageStacks[slot] = stack.copy();
+                    return;
+                }
+                if (isPersistentOutputMode()) return;
+                int actual = actualSlot(slot);
+                machine.ensureOutputInventorySize(actual + 1);
+                machine.getInventory().setStackInSlot(actual, stack);
+            }
+
+            @Override public ItemStack getStackInSlot(int slot) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                if (level.isClientSide) return clientPageStacks[slot];
+                int actual = actualSlot(slot);
+                return actual < machine.getInventory().getSlots()
+                        ? machine.getInventory().getStackInSlot(actual) : ItemStack.EMPTY;
+            }
+
+            @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+                if (machine == null || isPersistentOutputMode() || slot < 0 || slot >= PAGE_SIZE
+                        || !stack.is(Items.ENCHANTED_BOOK)
+                        || !machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack)) return stack;
+                // Output cells are a projection of the input enchantments. Putting
+                // a book back applies it to the input instead of storing a second,
+                // independent copy beside the generated projection.
+                if (simulate || level.isClientSide) return stack;
+                ItemStack remainder = stack.copy();
+                if (!machine.restoreBook(remainder)) return stack;
+                remainder.shrink(1);
+                return remainder.isEmpty() ? ItemStack.EMPTY : remainder;
+            }
+
+            @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= PAGE_SIZE) return ItemStack.EMPTY;
+                if (level.isClientSide) {
+                    ItemStack cached = clientPageStacks[slot];
+                    if (cached.isEmpty()) return ItemStack.EMPTY;
+                    ItemStack extracted = PlayerStackRules.copyForPlayer(cached, amount);
+                    int extractedCount = extracted.getCount();
+                    if (!simulate) {
+                        cached.shrink(extractedCount);
+                        if (cached.isEmpty()) clientPageStacks[slot] = ItemStack.EMPTY;
+                    }
+                    return extracted;
+                }
+                int actual = actualSlot(slot);
+                if (actual >= machine.getInventory().getSlots()) return ItemStack.EMPTY;
+                ItemStack present = machine.getInventory().getStackInSlot(actual);
+                int playerAmount = Math.min(amount, PlayerStackRules.getPlayerMaxStackSize(present));
+                ItemStack extracted = machine.getInventory().extractItem(actual, playerAmount, simulate);
+                return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
+            }
+
+            @Override public int getSlotLimit(int slot) {
+                return dev.whimsyautomation.util.OversizedItemStackCodec.MAX_COUNT;
+            }
+
+            @Override public boolean isItemValid(int slot, ItemStack stack) {
+                return machine != null && !isPersistentOutputMode() && stack.is(Items.ENCHANTED_BOOK)
+                        && machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack);
+            }
+        };
+
+        this.bufferPageHandler = new IItemHandlerModifiable() {
+            private int actualSlot(int pageSlot) { return getBufferPage() * BUFFER_PAGE_SIZE + pageSlot; }
+            @Override public int getSlots() { return BUFFER_PAGE_SIZE; }
+            @Override public void setStackInSlot(int slot, ItemStack stack) {
+                if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE) return;
+                if (level.isClientSide) { clientBufferStacks[slot] = stack.copy(); return; }
+                int actual = actualSlot(slot);
+                if (actual < machine.getInputBuffer().getSlots())
+                    machine.getInputBuffer().setStackInSlot(actual, stack);
+            }
+            @Override public ItemStack getStackInSlot(int slot) {
+                if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE) return ItemStack.EMPTY;
+                if (level.isClientSide) return clientBufferStacks[slot];
+                int actual = actualSlot(slot);
+                return actual < machine.getInputBuffer().getSlots()
+                        ? machine.getInputBuffer().getStackInSlot(actual) : ItemStack.EMPTY;
+            }
+            @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE || level.isClientSide) return stack;
+                int actual = actualSlot(slot);
+                if (actual >= machine.getInputBuffer().getSlots()) return stack;
+                return machine.getInputBuffer().insertItem(actual, stack, simulate);
+            }
+            @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+                if (machine == null || slot < 0 || slot >= BUFFER_PAGE_SIZE || level.isClientSide) return ItemStack.EMPTY;
+                int actual = actualSlot(slot);
+                if (actual >= machine.getInputBuffer().getSlots()) return ItemStack.EMPTY;
+                ItemStack present = machine.getInputBuffer().getStackInSlot(actual);
+                int legalAmount = Math.min(amount, PlayerStackRules.getPlayerMaxStackSize(present));
+                ItemStack extracted = machine.getInputBuffer().extractItem(actual, legalAmount, simulate);
+                if (!simulate && !extracted.isEmpty()) machine.compactInputBuffer();
+                return PlayerStackRules.copyForPlayer(extracted, extracted.getCount());
+            }
+            @Override public int getSlotLimit(int slot) { return 64; }
+            @Override public boolean isItemValid(int slot, ItemStack stack) {
+                return machine != null && !stack.isEmpty();
+            }
+        };
+
+        addSlot(new net.neoforged.neoforge.items.SlotItemHandler(
+                machine != null ? machine.getInventory() : new net.neoforged.neoforge.items.ItemStackHandler(1),
+                0, 184, 71));
+        for (int i = 0; i < PAGE_SIZE; i++) addPagedOutputSlot(i);
+        for (int i = 0; i < BUFFER_PAGE_SIZE; i++) {
+            int x = 184 + (i % 9) * 18;
+            int y = (i / 9 == 0) ? 175 : 197;
+            addSlot(new SlotItemHandler(bufferPageHandler, i, x, y));
+        }
+        addPlayerInventory(playerInventory, 8, 139);
+
+        addIntDataSlots(() -> syncedPage, value -> syncedPage = Math.max(0, value));
+        addIntDataSlots(
+                () -> machine == null ? OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES : machine.getInventory().getSlots(),
+                value -> syncedOutputSlotCount = Math.max(OUTPUT_START + PAGE_SIZE * MIN_OUTPUT_PAGES, value));
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return machine != null && machine.isAutoMode() ? 1 : 0; }
+            @Override public void set(int value) { syncedAutoMode = value != 0; }
+        });
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return machine != null && machine.isPersistentOutputMode() ? 1 : 0; }
+            @Override public void set(int value) { syncedPersistentOutputMode = value != 0; }
+        });
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return machine != null ? machine.getOutputMode() : 1; }
+            @Override public void set(int value) { syncedOutputMode = Math.max(0, Math.min(2, value)); }
+        });
+        for (int side = 0; side < 6; side++) {
+            final int sideIndex = side;
+            addDataSlot(new DataSlot() {
+                @Override public int get() { return machine == null ? 0 : machine.getSideMode(net.minecraft.core.Direction.values()[sideIndex]); }
+                @Override public void set(int value) { syncedSideModes[sideIndex] = Math.max(0, Math.min(2, value)); }
+            });
+        }
+        addIntDataSlots(
+                () -> machine == null ? BUFFER_PAGE_SIZE : machine.getInputBuffer().getSlots(),
+                value -> syncedBufferSlotCount = Math.max(BUFFER_PAGE_SIZE, value));
+        addIntDataSlots(() -> syncedBufferPage,
+                value -> syncedBufferPage = Math.max(0, value));
+    }
+
+    /**
+     * DataSlot transports a signed 16-bit value. Two slots preserve a full
+     * 32-bit non-negative capacity/page value without the old 32767 ceiling.
+     */
+    private void addIntDataSlots(IntSupplier getter, IntConsumer setter) {
+        final int[] parts = new int[2];
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return (getter.getAsInt() >>> 16) & 0xFFFF; }
+            @Override public void set(int value) {
+                parts[0] = value & 0xFFFF;
+                setter.accept((parts[0] << 16) | parts[1]);
+            }
+        });
+        addDataSlot(new DataSlot() {
+            @Override public int get() { return getter.getAsInt() & 0xFFFF; }
+            @Override public void set(int value) {
+                parts[1] = value & 0xFFFF;
+                setter.accept((parts[0] << 16) | parts[1]);
+            }
+        });
+    }
+
+    private void addPagedOutputSlot(int outputIndex) {
+        int x = 8 + (outputIndex % 9) * 18;
+        int y = 71 + (outputIndex / 9) * 18;
+        addSlot(new SlotItemHandler(pageHandler, outputIndex, x, y) {
+            @Override
+            public ItemStack safeInsert(ItemStack stack, int increment) {
+                // Slot.safeInsert normally writes through setStackInSlot().
+                // That is unsafe for our virtual output projection: a normal
+                // right-click would overwrite a generated slot instead of
+                // restoring the book to the input. Route ordinary clicks through
+                // the same transactional path used by the item handler/shift-click.
+                if (stack.isEmpty() || increment <= 0 || machine == null || isPersistentOutputMode()
+                        || !stack.is(Items.ENCHANTED_BOOK)
+                        || !machine.canApplyBook(machine.getInventory().getStackInSlot(0), stack)) {
+                    return stack;
+                }
+                int offeredCount = Math.min(increment, stack.getCount());
+                ItemStack offered = stack.copyWithCount(offeredCount);
+                ItemStack remainder = pageHandler.insertItem(outputIndex, offered, false);
+                int accepted = offeredCount - remainder.getCount();
+                return accepted <= 0 ? stack : stack.copyWithCount(stack.getCount() - accepted);
+            }
+        });
+    }
+
+    private void addPlayerInventory(Inventory inventory, int x, int y) {
+        for (int row = 0; row < 3; row++) for (int col = 0; col < 9; col++)
+            addSlot(new Slot(inventory, col + row * 9 + 9, x + col * 18, y + row * 18));
+        for (int col = 0; col < 9; col++) addSlot(new Slot(inventory, col, x + col * 18, y + 58));
+    }
+
+    private int getActualOutputSlot(int menuSlotIndex) {
+        return OUTPUT_START + getPage() * PAGE_SIZE + (menuSlotIndex - OUTPUT_MENU_START);
+    }
+
+    public int getPage() { return Math.min(syncedPage, getPageCount() - 1); }
+    public int getBufferPage() { return Math.min(syncedBufferPage, getBufferPageCount() - 1); }
+    public int getBufferPageCount() {
+        int count = machine == null || (machine.getLevel() != null && machine.getLevel().isClientSide)
+                ? syncedBufferSlotCount : machine.getInputBuffer().getSlots();
+        return Math.max(1, (int) (((long) count + BUFFER_PAGE_SIZE - 1L) / BUFFER_PAGE_SIZE));
+    }
+    public boolean isAutoMode() { return syncedAutoMode; }
+    private boolean isPersistentOutputMode() {
+        return machine != null && !level.isClientSide ? machine.isPersistentOutputMode() : syncedPersistentOutputMode;
+    }
+    public boolean isSplitLevels() { return syncedOutputMode == 2; }
+    public int getOutputMode() { return syncedOutputMode; }
+    public int getSideMode(int side) { return side < 0 || side >= 6 ? 0 : syncedSideModes[side]; }
+    public int getPageCount() {
+        int outputSlots = machine == null || (machine.getLevel() != null && machine.getLevel().isClientSide)
+                ? syncedOutputSlotCount - OUTPUT_START
+                : machine.getGeneratedOutputCount();
+        return Math.max(1, (int) (((long) outputSlots + PAGE_SIZE - 1L) / PAGE_SIZE));
+    }
+
+    @Override public boolean clickMenuButton(Player player, int buttonId) {
+        if (machine == null || player.level().isClientSide) return false;
+        if (buttonId < 0) {
+            int encoded = -buttonId - 1;
+            int targetPage = encoded >>> 1;
+            if ((encoded & 1) == 0) syncedPage = Math.max(0, Math.min(getPageCount() - 1, targetPage));
+            else syncedBufferPage = Math.max(0, Math.min(getBufferPageCount() - 1, targetPage));
+            return true;
+        }
+        if (buttonId >= 10 && buttonId <= 15) { machine.cycleSideMode(net.minecraft.core.Direction.values()[buttonId - 10]); return true; }
+        if (buttonId == 0) machine.setAutoMode(!machine.isAutoMode());
+        else if (buttonId == 1) machine.processOnce();
+        else if (buttonId == 2) machine.setOutputMode((machine.getOutputMode() + 1) % 3);
+        else if (buttonId == 3) syncedPage = Math.max(0, syncedPage - 1);
+        else if (buttonId == 4) syncedPage = Math.min(getPageCount() - 1, syncedPage + 1);
+        else if (buttonId == 5) syncedBufferPage = Math.max(0, syncedBufferPage - 1);
+        else if (buttonId == 6) syncedBufferPage = Math.min(getBufferPageCount() - 1, syncedBufferPage + 1);
+        else return false;
+        return true;
+    }
+
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        quickMoveSingle = clickType == ClickType.QUICK_MOVE && button == 1;
+        try { super.clicked(slotId, button, clickType, player); }
+        finally { quickMoveSingle = false; }
+    }
+
+    @Override public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= slots.size()) return ItemStack.EMPTY;
+        Slot slot = slots.get(index);
+        if (!slot.hasItem()) return ItemStack.EMPTY;
+        ItemStack source = slot.getItem();
+        ItemStack copy = source.copy();
+        if (index >= OUTPUT_MENU_START && index < BUFFER_MENU_START) {
+            int actualOutputSlot = getActualOutputSlot(index);
+            int requested = quickMoveSingle ? 1 : source.getCount();
+            ItemStack moving = PlayerStackRules.copyForPlayer(source, requested);
+            int offeredCount = moving.getCount();
+            ItemStack debitTemplate = source.copyWithCount(offeredCount);
+            if (!player.level().isClientSide && !machine.isPersistentOutputMode()
+                    && !machine.canConsumeGeneratedBook(actualOutputSlot, debitTemplate)) {
+                return ItemStack.EMPTY;
+            }
+            if (!moveItemStackTo(moving, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
+            int movedCount = offeredCount - moving.getCount();
+            if (movedCount <= 0) return ItemStack.EMPTY;
+            if (!player.level().isClientSide) {
+                if (machine.isPersistentOutputMode()) {
+                    // moveItemStackTo operates on a copy; remove the transferred
+                    // amount from the durable machine output inventory explicitly.
+                    ItemStack extracted = machine.getInventory().extractItem(actualOutputSlot, movedCount, false);
+                    if (extracted.getCount() != movedCount) return ItemStack.EMPTY;
+                } else if (!machine.consumeGeneratedBook(actualOutputSlot, debitTemplate.copyWithCount(movedCount))) {
+                    return ItemStack.EMPTY;
+                }
+            }
+            if (player.level().isClientSide) {
+                // Predict the source-slot shrink on the client as well. Without
+                // this, shift-click briefly leaves the full virtual stack visible
+                // while its copied contents have already entered the player inventory.
+                ItemStack predictedRemainder = source.copy();
+                predictedRemainder.shrink(movedCount);
+                slot.set(predictedRemainder);
+            }
+            return PlayerStackRules.copyForPlayer(copy, movedCount);
+        }
+        if (index < MACHINE_SLOT_COUNT) {
+            if (!moveItemStackTo(source, MACHINE_SLOT_COUNT, slots.size(), true)) return ItemStack.EMPTY;
+        } else {
+            if (source.is(Items.ENCHANTED_BOOK) && !machine.isPersistentOutputMode()) {
+                // Shift-clicking a manual-mode extracted book restores it to the input item;
+                // it must not be routed through the player's inventory or cloned
+                // into an unrelated output slot.
+                if (player.level().isClientSide) return ItemStack.EMPTY;
+                int restoredCount = 0;
+                int requestedCount = quickMoveSingle ? 1 : source.getCount();
+                while (restoredCount < requestedCount && !source.isEmpty()
+                        && machine.restoreBook(source)) {
+                    source.shrink(1);
+                    restoredCount++;
+                }
+                if (restoredCount <= 0) return ItemStack.EMPTY;
+            } else if (!moveItemStackTo(source, BUFFER_MENU_START, MACHINE_SLOT_COUNT, false)) {
+                return ItemStack.EMPTY;
+            }
+        }
+        if (source.isEmpty()) slot.set(ItemStack.EMPTY); else slot.setChanged();
+        return copy;
+    }
+
+    @Override public boolean stillValid(Player player) {
+        return machine != null && stillValid(access, player, ModBlocks.ENCHANTMENT_EXTRACTOR.get());
+    }
+
+    public EnchantmentExtractorBlockEntity machine() { return machine; }
+}

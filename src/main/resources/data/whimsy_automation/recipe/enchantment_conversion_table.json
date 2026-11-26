@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["DDD", "DLD", "DDD"],
+  "key": {
+    "D": {"item": "minecraft:diamond"},
+    "L": {"item": "minecraft:lectern"}
+  },
+  "result": {"id": "whimsy_automation:enchantment_conversion_table"}
+}
