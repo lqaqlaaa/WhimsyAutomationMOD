@@ -22,7 +22,7 @@ public final class RemoteTransferFilterScreen extends Screen {
     private static final int SLOT = 18;
     private final Screen parent;
     private final UUID networkId, workstationId;
-    private final int workstationSlot;
+    private final List<Integer> workstationSlots;
     private final Consumer<RemoteTransferNetworkData.Filter> onSaved;
     private final List<String> entries = new ArrayList<>();
     private RemoteTransferNetworkData.FilterMode mode;
@@ -31,13 +31,13 @@ public final class RemoteTransferFilterScreen extends Screen {
     private int inventoryX, inventoryY;
 
     public RemoteTransferFilterScreen(Screen parent, UUID networkId, UUID workstationId,
-                                      int workstationSlot, RemoteTransferNetworkData.Filter filter,
+                                      List<Integer> workstationSlots, RemoteTransferNetworkData.Filter filter,
                                       Consumer<RemoteTransferNetworkData.Filter> onSaved) {
         super(Component.literal("槽位过滤规则"));
         this.parent = parent;
         this.networkId = networkId;
         this.workstationId = workstationId;
-        this.workstationSlot = workstationSlot;
+        this.workstationSlots = List.copyOf(workstationSlots);
         this.onSaved = onSaved;
         this.mode = filter.mode() == RemoteTransferNetworkData.FilterMode.BLACKLIST
                 ? RemoteTransferNetworkData.FilterMode.BLACKLIST
@@ -100,8 +100,10 @@ public final class RemoteTransferFilterScreen extends Screen {
         RemoteTransferNetworkData.Filter updated = new RemoteTransferNetworkData.Filter(mode, true,
                 entries.stream().filter(e -> !e.isBlank()).toList(), !entries.stream().allMatch(String::isBlank),
                 !matchDurability, !matchNbt, matchTags);
-        PacketDistributor.sendToServer(new RemoteTransferActionPayload(
-                23, networkId, workstationId, null, workstationSlot, encoded.toString()));
+        for (int slot : workstationSlots) {
+            PacketDistributor.sendToServer(new RemoteTransferActionPayload(
+                    23, networkId, workstationId, null, slot, encoded.toString()));
+        }
         if (onSaved != null) onSaved.accept(updated);
         minecraft.setScreen(parent);
     }
@@ -115,7 +117,11 @@ public final class RemoteTransferFilterScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         // Draw background and widgets first; the background pass otherwise covers custom slot cells.
         super.render(g, mouseX, mouseY, partialTick);
-        g.drawCenteredString(font, "槽位过滤规则 · 槽位 " + workstationSlot, width / 2, 12, 0xFFFFFFFF);
+        String targetLabel = workstationSlots.size() == 1
+                ? "槽位 " + (workstationSlots.get(0) + 1)
+                : workstationSlots.size() + " 个槽位（" + workstationSlots.stream()
+                        .map(slot -> Integer.toString(slot + 1)).collect(java.util.stream.Collectors.joining(", ")) + "）";
+        g.drawCenteredString(font, "槽位过滤规则 · " + targetLabel, width / 2, 12, 0xFFFFFFFF);
         g.drawCenteredString(font, entries.stream().anyMatch(e -> !e.isBlank())
                 ? "点击有物品的过滤格可清空；选择空格后点击背包物品可复制模板"
                 : "过滤槽全部为空：当前不启用过滤", width / 2, 28, 0xFFD0D9E5);

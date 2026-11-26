@@ -152,7 +152,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
         boolean hasSelection = !selectedSlots.isEmpty() || selectedSlot >= 0;
         if (bindInputButton != null) bindInputButton.active = available && hasSelection;
         if (bindOutputButton != null) bindOutputButton.active = available && hasSelection;
-        if (filterButton != null) filterButton.active = available && selectedSlots.isEmpty() && selectedSlot >= 0;
+        if (filterButton != null) filterButton.active = available && (!selectedSlots.isEmpty() || selectedSlot >= 0);
     }
 
     private void selectAllSlots() {
@@ -177,11 +177,15 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private void openFilter() {
-        if (selectedSlot < 0 || networkId == null || memberId == null) return;
-        RemoteTransferNetworkData.Filter filter = localFilters.getOrDefault(selectedSlot,
-                readFilter(selectedSlot));
-        minecraft.setScreen(new RemoteTransferFilterScreen(this, networkId, memberId,
-                selectedSlot, filter, updated -> localFilters.put(selectedSlot, updated)));
+        if ((selectedSlot >= 0 || !selectedSlots.isEmpty()) && networkId != null && memberId != null) {
+            java.util.List<Integer> targets = selectedSlots.isEmpty()
+                    ? java.util.List.of(selectedSlot)
+                    : selectedSlots.stream().sorted().toList();
+            int sourceSlot = targets.get(0);
+            RemoteTransferNetworkData.Filter filter = localFilters.getOrDefault(sourceSlot, readFilter(sourceSlot));
+            minecraft.setScreen(new RemoteTransferFilterScreen(this, networkId, memberId, targets, filter,
+                    updated -> targets.forEach(slot -> localFilters.put(slot, updated))));
+        }
     }
 
     private RemoteTransferNetworkData.Filter readFilter(int slotIndex) {
