@@ -99,9 +99,14 @@ public final class RemoteTransferInventoryScreen extends Screen {
         int startX = (width - totalWidth) / 2;
         int firstRowY = height - 48;
         int secondRowY = height - 24;
-        multiSelectButton = TechButton.create(Component.literal(multiSelectMode ? "多选：开" : "多选：关"), b -> {
-            multiSelectMode = !multiSelectMode; selectedSlots.clear(); selectedSlot = -1; dragSelecting = false;
-            updateSelectionButtons(); init();
+        // Keep the label immutable; the current state is shown in the hint below the grid.
+        multiSelectButton = TechButton.create(Component.literal("多选模式"), b -> {
+            multiSelectMode = !multiSelectMode;
+            selectedSlots.clear();
+            selectedSlot = -1;
+            dragSelecting = false;
+            updateSelectionButtons();
+            init();
         }).bounds(firstStartX, firstRowY, firstButtonWidth, 20).build();
         addRenderableWidget(multiSelectButton);
         selectAllButton = TechButton.create(Component.literal("全选格子"), b -> selectAllSlots())
@@ -154,8 +159,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
         if (bindInputButton != null) bindInputButton.active = available && hasSelection;
         if (bindOutputButton != null) bindOutputButton.active = available && hasSelection;
         if (filterButton != null) filterButton.active = available && selectedSlot >= 0;
-        if (multiSelectButton != null) multiSelectButton.setMessage(
-                Component.literal(multiSelectMode ? "多选：开" : "多选：关"));
+
         if (selectAllButton != null) selectAllButton.visible = multiSelectMode;
     }
 
@@ -303,16 +307,19 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 g.renderItemDecorations(font, stack, x + 1, y + 1);
             }
             String slotNumber = Integer.toString(index + 1);
-            int numberWidth = font.width(slotNumber);
-            int numberX = x + 2;
-            int numberY = y + 1;
-            g.fill(numberX - 1, numberY - 1, numberX + numberWidth + 1, numberY + 8, 0xB9000000);
-            g.drawString(font, slotNumber, numberX, numberY, 0xFFEAF0F7, false);
+            // Scale the index to a fixed width so even 4+ digit indices stay inside this slot.
+            // No backing plate is drawn, keeping the item icon unobstructed.
+            float numberScale = Math.min(1.0F, 8.0F / Math.max(1, font.width(slotNumber)));
+            g.pose().pushPose();
+            g.pose().translate(x + 1.0F, y + 1.0F, 300.0F);
+            g.pose().scale(numberScale, numberScale, 1.0F);
+            g.drawString(font, slotNumber, 0, 0, 0xFFFFFFFF, true);
+            g.pose().popPose();
         }
 
         String selectionText = multiSelectMode
-                ? "多选模式 · 已选择 " + selectedSlots.size() + " 格（Shift+拖动可连续选择）"
-                : selectedSlot >= 0 ? "当前选择：" + slotRole(selectedSlot) : "点击格子选择；Shift+拖动可快速多选";
+                ? "多选模式已开启 · 已选择 " + selectedSlots.size() + " 格（Shift+拖动可连续选择）"
+                : selectedSlot >= 0 ? "当前选择：" + slotRole(selectedSlot) : "多选模式已关闭 · 点击格子选择，Shift+拖动可多选";
         int selectionY = Math.min(height - 62, panelY + panelHeight + 2);
         g.drawCenteredString(font, selectionText, width / 2, selectionY, 0xFFFFFFFF);
     }
