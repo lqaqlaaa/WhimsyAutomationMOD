@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "whimsy_automation:item/remote_transfer_tool"
-  }
-}

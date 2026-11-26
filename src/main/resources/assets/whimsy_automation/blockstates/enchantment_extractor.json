@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "minecraft:block/enchanting_table" },
-    "facing=east":  { "model": "minecraft:block/enchanting_table", "y": 90 },
-    "facing=south": { "model": "minecraft:block/enchanting_table", "y": 180 },
-    "facing=west":  { "model": "minecraft:block/enchanting_table", "y": 270 }
-  }
-}

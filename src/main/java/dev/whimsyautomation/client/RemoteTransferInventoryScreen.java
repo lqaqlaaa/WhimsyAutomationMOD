@@ -97,7 +97,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
         int startX = (width - totalWidth) / 2;
         int firstRowY = height - 48;
         int secondRowY = height - 24;
-        selectAllButton = TechButton.create(Component.literal("全选格子"), b -> selectAllSlots())
+        selectAllButton = TechButton.create(Component.literal("全选"), b -> selectAllSlots())
             .bounds(firstStartX, firstRowY, firstButtonWidth, 20).build();
         addRenderableWidget(selectAllButton);
         addRenderableWidget(TechButton.create(Component.literal("清空"), b -> {
@@ -105,9 +105,9 @@ public final class RemoteTransferInventoryScreen extends Screen {
             selectedSlot = -1;
             updateSelectionButtons();
         }).bounds(firstStartX + firstButtonWidth + gap, firstRowY, firstButtonWidth, 20).build());
-        addRenderableWidget(TechButton.create(Component.literal("自动识别输入"), b -> beginAutoDetect("INPUT"))
+        addRenderableWidget(TechButton.create(Component.literal("识别输入"), b -> beginAutoDetect("INPUT"))
             .bounds(firstStartX + (firstButtonWidth + gap) * 2, firstRowY, firstButtonWidth, 20).build());
-        addRenderableWidget(TechButton.create(Component.literal("自动识别输出"), b -> beginAutoDetect("OUTPUT"))
+        addRenderableWidget(TechButton.create(Component.literal("识别输出"), b -> beginAutoDetect("OUTPUT"))
             .bounds(firstStartX + (firstButtonWidth + gap) * 3, firstRowY, firstButtonWidth, 20).build());
         addRenderableWidget(TechButton.create(Component.literal("返回"), b -> minecraft.setScreen(parent))
             .bounds(startX, secondRowY, buttonWidth, 20).build());
