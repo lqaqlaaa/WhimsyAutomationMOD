@@ -304,9 +304,9 @@ public final class RemoteTransferInventoryScreen extends Screen {
             }
             String slotNumber = Integer.toString(index + 1);
             int numberWidth = font.width(slotNumber);
-            int numberX = x + SLOT_SIZE - numberWidth - 1;
-            int numberY = y + SLOT_SIZE - 6;
-            g.fill(numberX - 1, numberY - 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1, 0xB9000000);
+            int numberX = x + 2;
+            int numberY = y + 1;
+            g.fill(numberX - 1, numberY - 1, numberX + numberWidth + 1, numberY + 8, 0xB9000000);
             g.drawString(font, slotNumber, numberX, numberY, 0xFFEAF0F7, false);
         }
 
