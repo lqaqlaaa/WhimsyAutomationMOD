@@ -493,22 +493,23 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                 new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BUCKET, 1)
         };
         for (int slot = 0; slot < handler.getSlots(); slot++) {
-            if ("INPUT".equals(direction)) {
-                for (var probe : probes) {
-                    if (!handler.isItemValid(slot, probe)) continue;
-                    try {
-                        if (handler.insertItem(slot, probe.copy(), true).getCount() < probe.getCount()) {
-                            result.add(slot);
-                            break;
-                        }
-                    } catch (RuntimeException ignored) {}
-                }
-            } else {
-                var present = handler.getStackInSlot(slot);
-                if (present.isEmpty()) continue;
+            net.minecraft.world.item.ItemStack present = handler.getStackInSlot(slot);
+            int acceptedProbeTypes = 0;
+            for (var probe : probes) {
                 try {
-                    if (!handler.extractItem(slot, 1, true).isEmpty()) result.add(slot);
+                    if (!handler.isItemValid(slot, probe)) continue;
+                    if (present.isEmpty() || net.minecraft.world.item.ItemStack.isSameItemSameComponents(present, probe)) {
+                        acceptedProbeTypes++;
+                    }
                 } catch (RuntimeException ignored) {}
+            }
+            // Ordinary storage slots generally accept every probe. Specialized
+            // machine inputs accept only a subset; output-only slots accept none.
+            if ("INPUT".equals(direction) && acceptedProbeTypes > 0
+                    && acceptedProbeTypes < probes.length) {
+                result.add(slot);
+            } else if ("OUTPUT".equals(direction) && acceptedProbeTypes == 0) {
+                result.add(slot);
             }
         }
         return result;
