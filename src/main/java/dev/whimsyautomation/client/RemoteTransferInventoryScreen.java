@@ -17,6 +17,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.UUID;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 /** Displays the selected member's live server-side ItemHandler slots. */
 public final class RemoteTransferInventoryScreen extends Screen {
@@ -36,6 +38,8 @@ public final class RemoteTransferInventoryScreen extends Screen {
     private final boolean pagedMachineLayout;
     private int page;
     private int selectedSlot = -1;
+    private boolean multiSelectMode;
+    private final Set<Integer> selectedSlots = new HashSet<>();
     private final Map<Integer, RemoteTransferNetworkData.Filter> localFilters = new HashMap<>();
     private int panelX, panelY, panelWidth = 176, panelHeight = 166;
 
@@ -89,12 +93,12 @@ public final class RemoteTransferInventoryScreen extends Screen {
         Button input = Button.builder(Component.literal("绑定输入"),
                 b -> beginBinding("INPUT"))
                 .bounds(startX + buttonW + gap, buttonY, buttonW, 20).build();
-        input.active = selectedSlot >= 0 && available;
+        input.active = hasBindingSelection() && available;
         addRenderableWidget(input);
         Button output = Button.builder(Component.literal("绑定输出"),
                 b -> beginBinding("OUTPUT"))
                 .bounds(startX + (buttonW + gap) * 2, buttonY, buttonW, 20).build();
-        output.active = selectedSlot >= 0 && available;
+        output.active = hasBindingSelection() && available;
         addRenderableWidget(output);
         Button filter = Button.builder(Component.literal("过滤"),
                 b -> openFilter())
@@ -115,6 +119,22 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 .bounds(autoStartX + autoW + autoGap, autoY, autoW, 20).build();
         autoOutput.active = available && memberId != null && supportsAutoRecognition();
         addRenderableWidget(autoOutput);
+        int selectY = height - 76;
+        int selectGap = 6;
+        int selectW = Math.min(132, (width - 32 - selectGap) / 2);
+        int selectX = (width - (selectW * 2 + selectGap)) / 2;
+        addRenderableWidget(Button.builder(Component.literal(
+                multiSelectMode ? "多选模式：开启" : "多选模式：关闭"), b -> {
+            multiSelectMode = !multiSelectMode;
+            selectedSlots.clear();
+            selectedSlot = -1;
+            init();
+        }).bounds(selectX, selectY, selectW, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("清空选择"), b -> {
+            selectedSlots.clear();
+            selectedSlot = -1;
+            init();
+        }).bounds(selectX + selectW + selectGap, selectY, selectW, 20).build());
         if (pagedMachineLayout && pageCount > 1) {
             addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
                 page = Math.max(0, page - 1);
@@ -190,10 +210,21 @@ public final class RemoteTransferInventoryScreen extends Screen {
         minecraft.setScreen(null);
     }
 
+    private boolean hasBindingSelection() {
+        return multiSelectMode ? !selectedSlots.isEmpty() : selectedSlot >= 0;
+    }
+
     private void beginBinding(String direction) {
-        if (selectedSlot < 0 || !available || networkId == null || memberId == null) return;
-        PacketDistributor.sendToServer(new RemoteTransferActionPayload(
-                16, networkId, memberId, null, selectedSlot, direction));
+        if (!hasBindingSelection() || !available || networkId == null || memberId == null) return;
+        if (multiSelectMode) {
+            String indices = selectedSlots.stream().sorted().map(String::valueOf)
+                    .collect(java.util.stream.Collectors.joining(","));
+            PacketDistributor.sendToServer(new RemoteTransferActionPayload(
+                    25, networkId, memberId, null, 0, direction + "|" + indices));
+        } else {
+            PacketDistributor.sendToServer(new RemoteTransferActionPayload(
+                    16, networkId, memberId, null, selectedSlot, direction));
+        }
         // The server stores the binding context. Close the screen so the next
         // Shift+right-click can target the container in the world.
         minecraft.setScreen(null);
@@ -321,7 +352,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
             int x = panelX + slotX(index);
             int y = panelY + slotY(index);
             if (x < panelX || x + SLOT_SIZE > panelX + panelWidth) continue;
-            boolean selected = index == selectedSlot;
+            boolean selected = multiSelectMode ? selectedSlots.contains(index) : index == selectedSlot;
             // High-contrast two-layer slot wells remain visible even when empty.
             g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, 0xFF080D14);
             g.fill(x + 1, y + 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1,
@@ -337,9 +368,12 @@ public final class RemoteTransferInventoryScreen extends Screen {
                     y + SLOT_SIZE + 2, 0xFFBFCBDD);
         }
 
-        if (selectedSlot >= 0) {
+        if (multiSelectMode) {
+            g.drawCenteredString(font, "多选模式：已选择 " + selectedSlots.size() + " 个槽位",
+                    width / 2, height - 100, 0xFFFFFFFF);
+        } else if (selectedSlot >= 0) {
             g.drawCenteredString(font, "当前选择：" + slotRole(selectedSlot)
-                    + "（槽位 " + selectedSlot + "）", width / 2, height - 76, 0xFFFFFFFF);
+                    + "（槽位 " + selectedSlot + "）", width / 2, height - 100, 0xFFFFFFFF);
         }
     }
 
@@ -354,7 +388,12 @@ public final class RemoteTransferInventoryScreen extends Screen {
                 int y = panelY + slotY(index);
                 if (mouseX >= x && mouseX < x + SLOT_SIZE
                         && mouseY >= y && mouseY < y + SLOT_SIZE) {
-                    selectedSlot = index;
+                    if (multiSelectMode) {
+                        if (!selectedSlots.add(index)) selectedSlots.remove(index);
+                    } else {
+                        selectedSlot = index;
+                        selectedSlots.clear();
+                    }
                     init();
                     return true;
                 }

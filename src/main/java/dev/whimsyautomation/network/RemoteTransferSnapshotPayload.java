@@ -148,8 +148,10 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                     }
                 }
                 if (handler != null) {
-                    source.setMemberKind(networkId, member.id(),
-                            RemoteTransferNetworkData.EndpointKind.WORKSTATION);
+                    if (blockEntity instanceof dev.whimsyautomation.remote.RemoteTransferInventoryProvider) {
+                        source.setMemberKind(networkId, member.id(),
+                                RemoteTransferNetworkData.EndpointKind.WORKSTATION);
+                    }
                     inventory.putBoolean("Available", true);
                     inventory.putUUID("Member", member.id());
                     inventory.putString("Block", member.blockId());

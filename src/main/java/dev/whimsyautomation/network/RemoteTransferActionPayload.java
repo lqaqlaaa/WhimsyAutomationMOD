@@ -133,14 +133,71 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                             player.displayClientMessage(Component.literal("该方块没有对应的物品库存槽位。"), true);
                             return;
                         }
-                        data.setMemberKind(p.networkId(), workstation.id(),
-                                RemoteTransferNetworkData.EndpointKind.WORKSTATION);
+                        if (workstationEntity instanceof dev.whimsyautomation.remote.RemoteTransferInventoryProvider) {
+                            data.setMemberKind(p.networkId(), workstation.id(),
+                                    RemoteTransferNetworkData.EndpointKind.WORKSTATION);
+                        }
                         var direction = "INPUT".equals(p.text())
                                 ? RemoteTransferNetworkData.TransferDirection.INPUT
                                 : RemoteTransferNetworkData.TransferDirection.OUTPUT;
                         RemoteTransferSelection.beginSlotBinding(player.getUUID(), p.networkId(),
                                 workstation.id(), p.value(), direction);
                         player.displayClientMessage(Component.literal("槽位绑定模式已启动：Shift+右键选择目标容器。"), true);
+                        suppressSnapshot = true;
+                    }
+                }
+            }
+            case 25 -> {
+                if (owned(data, p.networkId(), player) && p.firstId() != null) {
+                    String[] parts = p.text().split("\\|", 2);
+                    if (parts.length == 2 && ("INPUT".equals(parts[0]) || "OUTPUT".equals(parts[0]))) {
+                        var network = data.getNetwork(p.networkId());
+                        var workstation = network == null ? null : network.members().stream()
+                                .filter(member -> member.id().equals(p.firstId())).findFirst().orElse(null);
+                        if (workstation == null) return;
+                        ServerLevel level = player.server.getLevel(workstation.dimension());
+                        if (level == null || !level.hasChunkAt(workstation.pos())) {
+                            player.displayClientMessage(Component.literal("工作方块所在区块未加载，无法读取槽位。"), true);
+                            return;
+                        }
+                        var blockEntity = level.getBlockEntity(workstation.pos());
+                        net.neoforged.neoforge.items.IItemHandler handler =
+                                blockEntity instanceof dev.whimsyautomation.remote.RemoteTransferInventoryProvider provider
+                                        ? provider.getRemoteTransferInventory()
+                                        : level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                                workstation.pos(), null);
+                        if (handler == null) for (Direction side : Direction.values()) {
+                            handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                                    workstation.pos(), side);
+                            if (handler != null) break;
+                        }
+                        if (handler == null) {
+                            player.displayClientMessage(Component.literal("该方块没有可用的物品库存接口。"), true);
+                            return;
+                        }
+                        java.util.TreeSet<Integer> selected = new java.util.TreeSet<>();
+                        for (String raw : parts[1].split(",")) {
+                            if (selected.size() >= 512) break;
+                            try {
+                                int slot = Integer.parseInt(raw);
+                                if (slot >= 0 && slot < handler.getSlots()) selected.add(slot);
+                            } catch (NumberFormatException ignored) {}
+                        }
+                        if (selected.isEmpty()) {
+                            player.displayClientMessage(Component.literal("没有有效的槽位选择。"), true);
+                            return;
+                        }
+                        if (blockEntity instanceof dev.whimsyautomation.remote.RemoteTransferInventoryProvider) {
+                            data.setMemberKind(p.networkId(), workstation.id(),
+                                    RemoteTransferNetworkData.EndpointKind.WORKSTATION);
+                        }
+                        var direction = "INPUT".equals(parts[0])
+                                ? RemoteTransferNetworkData.TransferDirection.INPUT
+                                : RemoteTransferNetworkData.TransferDirection.OUTPUT;
+                        RemoteTransferSelection.beginSlotBindings(player.getUUID(), p.networkId(),
+                                workstation.id(), java.util.List.copyOf(selected), direction);
+                        player.displayClientMessage(Component.literal("已选择 " + selected.size()
+                                + " 个槽位。Shift+右键目标容器即可批量绑定。"), true);
                         suppressSnapshot = true;
                     }
                 }
@@ -191,17 +248,23 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                     } else if ("whimsy_automation:enchantment_conversion_table".equals(blockId)) {
                         matched.add("INPUT".equals(p.text()) ? 0 : 1);
                     } else {
-                        player.displayClientMessage(Component.literal(
-                                "暂不支持自动识别这台机器的槽位规则；请继续使用原来的手动选择。"), true);
-                        return;
+                        matched.addAll(detectGenericSlots(handler, p.text()));
+                        if (matched.isEmpty()) {
+                            player.displayClientMessage(Component.literal(
+                                    "没有检测到明确的" + ("INPUT".equals(p.text()) ? "输入" : "输出")
+                                            + "槽位。该方块仍可作为完整存储容器使用；可开启多选模式手动指定槽位。"), true);
+                            return;
+                        }
                     }
                     matched.removeIf(slot -> slot < 0 || slot >= count);
                     if (matched.isEmpty()) {
                         player.displayClientMessage(Component.literal("没有识别到符合条件的槽位。"), true);
                         return;
                     }
-                    data.setMemberKind(p.networkId(), workstation.id(),
-                            RemoteTransferNetworkData.EndpointKind.WORKSTATION);
+                    if (blockEntity instanceof dev.whimsyautomation.remote.RemoteTransferInventoryProvider) {
+                        data.setMemberKind(p.networkId(), workstation.id(),
+                                RemoteTransferNetworkData.EndpointKind.WORKSTATION);
+                    }
                     var direction = "INPUT".equals(p.text())
                             ? RemoteTransferNetworkData.TransferDirection.INPUT
                             : RemoteTransferNetworkData.TransferDirection.OUTPUT;
@@ -418,6 +481,37 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
             }
         }
         player.displayClientMessage(Component.literal("目标方块附近没有安全位置（需要地面和至少两格空间）。"), true);
+    }
+
+    private static java.util.List<Integer> detectGenericSlots(
+            net.neoforged.neoforge.items.IItemHandler handler, String direction) {
+        java.util.ArrayList<Integer> result = new java.util.ArrayList<>();
+        net.minecraft.world.item.ItemStack[] probes = {
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 1),
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 1),
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 1),
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BUCKET, 1)
+        };
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            if ("INPUT".equals(direction)) {
+                for (var probe : probes) {
+                    if (!handler.isItemValid(slot, probe)) continue;
+                    try {
+                        if (handler.insertItem(slot, probe.copy(), true).getCount() < probe.getCount()) {
+                            result.add(slot);
+                            break;
+                        }
+                    } catch (RuntimeException ignored) {}
+                }
+            } else {
+                var present = handler.getStackInSlot(slot);
+                if (present.isEmpty()) continue;
+                try {
+                    if (!handler.extractItem(slot, 1, true).isEmpty()) result.add(slot);
+                } catch (RuntimeException ignored) {}
+            }
+        }
+        return result;
     }
 
     private static boolean owned(RemoteTransferNetworkData data, UUID id, ServerPlayer player) {
