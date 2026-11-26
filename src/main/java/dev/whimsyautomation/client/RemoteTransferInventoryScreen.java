@@ -43,7 +43,6 @@ public final class RemoteTransferInventoryScreen extends Screen {
     private int page;
     private int visibleRows = MAX_GRID_ROWS;
     private int pageCapacity = GRID_COLUMNS * MAX_GRID_ROWS;
-    private boolean multiSelectMode;
     private int selectedSlot = -1;
     private final Set<Integer> selectedSlots = new HashSet<>();
     private boolean dragSelecting;
@@ -53,7 +52,6 @@ public final class RemoteTransferInventoryScreen extends Screen {
     private int panelX;
     private int panelY;
     private int panelHeight;
-    private Button multiSelectButton;
     private Button selectAllButton;
     private Button bindInputButton;
     private Button bindOutputButton;
@@ -91,30 +89,26 @@ public final class RemoteTransferInventoryScreen extends Screen {
         panelHeight = HEADER_HEIGHT + visibleRows * SLOT_SIZE + 8;
 
         int gap = 4;
-        int firstRowWidth = Math.min(width - 24, 300);
-        int firstButtonWidth = (firstRowWidth - gap * 2) / 3;
+        int firstRowWidth = Math.min(width - 24, 320);
+        int firstButtonWidth = (firstRowWidth - gap * 3) / 4;
         int firstStartX = (width - firstRowWidth) / 2;
         int buttonWidth = Math.max(42, Math.min(76, (width - 24 - gap * 3) / 4));
         int totalWidth = buttonWidth * 4 + gap * 3;
         int startX = (width - totalWidth) / 2;
         int firstRowY = height - 48;
         int secondRowY = height - 24;
-        // Keep the label immutable; the current state is shown in the hint below the grid.
-        multiSelectButton = TechButton.create(Component.literal("多选模式"), b -> {
-            multiSelectMode = !multiSelectMode;
+        selectAllButton = TechButton.create(Component.literal("全选格子"), b -> selectAllSlots())
+            .bounds(firstStartX, firstRowY, firstButtonWidth, 20).build();
+        addRenderableWidget(selectAllButton);
+        addRenderableWidget(TechButton.create(Component.literal("清空"), b -> {
             selectedSlots.clear();
             selectedSlot = -1;
-            dragSelecting = false;
             updateSelectionButtons();
-            init();
-        }).bounds(firstStartX, firstRowY, firstButtonWidth, 20).build();
-        addRenderableWidget(multiSelectButton);
-        selectAllButton = TechButton.create(Component.literal("全选格子"), b -> selectAllSlots())
-            .bounds(firstStartX + firstButtonWidth + gap, firstRowY, firstButtonWidth, 20).build();
-        selectAllButton.visible = multiSelectMode; addRenderableWidget(selectAllButton);
-        addRenderableWidget(TechButton.create(Component.literal("清空"), b -> {
-            selectedSlots.clear(); selectedSlot = -1; updateSelectionButtons();
-        }).bounds(firstStartX + (firstButtonWidth + gap) * 2, firstRowY, firstButtonWidth, 20).build());
+        }).bounds(firstStartX + firstButtonWidth + gap, firstRowY, firstButtonWidth, 20).build());
+        addRenderableWidget(TechButton.create(Component.literal("自动识别输入"), b -> beginAutoDetect("INPUT"))
+            .bounds(firstStartX + (firstButtonWidth + gap) * 2, firstRowY, firstButtonWidth, 20).build());
+        addRenderableWidget(TechButton.create(Component.literal("自动识别输出"), b -> beginAutoDetect("OUTPUT"))
+            .bounds(firstStartX + (firstButtonWidth + gap) * 3, firstRowY, firstButtonWidth, 20).build());
         addRenderableWidget(TechButton.create(Component.literal("返回"), b -> minecraft.setScreen(parent))
             .bounds(startX, secondRowY, buttonWidth, 20).build());
         bindInputButton = TechButton.create(Component.literal("绑定输入"), b -> beginBinding("INPUT"))
@@ -155,27 +149,20 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private void updateSelectionButtons() {
-        boolean hasSelection = multiSelectMode ? !selectedSlots.isEmpty() : selectedSlot >= 0;
+        boolean hasSelection = !selectedSlots.isEmpty() || selectedSlot >= 0;
         if (bindInputButton != null) bindInputButton.active = available && hasSelection;
         if (bindOutputButton != null) bindOutputButton.active = available && hasSelection;
-        if (filterButton != null) filterButton.active = available && selectedSlot >= 0;
-
-        if (selectAllButton != null) selectAllButton.visible = multiSelectMode;
+        if (filterButton != null) filterButton.active = available && selectedSlots.isEmpty() && selectedSlot >= 0;
     }
 
     private void selectAllSlots() {
-        if (!multiSelectMode) return;
         selectedSlots.clear();
         for (int i = 0; i < slots.size(); i++) selectedSlots.add(slots.getCompound(i).getInt("Index"));
         selectedSlot = -1; updateSelectionButtons();
     }
     private void toggleSlotSelection(int index) {
-        if (!multiSelectMode) {
-            selectedSlot = index;
-            selectedSlots.clear();
-        } else {
-            if (!selectedSlots.add(index)) selectedSlots.remove(index);
-        }
+        if (!selectedSlots.add(index)) selectedSlots.remove(index);
+        selectedSlot = -1;
         updateSelectionButtons();
     }
 
@@ -226,12 +213,19 @@ public final class RemoteTransferInventoryScreen extends Screen {
     }
 
     private boolean hasBindingSelection() {
-        return multiSelectMode ? !selectedSlots.isEmpty() : selectedSlot >= 0;
+        return !selectedSlots.isEmpty() || selectedSlot >= 0;
+    }
+
+    private void beginAutoDetect(String direction) {
+        if (!available || networkId == null || memberId == null) return;
+        PacketDistributor.sendToServer(new RemoteTransferActionPayload(
+                24, networkId, memberId, null, 0, direction));
+        minecraft.setScreen(null);
     }
 
     private void beginBinding(String direction) {
         if (!hasBindingSelection() || !available || networkId == null || memberId == null) return;
-        if (multiSelectMode) {
+        if (!selectedSlots.isEmpty()) {
             String indices = selectedSlots.stream().sorted().map(String::valueOf)
                     .collect(java.util.stream.Collectors.joining(","));
             PacketDistributor.sendToServer(new RemoteTransferActionPayload(
@@ -294,7 +288,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
             int index = slot.getInt("Index");
             int x = panelX + visibleSlotX(index);
             int y = panelY + visibleSlotY(index);
-            boolean selected = multiSelectMode ? selectedSlots.contains(index) : index == selectedSlot;
+            boolean selected = selectedSlots.contains(index) || index == selectedSlot;
             g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, 0xFF080D14);
             g.fill(x + 1, y + 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1,
                     selected ? 0xFF315C88 : 0xFF71849A);
@@ -317,9 +311,10 @@ public final class RemoteTransferInventoryScreen extends Screen {
             g.pose().popPose();
         }
 
-        String selectionText = multiSelectMode
-                ? "多选模式已开启 · 已选择 " + selectedSlots.size() + " 格（Shift+拖动可连续选择）"
-                : selectedSlot >= 0 ? "当前选择：" + slotRole(selectedSlot) : "多选模式已关闭 · 点击格子选择，Shift+拖动可多选";
+        String selectionText = !selectedSlots.isEmpty()
+                ? "已选择 " + selectedSlots.size() + " 格（Shift+点击/拖动可增减选择）"
+                : selectedSlot >= 0 ? "当前选择：" + slotRole(selectedSlot)
+                : "点击格子选择；按住 Shift 可多选或拖动连续选择";
         int selectionY = Math.min(height - 62, panelY + panelHeight + 2);
         g.drawCenteredString(font, selectionText, width / 2, selectionY, 0xFFFFFFFF);
     }
@@ -330,14 +325,16 @@ public final class RemoteTransferInventoryScreen extends Screen {
             int index = slotAt(mouseX, mouseY);
             if (index >= 0) {
                 if (hasShiftDown()) {
-                    multiSelectMode = true;
+                    selectedSlot = -1;
                     dragSelecting = true;
                     dragVisitedSlots.clear();
                     dragVisitedSlots.add(index);
                     toggleSlotSelection(index);
                 } else {
                     dragSelecting = false;
-                    toggleSlotSelection(index);
+                    selectedSlots.clear();
+                    selectedSlot = index;
+                    updateSelectionButtons();
                 }
                 return true;
             }
