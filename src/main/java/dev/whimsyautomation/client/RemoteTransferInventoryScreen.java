@@ -136,12 +136,12 @@ public final class RemoteTransferInventoryScreen extends Screen {
             init();
         }).bounds(selectX + selectW + selectGap, selectY, selectW, 20).build());
         if (pagedMachineLayout && pageCount > 1) {
-            addRenderableWidget(TechButton.builder(Component.literal("\u2039"), b -> {
+            addRenderableWidget(TechButton.builder(Component.literal("‹"), b -> {
                 page = Math.max(0, page - 1);
                 selectedSlot = -1;
                 init();
             }).bounds(panelX + panelWidth - 44, panelY + 3, 18, 14).build());
-            addRenderableWidget(TechButton.builder(Component.literal("\u203a"), b -> {
+            addRenderableWidget(TechButton.builder(Component.literal("›"), b -> {
                 page = Math.min(pageCount - 1, page + 1);
                 selectedSlot = -1;
                 init();
