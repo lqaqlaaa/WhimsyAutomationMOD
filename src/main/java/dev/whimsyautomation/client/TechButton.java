@@ -24,7 +24,7 @@ public final class TechButton extends Button {
         super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
     }
 
-    public static Builder builder(Component message, OnPress onPress) {
+    public static Builder create(Component message, OnPress onPress) {
         return new Builder(message, onPress);
     }
 

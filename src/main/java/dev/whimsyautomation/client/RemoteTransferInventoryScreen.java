@@ -96,11 +96,11 @@ public final class RemoteTransferInventoryScreen extends Screen {
         int firstRowY = height - 48;
         int secondRowY = height - 24;
 
-        addRenderableWidget(TechButton.builder(Component.literal("全选输入"), b -> selectAllByRole("InputRole"))
+        addRenderableWidget(TechButton.create(Component.literal("全选输入"), b -> selectAllByRole("InputRole"))
                 .bounds(startX, firstRowY, buttonWidth, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("全选输出"), b -> selectAllByRole("OutputRole"))
+        addRenderableWidget(TechButton.create(Component.literal("全选输出"), b -> selectAllByRole("OutputRole"))
                 .bounds(startX + buttonWidth + gap, firstRowY, buttonWidth, 20).build());
-        multiSelectButton = TechButton.builder(Component.literal(
+        multiSelectButton = TechButton.create(Component.literal(
                         multiSelectMode ? "多选：开启" : "多选：关闭"), b -> {
                     multiSelectMode = !multiSelectMode;
                     selectedSlots.clear();
@@ -109,34 +109,34 @@ public final class RemoteTransferInventoryScreen extends Screen {
                     init();
                 }).bounds(startX + (buttonWidth + gap) * 2, firstRowY, buttonWidth, 20).build();
         addRenderableWidget(multiSelectButton);
-        addRenderableWidget(TechButton.builder(Component.literal("清空"), b -> {
+        addRenderableWidget(TechButton.create(Component.literal("清空"), b -> {
                     selectedSlots.clear();
                     selectedSlot = -1;
                     updateSelectionButtons();
                 }).bounds(startX + (buttonWidth + gap) * 3, firstRowY, buttonWidth, 20).build());
 
-        addRenderableWidget(TechButton.builder(Component.literal("返回"), b -> minecraft.setScreen(parent))
+        addRenderableWidget(TechButton.create(Component.literal("返回"), b -> minecraft.setScreen(parent))
                 .bounds(startX, secondRowY, buttonWidth, 20).build());
 
-        bindInputButton = TechButton.builder(Component.literal("绑定输入"), b -> beginBinding("INPUT"))
+        bindInputButton = TechButton.create(Component.literal("绑定输入"), b -> beginBinding("INPUT"))
                 .bounds(startX + buttonWidth + gap, secondRowY, buttonWidth, 20).build();
         addRenderableWidget(bindInputButton);
 
-        bindOutputButton = TechButton.builder(Component.literal("绑定输出"), b -> beginBinding("OUTPUT"))
+        bindOutputButton = TechButton.create(Component.literal("绑定输出"), b -> beginBinding("OUTPUT"))
                 .bounds(startX + (buttonWidth + gap) * 2, secondRowY, buttonWidth, 20).build();
         addRenderableWidget(bindOutputButton);
 
-        filterButton = TechButton.builder(Component.literal("过滤"), b -> openFilter())
+        filterButton = TechButton.create(Component.literal("过滤"), b -> openFilter())
                 .bounds(startX + (buttonWidth + gap) * 3, secondRowY, buttonWidth, 20).build();
         addRenderableWidget(filterButton);
         updateSelectionButtons();
 
         if (pageCount > 1) {
-            addRenderableWidget(TechButton.builder(Component.literal("‹"), b -> {
+            addRenderableWidget(TechButton.create(Component.literal("‹"), b -> {
                         page = Math.max(0, page - 1);
                         init();
                     }).bounds(panelX + PANEL_WIDTH - 40, panelY + 1, 17, 14).build());
-            addRenderableWidget(TechButton.builder(Component.literal("›"), b -> {
+            addRenderableWidget(TechButton.create(Component.literal("›"), b -> {
                         page = Math.min(pageCount - 1, page + 1);
                         init();
                     }).bounds(panelX + PANEL_WIDTH - 20, panelY + 1, 17, 14).build());
