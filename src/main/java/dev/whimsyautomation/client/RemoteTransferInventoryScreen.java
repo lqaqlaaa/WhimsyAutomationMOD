@@ -314,7 +314,7 @@ public final class RemoteTransferInventoryScreen extends Screen {
         g.fill(0, 0, width, height, 0xFF101722);
         g.drawCenteredString(font, "工作方块库存槽位", width / 2, 16, 0xFFFFFFFF);
         g.drawCenteredString(font, available
-                ? ("存储：完整库存可用 · " + (menuLayout
+                ? ("存储：完整库存可用 · 蓝框输入 / 绿框输出 · " + (menuLayout
                     ? "槽位位置取自该方块原生菜单；编号对应真实库存槽位。"
                     : furnaceLayout
                         ? "原料、燃料、成品按熔炉原生槽位位置显示。"
@@ -359,8 +359,10 @@ public final class RemoteTransferInventoryScreen extends Screen {
             g.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, 0xFF080D14);
             g.fill(x + 1, y + 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1,
                     selected ? 0xFF315C88 : 0xFF71849A);
+            int roleBorder = slot.getBoolean("InputRole") ? 0xFF398BFF
+                    : slot.getBoolean("OutputRole") ? 0xFF39C77A : 0xFFE0E8F0;
             g.renderOutline(x, y, SLOT_SIZE, SLOT_SIZE,
-                    selected ? 0xFFFFFFFF : 0xFFE0E8F0);
+                    selected ? 0xFFFFFFFF : roleBorder);
             ItemStack stack = slotStack(slot);
             if (!stack.isEmpty()) {
                 g.renderItem(stack, x + 1, y + 1);

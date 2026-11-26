@@ -153,6 +153,7 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                                 RemoteTransferNetworkData.EndpointKind.WORKSTATION);
                     }
                     inventory.putBoolean("Available", true);
+                    inventory.putBoolean("Storage", true);
                     inventory.putUUID("Member", member.id());
                     inventory.putString("Block", member.blockId());
                     int[] menuX = new int[handler.getSlots()];
@@ -194,6 +195,41 @@ public record RemoteTransferSnapshotPayload(CompoundTag data) implements CustomP
                         slot.putString("Item", stack.isEmpty() ? "" :
                                 net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
                         slot.putInt("Count", stack.getCount());
+                        boolean inputRole = false;
+                        boolean outputRole = false;
+                        String blockId = member.blockId();
+                        if (blockId.equals("minecraft:furnace") || blockId.equals("minecraft:blast_furnace")
+                                || blockId.equals("minecraft:smoker")) {
+                            inputRole = i == 0 || i == 1;
+                            outputRole = i == 2;
+                        } else if (blockId.equals("whimsy_automation:deconstruction_table")
+                                || blockId.equals("whimsy_automation:enchantment_extractor")) {
+                            inputRole = i == 0;
+                            outputRole = i > 0;
+                        } else if (blockId.equals("whimsy_automation:enchantment_conversion_table")) {
+                            inputRole = i == 0;
+                            outputRole = i == 1;
+                        } else {
+                            net.minecraft.world.item.ItemStack[] probes = {
+                                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE),
+                                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL),
+                                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT),
+                                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BUCKET)
+                            };
+                            int accepted = 0;
+                            for (var probe : probes) {
+                                try {
+                                    if (handler.isItemValid(i, probe)
+                                            && (stack.isEmpty() || net.minecraft.world.item.ItemStack.isSameItemSameComponents(stack, probe))) {
+                                        accepted++;
+                                    }
+                                } catch (RuntimeException ignored) {}
+                            }
+                            inputRole = accepted > 0 && accepted < probes.length;
+                            outputRole = accepted == 0;
+                        }
+                        slot.putBoolean("InputRole", inputRole);
+                        slot.putBoolean("OutputRole", outputRole);
                         if (completeMenuLayout) {
                             slot.putInt("GuiX", menuX[i]);
                             slot.putInt("GuiY", menuY[i]);
