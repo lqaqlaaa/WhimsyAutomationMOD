@@ -4,7 +4,7 @@ import dev.whimsyautomation.network.RemoteTransferActionPayload;
 import dev.whimsyautomation.remote.RemoteTransferNetworkData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.screens.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
