@@ -70,7 +70,8 @@ public final class RemoteTransferFilterScreen extends Screen {
         filterY = inventoryY - 3 * SLOT - 12;
 
         int leftX = 8;
-        int leftW = Math.max(54, gridX - 16);
+        int leftW = Math.max(28, (gridX - 20) / 2);
+        int rightX = leftX + leftW + 4;
         int y = Math.max(38, filterY);
         addRenderableWidget(TechButton.create(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST
                 ? "白名单" : "黑名单"), b -> {
@@ -78,19 +79,19 @@ public final class RemoteTransferFilterScreen extends Screen {
                     ? RemoteTransferNetworkData.FilterMode.BLACKLIST
                     : RemoteTransferNetworkData.FilterMode.WHITELIST;
             b.setMessage(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST ? "白名单" : "黑名单"));
-        }).bounds(leftX, y, leftW, 20).build());
+        }).bounds(leftX, y, leftW, 18).build());
         addRenderableWidget(toggle("耐久", matchDurability, v -> matchDurability = v)
-                .bounds(leftX, y + 24, leftW, 20).build());
-        addRenderableWidget(toggle("物品标签", matchTags, v -> matchTags = v)
-                .bounds(leftX, y + 48, leftW, 20).build());
+                .bounds(rightX, y, leftW, 18).build());
+        addRenderableWidget(toggle("标签", matchTags, v -> matchTags = v)
+                .bounds(leftX, y + 22, leftW, 18).build());
         addRenderableWidget(toggle("NBT", matchNbt, v -> matchNbt = v)
-                .bounds(leftX, y + 72, leftW, 20).build());
+                .bounds(rightX, y + 22, leftW, 18).build());
         addRenderableWidget(TechButton.create(Component.literal("上一页"), b -> {
             page = Math.max(0, page - 1); init();
-        }).bounds(leftX, y + 100, leftW, 18).build());
+        }).bounds(leftX, y + 44, leftW, 18).build());
         addRenderableWidget(TechButton.create(Component.literal("下一页"), b -> {
             page = Math.min(pageCount - 1, page + 1); init();
-        }).bounds(leftX, y + 122, leftW, 18).build());
+        }).bounds(rightX, y + 44, leftW, 18).build());
         addRenderableWidget(TechButton.create(Component.literal("+ 添加页"), b -> {
             if (pageCount < 8) {
                 pageCount++;
@@ -98,7 +99,7 @@ public final class RemoteTransferFilterScreen extends Screen {
                 page = pageCount - 1;
                 init();
             }
-        }).bounds(leftX, y + 146, leftW, 18).build());
+        }).bounds(leftX, y + 66, leftW, 18).build());
         addRenderableWidget(TechButton.create(Component.literal("− 删除页"), b -> {
             if (pageCount > 1) {
                 entries.subList(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).clear();
@@ -107,7 +108,7 @@ public final class RemoteTransferFilterScreen extends Screen {
                 page = Math.min(page, pageCount - 1);
                 init();
             }
-        }).bounds(leftX, y + 168, leftW, 18).build());
+        }).bounds(rightX, y + 66, leftW, 18).build());
         addRenderableWidget(TechButton.create(Component.literal("返回"), b -> minecraft.setScreen(parent))
                 .bounds(leftX, height - 24, leftW, 20).build());
         addRenderableWidget(TechButton.create(Component.literal("保存"), b -> save())
