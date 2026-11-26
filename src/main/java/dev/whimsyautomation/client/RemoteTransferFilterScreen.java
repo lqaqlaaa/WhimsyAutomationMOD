@@ -55,7 +55,7 @@ public final class RemoteTransferFilterScreen extends Screen {
         int buttonY = 108;
         int controlGap = 3;
         int controlW = Math.max(36, (width - 16 - controlGap * 3) / 4);
-        addRenderableWidget(TechButton.builder(Component.literal(
+        addRenderableWidget(Button.builder(Component.literal(
                 mode == RemoteTransferNetworkData.FilterMode.WHITELIST ? "白名单" : "黑名单"), b -> {
             mode = mode == RemoteTransferNetworkData.FilterMode.WHITELIST
                     ? RemoteTransferNetworkData.FilterMode.BLACKLIST
@@ -72,15 +72,15 @@ public final class RemoteTransferFilterScreen extends Screen {
 
         inventoryX = (width - 9 * SLOT) / 2;
         inventoryY = height - 104;
-        addRenderableWidget(TechButton.builder(Component.literal("返回"), b -> minecraft.setScreen(parent))
+        addRenderableWidget(Button.builder(Component.literal("返回"), b -> minecraft.setScreen(parent))
                 .bounds(8, height - 24, Math.max(64, (width - 24) / 2), 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("保存过滤规则"), b -> save())
+        addRenderableWidget(Button.builder(Component.literal("保存过滤规则"), b -> save())
                 .bounds(width / 2 + 4, height - 24, Math.max(64, (width - 24) / 2), 20).build());
     }
 
     private interface BoolSetter { void set(boolean value); }
-    private TechButton.Builder toggle(String label, boolean value, BoolSetter setter) {
-        return TechButton.builder(Component.literal(label + "：" + (value ? "开" : "关")), b -> {
+    private Button.Builder toggle(String label, boolean value, BoolSetter setter) {
+        return Button.builder(Component.literal(label + "：" + (value ? "开" : "关")), b -> {
             boolean next = !b.getMessage().getString().endsWith("开");
             setter.set(next);
             b.setMessage(Component.literal(label + "：" + (next ? "开" : "关")));

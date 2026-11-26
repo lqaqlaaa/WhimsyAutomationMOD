@@ -29,14 +29,14 @@ import java.util.UUID;
 public final class RemoteTransferScreen extends Screen {
     // Opaque surfaces are intentional: translucent panels let the world's blur show
     // through and make manually rendered labels/items look washed out on mobile.
-    private static final int BG = 0xFF0B1018;
-    private static final int PANEL = 0xFF121A26;
-    private static final int ROW = 0xFF182230;
-    private static final int ROW_SELECTED = 0xFF163444;
-    private static final int ACCENT = 0xFF00C8E0;
-    private static final int TEXT = 0xFFE8F6FF;
-    private static final int MUTED = 0xFF8AA0B4;
-    private static final int BORDER = 0xFF2A4154;
+    private static final int BG = 0xFF101722;
+    private static final int PANEL = 0xFF192638;
+    private static final int ROW = 0xFF26384D;
+    private static final int ROW_SELECTED = 0xFF304E70;
+    private static final int ACCENT = 0xFF398BFF;
+    private static final int TEXT = 0xFFFFFFFF;
+    private static final int MUTED = 0xFFD0D9E5;
+    private static final int BORDER = 0xFF58718F;
 
     private CompoundTag snapshot = new CompoundTag();
     private UUID selectedNetwork, selectedMember, selectedSecond, selectedConnection, selectedSlotBinding;
@@ -141,7 +141,7 @@ public final class RemoteTransferScreen extends Screen {
             UUID id = n.getUUID("Id");
             int y = navTop + (i - networkScroll) * navRowH;
             String label = trim(n.getString("Name"), 14);
-            addRenderableWidget(TechButton.builder(Component.literal((id.equals(selectedNetwork) ? "▸ " : "  ") + label), b -> {
+            addRenderableWidget(Button.builder(Component.literal((id.equals(selectedNetwork) ? "▸ " : "  ") + label), b -> {
                 selectedNetwork = id;
                 send(20, id, null, null, 0, "");
                 selectedMember = selectedSecond = selectedConnection = null;
@@ -155,7 +155,7 @@ public final class RemoteTransferScreen extends Screen {
         createNameBox.setMaxLength(48);
         createNameBox.setHint(Component.literal("新网络名称"));
         addRenderableWidget(createNameBox);
-        addRenderableWidget(TechButton.builder(Component.literal("+ 创建网络"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("+ 创建网络"), b -> {
             if (!createNameBox.getValue().isBlank()) send(1, null, null, null, 0, createNameBox.getValue());
         }).bounds(8, height - 26, sideW, 20).build());
 
@@ -165,7 +165,7 @@ public final class RemoteTransferScreen extends Screen {
         int tabW = Math.max(42, (contentW - tabGap * 2) / 3);
         for (int i = 0; i < tabs.length; i++) {
             final int page = i;
-            addRenderableWidget(TechButton.builder(Component.literal((activePage == i ? "◆ " : "") + tabs[i]), b -> {
+            addRenderableWidget(Button.builder(Component.literal((activePage == i ? "◆ " : "") + tabs[i]), b -> {
                 activePage = page;
                 init();
             }).bounds(contentX + i * (tabW + tabGap), 38, tabW, 20).build());
@@ -185,23 +185,23 @@ public final class RemoteTransferScreen extends Screen {
         renameBox.setMaxLength(48);
         renameBox.setValue(network.getString("Name"));
         addRenderableWidget(renameBox);
-        addRenderableWidget(TechButton.builder(Component.literal("重命名"), b ->
+        addRenderableWidget(Button.builder(Component.literal("重命名"), b ->
                 send(2, selectedNetwork, null, null, 0, renameBox.getValue()))
                 .bounds(contentX + contentW - 96, 112, 88, 20).build());
         int half = Math.max(38, (contentW - 20) / 2);
         int row1 = Math.max(142, Math.min(148, height - 94));
         int row2 = row1 + 26;
         int row3 = row2 + 26;
-        addRenderableWidget(TechButton.builder(Component.literal("删除当前网络"), b ->
+        addRenderableWidget(Button.builder(Component.literal("删除当前网络"), b ->
                 send(3, selectedNetwork, null, null, 0, ""))
                 .bounds(contentX + 6, row1, half, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("添加成员方块"), b ->
+        addRenderableWidget(Button.builder(Component.literal("添加成员方块"), b ->
                 send(15, selectedNetwork, null, null, 0, ""))
                 .bounds(contentX + 12 + half, row1, Math.max(38, contentW - half - 18), 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("打开成员管理"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("打开成员管理"), b -> {
             activePage = 1; init();
         }).bounds(contentX + 6, row2, half, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal(RemoteTransferOverlay.connectionsVisible()
+        addRenderableWidget(Button.builder(Component.literal(RemoteTransferOverlay.connectionsVisible()
                 ? "连接线：开" : "连接线：关"), b -> {
             RemoteTransferOverlay.toggleConnectionsVisible();
             b.setMessage(Component.literal(RemoteTransferOverlay.connectionsVisible()
@@ -211,7 +211,7 @@ public final class RemoteTransferScreen extends Screen {
         }).bounds(contentX + 12 + half, row2, Math.max(38, contentW - half - 18), 20).build());
         boolean bordersVisible = !network.contains("MemberBordersVisible")
                 || network.getBoolean("MemberBordersVisible");
-        addRenderableWidget(TechButton.builder(Component.literal(
+        addRenderableWidget(Button.builder(Component.literal(
                 bordersVisible ? "方块边框：开" : "方块边框：关"), b -> {
             boolean nextVisible = !(!network.contains("MemberBordersVisible")
                     || network.getBoolean("MemberBordersVisible"));
@@ -223,15 +223,15 @@ public final class RemoteTransferScreen extends Screen {
 
     private void buildMemberWidgets() {
         int third = Math.max(28, (contentW - 24) / 3);
-        addRenderableWidget(TechButton.builder(Component.literal("添加成员"), b ->
+        addRenderableWidget(Button.builder(Component.literal("添加成员"), b ->
                 send(15, selectedNetwork, null, null, 0, ""))
                 .bounds(contentX + 6, 62, third, 20).build());
-        Button inventoryButton = TechButton.builder(Component.literal("查看库存槽位"), b ->
+        Button inventoryButton = Button.builder(Component.literal("查看库存槽位"), b ->
                 send(17, selectedNetwork, selectedMember, null, 0, ""))
                 .bounds(contentX + 12 + third, 62, third, 20).build();
         inventoryButton.active = selectedMember != null;
         addRenderableWidget(inventoryButton);
-        addRenderableWidget(TechButton.builder(Component.literal("移除成员"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("移除成员"), b -> {
             if (selectedMember != null) send(5, selectedNetwork, selectedMember, null, 0, "");
         }).bounds(contentX + 18 + third * 2, 62, third, 20).build());
 
@@ -242,7 +242,7 @@ public final class RemoteTransferScreen extends Screen {
             int y = listTop + row * rowH;
             int actionW = 48;
             boolean canTeleport = minecraft != null && minecraft.player != null && minecraft.player.hasPermissions(2);
-            Button teleportButton = TechButton.builder(Component.literal("传送"), b ->
+            Button teleportButton = Button.builder(Component.literal("传送"), b ->
                     send(11, selectedNetwork, id, null, 0, ""))
                     .bounds(contentX + contentW - actionW - 6, y + 5, actionW, 20)
                     .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
@@ -256,15 +256,15 @@ public final class RemoteTransferScreen extends Screen {
             int controlY = height - 30;
             int controlW = Math.max(34, (contentW - 24) / 3);
             UUID linkId = selectedContainerLink.getUUID("Id");
-            addRenderableWidget(TechButton.builder(Component.literal(
+            addRenderableWidget(Button.builder(Component.literal(
                     "方向：" + ("INPUT".equals(selectedContainerLink.getString("Direction")) ? "输入" : "输出")), b ->
                     send(13, selectedNetwork, linkId, null, 0, ""))
                     .bounds(contentX + 6, controlY, controlW, 20).build());
-            addRenderableWidget(TechButton.builder(Component.literal(
+            addRenderableWidget(Button.builder(Component.literal(
                     selectedContainerLink.getBoolean("ShowLine") ? "连接线：开" : "连接线：关"), b ->
                     send(14, selectedNetwork, linkId, null, 0, ""))
                     .bounds(contentX + 12 + controlW, controlY, controlW, 20).build());
-            addRenderableWidget(TechButton.builder(Component.literal(
+            addRenderableWidget(Button.builder(Component.literal(
                     selectedContainerLink.getBoolean("Enabled") ? "传输：开" : "传输：关"), b ->
                     send(12, selectedNetwork, linkId, null, 0, ""))
                     .bounds(contentX + 18 + controlW * 2, controlY, Math.max(34, contentW - controlW * 2 - 24), 20).build());
@@ -294,7 +294,7 @@ public final class RemoteTransferScreen extends Screen {
             String label = memberName(binding.getUUID("Workstation")) + " 槽位 "
                     + binding.getInt("WorkstationSlot") + " → "
                     + memberName(binding.getUUID("Target")) + " · " + direction + " · " + state;
-            addRenderableWidget(TechButton.builder(Component.literal(
+            addRenderableWidget(Button.builder(Component.literal(
                     (id.equals(selectedSlotBinding) ? "▸ " : "") + label), b -> {
                 selectedSlotBinding = id;
                 init();
@@ -305,11 +305,11 @@ public final class RemoteTransferScreen extends Screen {
         if (selected == null) return;
         int actionY = Math.max(80, Math.min(height - 52, 80 + visible * 24));
         int half = Math.max(40, (contentW - 18) / 2);
-        addRenderableWidget(TechButton.builder(Component.literal(
+        addRenderableWidget(Button.builder(Component.literal(
                 selected.getBoolean("Enabled") ? "暂停此槽位绑定" : "恢复此槽位绑定"), b ->
                 send(18, selectedNetwork, selectedSlotBinding, null, 0, ""))
                 .bounds(contentX + 6, actionY, half, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("删除此槽位绑定"), b ->
+        addRenderableWidget(Button.builder(Component.literal("删除此槽位绑定"), b ->
                 send(19, selectedNetwork, selectedSlotBinding, null, 0, ""))
                 .bounds(contentX + 12 + half, actionY, Math.max(40, contentW - half - 18), 20).build());
     }
@@ -329,7 +329,7 @@ public final class RemoteTransferScreen extends Screen {
             UUID id = link.getUUID("Id");
             int y = 70 + row * 24;
             String state = link.getBoolean("Enabled") ? "运行中" : "已关闭";
-            addRenderableWidget(TechButton.builder(Component.literal(
+            addRenderableWidget(Button.builder(Component.literal(
                     (id.equals(selectedConnection) ? "▸ " : "") + connectionLabel(link) + " · " + state), b -> {
                 selectedConnection = id;
                 loadSelectedFilter(link);
@@ -341,19 +341,19 @@ public final class RemoteTransferScreen extends Screen {
         if (selected == null) return;
         int actionY = Math.max(76, Math.min(height - 56, 76 + visible * 24));
         int half = Math.max(40, (contentW - 18) / 2);
-        addRenderableWidget(TechButton.builder(Component.literal(
+        addRenderableWidget(Button.builder(Component.literal(
                 selected.getBoolean("Enabled") ? "关闭此连接" : "开启此连接"), b ->
                 send(12, selectedNetwork, selectedConnection, null, 0, ""))
                 .bounds(contentX + 6, actionY, half, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("切换输入 / 输出"), b ->
+        addRenderableWidget(Button.builder(Component.literal("切换输入 / 输出"), b ->
                 send(13, selectedNetwork, selectedConnection, null, 0, ""))
                 .bounds(contentX + 12 + half, actionY, Math.max(40, contentW - half - 18), 20).build());
         int secondY = Math.min(height - 28, actionY + 26);
-        addRenderableWidget(TechButton.builder(Component.literal(selected.getBoolean("ShowLine")
+        addRenderableWidget(Button.builder(Component.literal(selected.getBoolean("ShowLine")
                 ? "关闭此容器的连接线" : "开启此容器的连接线"), b ->
                 send(14, selectedNetwork, selectedConnection, null, 0, ""))
                 .bounds(contentX + 6, secondY, half, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("移除此连接"), b ->
+        addRenderableWidget(Button.builder(Component.literal("移除此连接"), b ->
                 send(7, selectedNetwork, selectedConnection, null, 0, ""))
                 .bounds(contentX + 12 + half, secondY, Math.max(40, contentW - half - 18), 20).build());
     }
@@ -364,7 +364,7 @@ public final class RemoteTransferScreen extends Screen {
         for (int i = 0; i < Math.min(links.size(), Math.max(1, (height - 168) / 22)); i++) {
             CompoundTag link = links.get(i);
             UUID id = link.getUUID("Id");
-            addRenderableWidget(TechButton.builder(Component.literal(
+            addRenderableWidget(Button.builder(Component.literal(
                     (id.equals(selectedConnection) ? "▸ " : "") + connectionLabel(link)), b -> {
                 selectedConnection = id;
                 loadSelectedFilter(link);
@@ -379,12 +379,12 @@ public final class RemoteTransferScreen extends Screen {
         int inputX = contentX + 6;
         int outputX = inputX + labelW + gap;
         int fieldY = Math.max(82, Math.min(height - 144, Math.max(y + 8, 100)));
-        addRenderableWidget(TechButton.builder(Component.literal(filterLabel("输入", filterModeInput, exactInput)), b -> {
+        addRenderableWidget(Button.builder(Component.literal(filterLabel("输入", filterModeInput, exactInput)), b -> {
             filterModeInput = (filterModeInput + 1) % 3;
             if (filterModeInput == 0) exactInput = !exactInput;
             b.setMessage(Component.literal(filterLabel("输入", filterModeInput, exactInput)));
         }).bounds(inputX, fieldY, labelW, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal(filterLabel("输出", filterModeOutput, exactOutput)), b -> {
+        addRenderableWidget(Button.builder(Component.literal(filterLabel("输出", filterModeOutput, exactOutput)), b -> {
             filterModeOutput = (filterModeOutput + 1) % 3;
             if (filterModeOutput == 0) exactOutput = !exactOutput;
             b.setMessage(Component.literal(filterLabel("输出", filterModeOutput, exactOutput)));
@@ -404,55 +404,55 @@ public final class RemoteTransferScreen extends Screen {
         outputFilterBox.setValue(outputFilterText == null ? "" : outputFilterText);
         outputFilterBox.setResponder(value -> outputFilterText = value);
         addRenderableWidget(outputFilterBox);
-        addRenderableWidget(TechButton.builder(Component.literal("选择输入物品"), b ->
+        addRenderableWidget(Button.builder(Component.literal("选择输入物品"), b ->
                 minecraft.setScreen(new RemoteTransferItemPickerScreen(this, inputFilterBox.getValue(), value -> {
                     inputFilterText = value;
                     init();
                 }))).bounds(inputX, fieldY + 48, labelW, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("选择输出物品"), b ->
+        addRenderableWidget(Button.builder(Component.literal("选择输出物品"), b ->
                 minecraft.setScreen(new RemoteTransferItemPickerScreen(this, outputFilterBox.getValue(), value -> {
                     outputFilterText = value;
                     init();
                 }))).bounds(outputX, fieldY + 48, labelW, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("应用输入规则"), b ->
+        addRenderableWidget(Button.builder(Component.literal("应用输入规则"), b ->
                 send(9, selectedNetwork, selectedConnection, null,
                         (filterModeInput << 1) | (exactInput ? 8 : 0)
                                 | (ignoreDurabilityInput ? 16 : 0) | (ignoreNbtInput ? 32 : 0)
                                 | (matchTagsInput ? 64 : 0), inputFilterBox.getValue()))
                 .bounds(inputX, fieldY + 72, labelW, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("应用输出规则"), b ->
+        addRenderableWidget(Button.builder(Component.literal("应用输出规则"), b ->
                 send(9, selectedNetwork, selectedConnection, null,
                         1 | (filterModeOutput << 1) | (exactOutput ? 8 : 0)
                                 | (ignoreDurabilityOutput ? 16 : 0) | (ignoreNbtOutput ? 32 : 0)
                                 | (matchTagsOutput ? 64 : 0), outputFilterBox.getValue()))
                 .bounds(outputX, fieldY + 72, labelW, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("手持物品加入输入精确规则"), b ->
+        addRenderableWidget(Button.builder(Component.literal("手持物品加入输入精确规则"), b ->
                 send(10, selectedNetwork, selectedConnection, null, 0, ""))
                 .bounds(inputX, fieldY + 96, labelW, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("手持物品加入输出精确规则"), b ->
+        addRenderableWidget(Button.builder(Component.literal("手持物品加入输出精确规则"), b ->
                 send(10, selectedNetwork, selectedConnection, null, 1, ""))
                 .bounds(outputX, fieldY + 96, labelW, 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("忽略耐久：" + (ignoreDurabilityInput ? "开" : "关")), b -> {
+        addRenderableWidget(Button.builder(Component.literal("忽略耐久：" + (ignoreDurabilityInput ? "开" : "关")), b -> {
             ignoreDurabilityInput = !ignoreDurabilityInput;
             b.setMessage(Component.literal("忽略耐久：" + (ignoreDurabilityInput ? "开" : "关")));
         }).bounds(inputX, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("忽略NBT：" + (ignoreNbtInput ? "开" : "关")), b -> {
+        addRenderableWidget(Button.builder(Component.literal("忽略NBT：" + (ignoreNbtInput ? "开" : "关")), b -> {
             ignoreNbtInput = !ignoreNbtInput;
             b.setMessage(Component.literal("忽略NBT：" + (ignoreNbtInput ? "开" : "关")));
         }).bounds(inputX + (labelW - 4) / 3 + 2, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("标签：" + (matchTagsInput ? "开" : "关")), b -> {
+        addRenderableWidget(Button.builder(Component.literal("标签：" + (matchTagsInput ? "开" : "关")), b -> {
             matchTagsInput = !matchTagsInput;
             b.setMessage(Component.literal("标签：" + (matchTagsInput ? "开" : "关")));
         }).bounds(inputX + 2 * ((labelW - 4) / 3) + 2, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("忽略耐久：" + (ignoreDurabilityOutput ? "开" : "关")), b -> {
+        addRenderableWidget(Button.builder(Component.literal("忽略耐久：" + (ignoreDurabilityOutput ? "开" : "关")), b -> {
             ignoreDurabilityOutput = !ignoreDurabilityOutput;
             b.setMessage(Component.literal("忽略耐久：" + (ignoreDurabilityOutput ? "开" : "关")));
         }).bounds(outputX, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("忽略NBT：" + (ignoreNbtOutput ? "开" : "关")), b -> {
+        addRenderableWidget(Button.builder(Component.literal("忽略NBT：" + (ignoreNbtOutput ? "开" : "关")), b -> {
             ignoreNbtOutput = !ignoreNbtOutput;
             b.setMessage(Component.literal("忽略NBT：" + (ignoreNbtOutput ? "开" : "关")));
         }).bounds(outputX + (labelW - 4) / 3 + 2, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
-        addRenderableWidget(TechButton.builder(Component.literal("标签：" + (matchTagsOutput ? "开" : "关")), b -> {
+        addRenderableWidget(Button.builder(Component.literal("标签：" + (matchTagsOutput ? "开" : "关")), b -> {
             matchTagsOutput = !matchTagsOutput;
             b.setMessage(Component.literal("标签：" + (matchTagsOutput ? "开" : "关")));
         }).bounds(outputX + 2 * ((labelW - 4) / 3) + 2, fieldY + 120, Math.max(24, (labelW - 4) / 3), 20).build());
@@ -486,7 +486,7 @@ public final class RemoteTransferScreen extends Screen {
 
         g.fill(0, 0, width, height, BG);
         g.fill(6, 6, sideW + 14, height - 6, PANEL);
-        g.fill(contentX - 4, 28, width - 6, height - 6, 0xFF0E1620);
+        g.fill(contentX - 4, 28, width - 6, height - 6, 0xFF101724);
         g.renderOutline(6, 6, sideW + 8, height - 12, BORDER);
         g.renderOutline(contentX - 4, 28, width - contentX + 2, height - 34, BORDER);
         g.fill(6, 6, 9, height - 6, ACCENT);
@@ -496,12 +496,12 @@ public final class RemoteTransferScreen extends Screen {
         // Native buttons and edit boxes must be rendered before custom labels/items.
         super.render(g, mouseX, mouseY, partialTick);
 
-        g.drawString(font, "远程网络", 14, 14, 0xFF5CEBFF, false);
+        g.drawString(font, "远程网络", 14, 14, 0xFF70AEFF, false);
         g.drawString(font, "网络列表", 12, 30, MUTED, false);
         g.drawString(font, selectedNetwork == null ? "请选择或创建网络" : networkName(),
                 contentX + 4, 14, TEXT, false);
         g.drawString(font, new String[]{"网络概览", "成员方块", "槽位绑定"}[Math.max(0, Math.min(2, activePage))],
-                contentX + 4, 62, 0xFF5CEBFF, false);
+                contentX + 4, 62, 0xFF70AEFF, false);
 
         if (activePage == 0 && selectedNetwork != null) {
             g.fill(contentX + 6, 78, contentX + contentW - 6, 104, ROW);
@@ -529,7 +529,7 @@ public final class RemoteTransferScreen extends Screen {
             g.fill(contentX + 4, y, contentX + contentW - 4, rowBottom,
                     selected ? ROW_SELECTED : ROW);
             g.renderOutline(contentX + 4, y, contentW - 8, rowBottom - y,
-                    selected ? 0xFF00E5FF : BORDER);
+                    selected ? 0xFF8FC5FF : BORDER);
             g.fill(contentX + 5, y + 2, contentX + 8, rowBottom - 2,
                     COLORS[(row + memberScroll) % COLORS.length]);
             if (mouseX >= contentX + 4 && mouseX < contentX + contentW - 4

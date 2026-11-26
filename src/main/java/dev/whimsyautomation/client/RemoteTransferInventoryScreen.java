@@ -83,20 +83,20 @@ public final class RemoteTransferInventoryScreen extends Screen {
         int buttonW = Math.max(42, Math.min(96, (width - 24 - gap * 3) / 4));
         int totalW = buttonW * 4 + gap * 3;
         int startX = (width - totalW) / 2;
-        addRenderableWidget(TechButton.builder(Component.literal("返回"),
+        addRenderableWidget(Button.builder(Component.literal("返回"),
                 b -> minecraft.setScreen(parent))
                 .bounds(startX, buttonY, buttonW, 20).build());
-        Button input = TechButton.builder(Component.literal("绑定输入"),
+        Button input = Button.builder(Component.literal("绑定输入"),
                 b -> beginBinding("INPUT"))
                 .bounds(startX + buttonW + gap, buttonY, buttonW, 20).build();
         input.active = selectedSlot >= 0 && available;
         addRenderableWidget(input);
-        Button output = TechButton.builder(Component.literal("绑定输出"),
+        Button output = Button.builder(Component.literal("绑定输出"),
                 b -> beginBinding("OUTPUT"))
                 .bounds(startX + (buttonW + gap) * 2, buttonY, buttonW, 20).build();
         output.active = selectedSlot >= 0 && available;
         addRenderableWidget(output);
-        Button filter = TechButton.builder(Component.literal("过滤"),
+        Button filter = Button.builder(Component.literal("过滤"),
                 b -> openFilter())
                 .bounds(startX + (buttonW + gap) * 3, buttonY, buttonW, 20).build();
         filter.active = selectedSlot >= 0 && available;
@@ -105,23 +105,23 @@ public final class RemoteTransferInventoryScreen extends Screen {
         int autoGap = 6;
         int autoW = Math.min(150, (width - 32 - autoGap) / 2);
         int autoStartX = (width - (autoW * 2 + autoGap)) / 2;
-        Button autoInput = TechButton.builder(Component.literal("自动识别输入"),
+        Button autoInput = Button.builder(Component.literal("自动识别输入"),
                 b -> beginAutoBinding("INPUT"))
                 .bounds(autoStartX, autoY, autoW, 20).build();
         autoInput.active = available && memberId != null && supportsAutoRecognition();
         addRenderableWidget(autoInput);
-        Button autoOutput = TechButton.builder(Component.literal("自动识别输出"),
+        Button autoOutput = Button.builder(Component.literal("自动识别输出"),
                 b -> beginAutoBinding("OUTPUT"))
                 .bounds(autoStartX + autoW + autoGap, autoY, autoW, 20).build();
         autoOutput.active = available && memberId != null && supportsAutoRecognition();
         addRenderableWidget(autoOutput);
         if (pagedMachineLayout && pageCount > 1) {
-            addRenderableWidget(TechButton.builder(Component.literal("‹"), b -> {
+            addRenderableWidget(Button.builder(Component.literal("‹"), b -> {
                 page = Math.max(0, page - 1);
                 selectedSlot = -1;
                 init();
             }).bounds(panelX + panelWidth - 44, panelY + 3, 18, 14).build());
-            addRenderableWidget(TechButton.builder(Component.literal("›"), b -> {
+            addRenderableWidget(Button.builder(Component.literal("›"), b -> {
                 page = Math.min(pageCount - 1, page + 1);
                 selectedSlot = -1;
                 init();
