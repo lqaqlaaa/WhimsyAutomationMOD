@@ -67,7 +67,7 @@ public record RemoteTransferActionPayload(int action, UUID networkId, UUID first
                         java.util.ArrayList<String> entries = new java.util.ArrayList<>();
                         if (parts.length > 2 && !parts[2].isBlank()) {
                             for (String encoded : parts[2].split(",")) {
-                                if (entries.size() >= 10) break;
+                                if (entries.size() >= 512) break;
                                 if (!encoded.isBlank()) entries.add(new String(
                                         java.util.Base64.getDecoder().decode(encoded),
                                         java.nio.charset.StandardCharsets.UTF_8));
