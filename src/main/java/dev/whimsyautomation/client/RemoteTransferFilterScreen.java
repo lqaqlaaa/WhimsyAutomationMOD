@@ -4,8 +4,7 @@ import dev.whimsyautomation.network.RemoteTransferActionPayload;
 import dev.whimsyautomation.remote.RemoteTransferNetworkData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -14,12 +13,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.UUID;
+import java.util.function.Consumer;
 
-/** Ten non-consuming ghost item slots plus the player's inventory. */
+/** Paged 9x3 ghost-item filter grid with Shift+right-click inventory painting. */
 public final class RemoteTransferFilterScreen extends Screen {
     private static final int SLOT = 18;
+    private static final int PAGE_SIZE = 27;
+    private static final String PAGE_MARKER = "#FILTER_PAGE#";
     private final Screen parent;
     private final UUID networkId, workstationId;
     private final List<Integer> workstationSlots;
@@ -27,8 +28,11 @@ public final class RemoteTransferFilterScreen extends Screen {
     private final List<String> entries = new ArrayList<>();
     private RemoteTransferNetworkData.FilterMode mode;
     private boolean matchDurability, matchTags, matchNbt;
-    private int selectedFilterSlot = -1;
-    private int inventoryX, inventoryY;
+    private int page;
+    private int pageCount = 1;
+    private int gridX, filterY, inventoryX, inventoryY;
+    private int lastPaintedInventory = -1, lastPaintedFilter = -1;
+    private boolean painting;
 
     public RemoteTransferFilterScreen(Screen parent, UUID networkId, UUID workstationId,
                                       List<Integer> workstationSlots, RemoteTransferNetworkData.Filter filter,
@@ -45,37 +49,68 @@ public final class RemoteTransferFilterScreen extends Screen {
         this.matchDurability = !filter.ignoreDurability();
         this.matchNbt = !filter.ignoreNbt();
         this.matchTags = filter.matchTags();
-        for (int i = 0; i < 10; i++)
-            entries.add(i < filter.items().size() ? filter.items().get(i) : "");
+        for (String entry : filter.items()) {
+            if (PAGE_MARKER.equals(entry)) pageCount++;
+            else entries.add(entry);
+        }
+        pageCount = Math.max(1, pageCount);
+        while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
+        while (entries.size() > pageCount * PAGE_SIZE) entries.remove(entries.size() - 1);
     }
 
     @Override
     protected void init() {
         clearWidgets();
-        int buttonY = 108;
-        int controlGap = 3;
-        int controlW = Math.max(36, (width - 16 - controlGap * 3) / 4);
-        addRenderableWidget(TechButton.create(Component.literal(
-                mode == RemoteTransferNetworkData.FilterMode.WHITELIST ? "白名单" : "黑名单"), b -> {
+        int gridWidth = 9 * SLOT;
+        gridX = width - gridWidth - 8;
+        if (gridX < 8) gridX = 8;
+        inventoryX = gridX;
+        inventoryY = height - 82;
+        filterY = inventoryY - 3 * SLOT - 12;
+
+        int leftX = 8;
+        int leftW = Math.max(54, gridX - 16);
+        int y = Math.max(38, filterY);
+        addRenderableWidget(TechButton.create(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST
+                ? "白名单" : "黑名单"), b -> {
             mode = mode == RemoteTransferNetworkData.FilterMode.WHITELIST
                     ? RemoteTransferNetworkData.FilterMode.BLACKLIST
                     : RemoteTransferNetworkData.FilterMode.WHITELIST;
-            b.setMessage(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST
-                    ? "白名单" : "黑名单"));
-        }).bounds(8, buttonY, controlW, 20).build());
+            b.setMessage(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST ? "白名单" : "黑名单"));
+        }).bounds(leftX, y, leftW, 20).build());
         addRenderableWidget(toggle("耐久", matchDurability, v -> matchDurability = v)
-                .bounds(8 + controlW + controlGap, buttonY, controlW, 20).build());
+                .bounds(leftX, y + 24, leftW, 20).build());
         addRenderableWidget(toggle("物品标签", matchTags, v -> matchTags = v)
-                .bounds(8 + (controlW + controlGap) * 2, buttonY, controlW, 20).build());
+                .bounds(leftX, y + 48, leftW, 20).build());
         addRenderableWidget(toggle("NBT", matchNbt, v -> matchNbt = v)
-                .bounds(8 + (controlW + controlGap) * 3, buttonY, controlW, 20).build());
-
-        inventoryX = (width - 9 * SLOT) / 2;
-        inventoryY = height - 104;
+                .bounds(leftX, y + 72, leftW, 20).build());
+        addRenderableWidget(TechButton.create(Component.literal("上一页"), b -> {
+            page = Math.max(0, page - 1); init();
+        }).bounds(leftX, y + 100, leftW, 18).build());
+        addRenderableWidget(TechButton.create(Component.literal("下一页"), b -> {
+            page = Math.min(pageCount - 1, page + 1); init();
+        }).bounds(leftX, y + 122, leftW, 18).build());
+        addRenderableWidget(TechButton.create(Component.literal("+ 添加页"), b -> {
+            if (pageCount < 64) {
+                pageCount++;
+                while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
+                page = pageCount - 1;
+                init();
+            }
+        }).bounds(leftX, y + 146, leftW, 18).build());
+        addRenderableWidget(TechButton.create(Component.literal("− 删除页"), b -> {
+            if (pageCount > 1) {
+                entries.subList(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).clear();
+                pageCount--;
+                while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
+                page = Math.min(page, pageCount - 1);
+                init();
+            }
+        }).bounds(leftX, y + 168, leftW, 18).build());
         addRenderableWidget(TechButton.create(Component.literal("返回"), b -> minecraft.setScreen(parent))
-                .bounds(8, height - 24, Math.max(64, (width - 24) / 2), 20).build());
-        addRenderableWidget(TechButton.create(Component.literal("保存过滤规则"), b -> save())
-                .bounds(width / 2 + 4, height - 24, Math.max(64, (width - 24) / 2), 20).build());
+                .bounds(leftX, height - 24, leftW, 20).build());
+        addRenderableWidget(TechButton.create(Component.literal("保存"), b -> save())
+                .bounds(gridX + gridWidth - 54, height - 24, 54, 20).build());
     }
 
     private interface BoolSetter { void set(boolean value); }
@@ -90,19 +125,26 @@ public final class RemoteTransferFilterScreen extends Screen {
     private void save() {
         int flags = (matchDurability ? 2 : 0) | (matchTags ? 4 : 0) | (matchNbt ? 8 : 0);
         StringBuilder encoded = new StringBuilder(mode.name()).append('|').append(flags).append('|');
-        boolean first = true;
-        for (String entry : entries) {
-            if (entry.isBlank()) continue;
-            if (!first) encoded.append(',');
-            first = false;
-            encoded.append(Base64.getEncoder().encodeToString(entry.getBytes(StandardCharsets.UTF_8)));
+        List<String> saved = new ArrayList<>();
+        for (int p = 0; p < pageCount; p++) {
+            if (p > 0) {
+                if (!encoded.toString().endsWith("|")) encoded.append(',');
+                encoded.append(Base64.getEncoder().encodeToString(PAGE_MARKER.getBytes(StandardCharsets.UTF_8)));
+                saved.add(PAGE_MARKER);
+            }
+            for (int i = 0; i < PAGE_SIZE; i++) {
+                String entry = entries.get(p * PAGE_SIZE + i);
+                if (entry.isBlank()) continue;
+                if (!encoded.toString().endsWith("|")) encoded.append(',');
+                encoded.append(Base64.getEncoder().encodeToString(entry.getBytes(StandardCharsets.UTF_8)));
+                saved.add(entry);
+            }
         }
         RemoteTransferNetworkData.Filter updated = new RemoteTransferNetworkData.Filter(mode, true,
-                entries.stream().filter(e -> !e.isBlank()).toList(), !entries.stream().allMatch(String::isBlank),
-                !matchDurability, !matchNbt, matchTags);
+                saved, !saved.isEmpty(), !matchDurability, !matchNbt, matchTags);
         for (int slot : workstationSlots) {
-            PacketDistributor.sendToServer(new RemoteTransferActionPayload(
-                    23, networkId, workstationId, null, slot, encoded.toString()));
+            PacketDistributor.sendToServer(new RemoteTransferActionPayload(23, networkId, workstationId, null,
+                    slot, encoded.toString()));
         }
         if (onSaved != null) onSaved.accept(updated);
         minecraft.setScreen(parent);
@@ -115,45 +157,32 @@ public final class RemoteTransferFilterScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // Draw background and widgets first; the background pass otherwise covers custom slot cells.
         super.render(g, mouseX, mouseY, partialTick);
-        String targetLabel = workstationSlots.size() == 1
-                ? "槽位 " + (workstationSlots.get(0) + 1)
-                : workstationSlots.size() + " 个槽位（" + workstationSlots.stream()
-                        .map(slot -> Integer.toString(slot + 1)).collect(java.util.stream.Collectors.joining(", ")) + "）";
-        g.drawCenteredString(font, "槽位过滤规则 · " + targetLabel, width / 2, 12, 0xFFFFFFFF);
-        g.drawCenteredString(font, entries.stream().anyMatch(e -> !e.isBlank())
-                ? "点击有物品的过滤格可清空；选择空格后点击背包物品可复制模板"
-                : "过滤槽全部为空：当前不启用过滤", width / 2, 28, 0xFFD0D9E5);
-
-        int filterX = (width - 5 * SLOT) / 2;
-        int filterY = 52;
-        for (int i = 0; i < 10; i++) {
-            int x = filterX + (i % 5) * SLOT;
-            int y = filterY + (i / 5) * SLOT;
+        String target = workstationSlots.size() == 1 ? "槽位 " + (workstationSlots.get(0) + 1)
+                : workstationSlots.size() + " 个槽位";
+        g.drawCenteredString(font, "槽位过滤规则 · " + target, width / 2, 10, 0xFFFFFFFF);
+        g.drawString(font, "第 " + (page + 1) + " / " + pageCount + " 页", 8,
+                Math.max(20, filterY - 12), 0xFFD0D9E5, false);
+        g.drawString(font, "过滤栏位（Shift+右键滑动添加；点击或Shift+右键移除）",
+                gridX, filterY - 12, 0xFFFFFFFF, false);
+        for (int i = 0; i < PAGE_SIZE; i++) {
+            int x = gridX + (i % 9) * SLOT;
+            int y = filterY + (i / 9) * SLOT;
             g.fill(x, y, x + SLOT, y + SLOT, 0xFF080D14);
-            g.fill(x + 1, y + 1, x + SLOT - 1, y + SLOT - 1,
-                    i == selectedFilterSlot ? 0xFF315C88 : 0xFF71849A);
-            g.renderOutline(x, y, SLOT, SLOT, i == selectedFilterSlot ? 0xFFFFFFFF : 0xFFE0E8F0);
-            ItemStack stack = stackFromEntry(entries.get(i));
+            g.fill(x + 1, y + 1, x + SLOT - 1, y + SLOT - 1, 0xFF526477);
+            g.renderOutline(x, y, SLOT, SLOT, 0xFFBAC8D8);
+            ItemStack stack = stackFromEntry(entries.get(page * PAGE_SIZE + i));
             if (!stack.isEmpty()) g.renderItem(stack, x + 1, y + 1);
-            g.drawString(font, Integer.toString(i + 1), x + 5, y + SLOT + 1, 0xFFBFCBDD, false);
         }
-
-        g.drawString(font, "玩家背包（点击物品复制到选中的过滤格，不会消耗）",
-                8, inventoryY - 12, 0xFFFFFFFF, false);
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                int inventoryIndex = 9 + row * 9 + col;
-                drawPlayerSlot(g, inventoryIndex, inventoryX + col * SLOT, inventoryY + row * SLOT, mouseX, mouseY);
-            }
-        }
+        g.drawString(font, "玩家背包", inventoryX, inventoryY - 12, 0xFFFFFFFF, false);
+        for (int row = 0; row < 3; row++)
+            for (int col = 0; col < 9; col++)
+                drawPlayerSlot(g, 9 + row * 9 + col, inventoryX + col * SLOT, inventoryY + row * SLOT);
         for (int col = 0; col < 9; col++)
-            drawPlayerSlot(g, col, inventoryX + col * SLOT, inventoryY + 3 * SLOT + 6, mouseX, mouseY);
-
+            drawPlayerSlot(g, col, inventoryX + col * SLOT, inventoryY + 3 * SLOT + 6);
     }
 
-    private void drawPlayerSlot(GuiGraphics g, int index, int x, int y, int mouseX, int mouseY) {
+    private void drawPlayerSlot(GuiGraphics g, int index, int x, int y) {
         g.fill(x, y, x + SLOT, y + SLOT, 0xFF080D14);
         g.fill(x + 1, y + 1, x + SLOT - 1, y + SLOT - 1, 0xFF526477);
         g.renderOutline(x, y, SLOT, SLOT, 0xFFBAC8D8);
@@ -166,7 +195,7 @@ public final class RemoteTransferFilterScreen extends Screen {
     }
 
     private ItemStack stackFromEntry(String entry) {
-        if (entry == null || entry.isBlank()) return ItemStack.EMPTY;
+        if (entry == null || entry.isBlank() || PAGE_MARKER.equals(entry)) return ItemStack.EMPTY;
         String id = entry.substring(0, entry.indexOf('|') >= 0 ? entry.indexOf('|') : entry.length());
         try {
             var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(
@@ -175,41 +204,94 @@ public final class RemoteTransferFilterScreen extends Screen {
         } catch (RuntimeException ignored) { return ItemStack.EMPTY; }
     }
 
+    private int inventoryIndexAt(double mouseX, double mouseY) {
+        int col = (int) ((mouseX - inventoryX) / SLOT);
+        if (col < 0 || col >= 9) return -1;
+        int row = (int) ((mouseY - inventoryY) / SLOT);
+        if (row >= 0 && row < 3) return 9 + row * 9 + col;
+        if (mouseY >= inventoryY + 3 * SLOT + 6 && mouseY < inventoryY + 4 * SLOT + 6) return col;
+        return -1;
+    }
+
+    private int filterIndexAt(double mouseX, double mouseY) {
+        int col = (int) ((mouseX - gridX) / SLOT);
+        int row = (int) ((mouseY - filterY) / SLOT);
+        return col >= 0 && col < 9 && row >= 0 && row < 3 ? row * 9 + col : -1;
+    }
+
+    private void addFromInventory(int inventoryIndex) {
+        ItemStack stack = minecraft.player.getInventory().getItem(inventoryIndex);
+        if (stack.isEmpty()) return;
+        String fingerprint = RemoteTransferNetworkData.Filter.fingerprint(stack, !matchDurability, !matchNbt);
+        int start = page * PAGE_SIZE;
+        for (int i = 0; i < PAGE_SIZE; i++) {
+            if (entries.get(start + i).equals(fingerprint)) return;
+            if (entries.get(start + i).isBlank()) {
+                entries.set(start + i, fingerprint);
+                return;
+            }
+        }
+    }
+
+    private void removeAt(int index) {
+        if (index >= 0 && !entries.get(page * PAGE_SIZE + index).isBlank())
+            entries.set(page * PAGE_SIZE + index, "");
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
-            int filterX = (width - 5 * SLOT) / 2;
-            int filterY = 52;
-            for (int i = 0; i < 10; i++) {
-                int x = filterX + (i % 5) * SLOT;
-                int y = filterY + (i / 5) * SLOT;
-                if (mouseX >= x && mouseX < x + SLOT && mouseY >= y && mouseY < y + SLOT) {
-                    if (!entries.get(i).isBlank()) {
-                        entries.set(i, "");
-                        selectedFilterSlot = -1;
-                    } else selectedFilterSlot = i;
-                    return true;
-                }
+            int filterIndex = filterIndexAt(mouseX, mouseY);
+            if (filterIndex >= 0) {
+                removeAt(filterIndex);
+                return true;
             }
-            if (selectedFilterSlot >= 0 && mouseY >= inventoryY - 2 && mouseY < inventoryY + 3 * SLOT + 6 + SLOT) {
-                int col = (int) ((mouseX - inventoryX) / SLOT);
-                if (col >= 0 && col < 9) {
-                    int row = (int) ((mouseY - inventoryY) / SLOT);
-                    int index;
-                    if (row >= 0 && row < 3) index = 9 + row * 9 + col;
-                    else if (mouseY >= inventoryY + 3 * SLOT + 6) index = col;
-                    else return super.mouseClicked(mouseX, mouseY, button);
-                    ItemStack picked = minecraft.player.getInventory().getItem(index);
-                    if (!picked.isEmpty()) {
-                        entries.set(selectedFilterSlot,
-                                RemoteTransferNetworkData.Filter.fingerprint(picked, false, false));
-                        selectedFilterSlot = -1;
-                    }
-                    return true;
-                }
+        }
+        if (button == 1 && hasShiftDown()) {
+            int filterIndex = filterIndexAt(mouseX, mouseY);
+            if (filterIndex >= 0) {
+                removeAt(filterIndex);
+                painting = true;
+                lastPaintedFilter = filterIndex;
+                return true;
+            }
+            int inventoryIndex = inventoryIndexAt(mouseX, mouseY);
+            if (inventoryIndex >= 0) {
+                addFromInventory(inventoryIndex);
+                painting = true;
+                lastPaintedInventory = inventoryIndex;
+                return true;
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (painting && button == 1 && hasShiftDown()) {
+            int filterIndex = filterIndexAt(mouseX, mouseY);
+            if (filterIndex >= 0 && filterIndex != lastPaintedFilter) {
+                removeAt(filterIndex);
+                lastPaintedFilter = filterIndex;
+            }
+            int inventoryIndex = inventoryIndexAt(mouseX, mouseY);
+            if (inventoryIndex >= 0 && inventoryIndex != lastPaintedInventory) {
+                addFromInventory(inventoryIndex);
+                lastPaintedInventory = inventoryIndex;
+            }
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 1) {
+            painting = false;
+            lastPaintedInventory = -1;
+            lastPaintedFilter = -1;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override public boolean isPauseScreen() { return false; }
