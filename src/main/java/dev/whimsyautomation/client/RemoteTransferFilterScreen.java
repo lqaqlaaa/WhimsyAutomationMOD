@@ -21,6 +21,7 @@ public final class RemoteTransferFilterScreen extends Screen {
     private static final int SLOT = 18;
     private static final int PAGE_SIZE = 27;
     private static final String PAGE_MARKER = "#FILTER_PAGE#";
+    private static final String EMPTY_MARKER = "#FILTER_EMPTY#";
     private final Screen parent;
     private final UUID networkId, workstationId;
     private final List<Integer> workstationSlots;
@@ -51,7 +52,7 @@ public final class RemoteTransferFilterScreen extends Screen {
         this.matchTags = filter.matchTags();
         for (String entry : filter.items()) {
             if (PAGE_MARKER.equals(entry)) pageCount++;
-            else entries.add(entry);
+            else entries.add(EMPTY_MARKER.equals(entry) ? "" : entry);
         }
         pageCount = Math.max(1, pageCount);
         while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
@@ -91,7 +92,7 @@ public final class RemoteTransferFilterScreen extends Screen {
             page = Math.min(pageCount - 1, page + 1); init();
         }).bounds(leftX, y + 122, leftW, 18).build());
         addRenderableWidget(TechButton.create(Component.literal("+ 添加页"), b -> {
-            if (pageCount < 64) {
+            if (pageCount < 8) {
                 pageCount++;
                 while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
                 page = pageCount - 1;
@@ -134,10 +135,10 @@ public final class RemoteTransferFilterScreen extends Screen {
             }
             for (int i = 0; i < PAGE_SIZE; i++) {
                 String entry = entries.get(p * PAGE_SIZE + i);
-                if (entry.isBlank()) continue;
                 if (!encoded.toString().endsWith("|")) encoded.append(',');
-                encoded.append(Base64.getEncoder().encodeToString(entry.getBytes(StandardCharsets.UTF_8)));
-                saved.add(entry);
+                String stored = entry.isBlank() ? EMPTY_MARKER : entry;
+                encoded.append(Base64.getEncoder().encodeToString(stored.getBytes(StandardCharsets.UTF_8)));
+                saved.add(stored);
             }
         }
         RemoteTransferNetworkData.Filter updated = new RemoteTransferNetworkData.Filter(mode, true,
