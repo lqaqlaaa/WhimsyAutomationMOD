@@ -64,12 +64,9 @@ public final class RemoteTransferFilterScreen extends Screen {
         clearWidgets();
         int gridWidth = 9 * SLOT;
         int gridHeight = 3 * SLOT;
-        int rightRailWidth = Math.max(68, Math.min(88, width / 4));
-        int gap = 8;
-        // Keep the filter grid as the visual focus; reserve a narrow rail on its right.
-        int contentWidth = gridWidth + gap + rightRailWidth;
-        int contentLeft = Math.max(4, (width - contentWidth) / 2);
-        gridX = contentLeft;
+        int gap = 6;
+        // The 9x3 filter grid itself stays centered; controls occupy the right rail.
+        gridX = Math.max(4, (width - gridWidth) / 2);
         inventoryX = gridX;
         filterY = 70;
         inventoryY = filterY + gridHeight + 24;
@@ -98,7 +95,7 @@ public final class RemoteTransferFilterScreen extends Screen {
         }
 
         int railX = gridX + gridWidth + gap;
-        int railW = Math.max(64, Math.min(rightRailWidth, width - railX - 4));
+        int railW = Math.max(52, width - railX - 4);
         int y = filterY;
         addRenderableWidget(TechButton.create(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST
                 ? "白名单" : "黑名单"), b -> {
