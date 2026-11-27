@@ -63,56 +63,60 @@ public final class RemoteTransferFilterScreen extends Screen {
     protected void init() {
         clearWidgets();
         int gridWidth = 9 * SLOT;
-        gridX = width - gridWidth - 8;
-        if (gridX < 8) gridX = 8;
+        int gridHeight = 3 * SLOT;
+        int rightRailWidth = Math.max(68, Math.min(88, width / 4));
+        int gap = 8;
+        // Keep the filter grid as the visual focus; reserve a narrow rail on its right.
+        int contentWidth = gridWidth + gap + rightRailWidth;
+        int contentLeft = Math.max(4, (width - contentWidth) / 2);
+        gridX = contentLeft;
         inventoryX = gridX;
-        inventoryY = height - 82;
-        filterY = inventoryY - 3 * SLOT - 12;
+        filterY = 70;
+        inventoryY = filterY + gridHeight + 24;
 
-        int leftX = 8;
-        int leftW = Math.max(28, (gridX - 20) / 2);
-        int rightX = leftX + leftW + 4;
-        int y = Math.max(38, filterY);
+        int pageButtonGap = 3;
+        int pageButtonWidth = (gridWidth - pageButtonGap * 3) / 4;
+        String[] pageLabels = {"上一页", "下一页", "+ 添加", "− 删除"};
+        for (int i = 0; i < pageLabels.length; i++) {
+            final int action = i;
+            addRenderableWidget(TechButton.create(Component.literal(pageLabels[i]), b -> {
+                if (action == 0) page = Math.max(0, page - 1);
+                else if (action == 1) page = Math.min(pageCount - 1, page + 1);
+                else if (action == 2 && pageCount < 8) {
+                    pageCount++;
+                    while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
+                    page = pageCount - 1;
+                } else if (action == 3 && pageCount > 1) {
+                    entries.subList(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).clear();
+                    pageCount--;
+                    while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
+                    page = Math.min(page, pageCount - 1);
+                }
+                init();
+            }).bounds(gridX + i * (pageButtonWidth + pageButtonGap), 34,
+                    pageButtonWidth, 20).build());
+        }
+
+        int railX = gridX + gridWidth + gap;
+        int railW = Math.max(64, Math.min(rightRailWidth, width - railX - 4));
+        int y = filterY;
         addRenderableWidget(TechButton.create(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST
                 ? "白名单" : "黑名单"), b -> {
             mode = mode == RemoteTransferNetworkData.FilterMode.WHITELIST
                     ? RemoteTransferNetworkData.FilterMode.BLACKLIST
                     : RemoteTransferNetworkData.FilterMode.WHITELIST;
             b.setMessage(Component.literal(mode == RemoteTransferNetworkData.FilterMode.WHITELIST ? "白名单" : "黑名单"));
-        }).bounds(leftX, y, leftW, 18).build());
+        }).bounds(railX, y, railW, 20).build());
         addRenderableWidget(toggle("耐久", matchDurability, v -> matchDurability = v)
-                .bounds(rightX, y, leftW, 18).build());
+                .bounds(railX, y + 26, railW, 20).build());
         addRenderableWidget(toggle("标签", matchTags, v -> matchTags = v)
-                .bounds(leftX, y + 22, leftW, 18).build());
+                .bounds(railX, y + 52, railW, 20).build());
         addRenderableWidget(toggle("NBT", matchNbt, v -> matchNbt = v)
-                .bounds(rightX, y + 22, leftW, 18).build());
-        addRenderableWidget(TechButton.create(Component.literal("上一页"), b -> {
-            page = Math.max(0, page - 1); init();
-        }).bounds(leftX, y + 44, leftW, 18).build());
-        addRenderableWidget(TechButton.create(Component.literal("下一页"), b -> {
-            page = Math.min(pageCount - 1, page + 1); init();
-        }).bounds(rightX, y + 44, leftW, 18).build());
-        addRenderableWidget(TechButton.create(Component.literal("+ 添加页"), b -> {
-            if (pageCount < 8) {
-                pageCount++;
-                while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
-                page = pageCount - 1;
-                init();
-            }
-        }).bounds(leftX, y + 66, leftW, 18).build());
-        addRenderableWidget(TechButton.create(Component.literal("− 删除页"), b -> {
-            if (pageCount > 1) {
-                entries.subList(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).clear();
-                pageCount--;
-                while (entries.size() < pageCount * PAGE_SIZE) entries.add("");
-                page = Math.min(page, pageCount - 1);
-                init();
-            }
-        }).bounds(rightX, y + 66, leftW, 18).build());
+                .bounds(railX, y + 78, railW, 20).build());
         addRenderableWidget(TechButton.create(Component.literal("返回"), b -> minecraft.setScreen(parent))
-                .bounds(leftX, height - 24, leftW, 20).build());
+                .bounds(railX, height - 48, railW, 20).build());
         addRenderableWidget(TechButton.create(Component.literal("保存"), b -> save())
-                .bounds(gridX + gridWidth - 54, height - 24, 54, 20).build());
+                .bounds(railX, height - 24, railW, 20).build());
     }
 
     private interface BoolSetter { void set(boolean value); }
